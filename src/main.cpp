@@ -13,6 +13,8 @@
 #include "Runner.hpp"
 #include "Utility.hpp"
 
+using namespace pipelines::analyze;
+
 auto main(int argc, const char* const argv[]) -> int {
     signal(SIGSEGV, helper::crashHandler);
 

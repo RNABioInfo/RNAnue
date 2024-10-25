@@ -11,36 +11,30 @@
 
 #include "InteractionCluster.hpp"
 
-namespace pipelines {
-namespace analyze {
+namespace pipelines::analyze {
 
 namespace fs = std::filesystem;
 
 struct SplitRecordsParser {
-    static std::vector<InteractionCluster> parse(const fs::path splitRecordsFilePath) {
+    static auto parse(const fs::path& splitRecordsFilePath) -> std::vector<InteractionCluster> {
         seqan3::sam_file_input splitsIn{splitRecordsFilePath, sam_field_ids{}};
 
         std::vector<InteractionCluster> clusters;
 
-        for (auto &&records : splitsIn | seqan3::views::chunk(2)) {
-            std::optional<Segment> segment1 = Segment::fromSamRecord(*records.begin());
-            std::optional<Segment> segment2 = Segment::fromSamRecord(*(++records.begin()));
+        for (auto&& records : splitsIn | seqan3::views::chunk(2)) {
+            std::optional<RecordFragment> segment1 =
+                RecordFragment::fromSamRecord(*records.begin());
+            std::optional<RecordFragment> segment2 =
+                RecordFragment::fromSamRecord(*(++records.begin()));
 
             if (!segment1 || !segment2) [[unlikely]] {
                 continue;
             }
 
-            auto cluster = InteractionCluster::fromSegments(*segment1, *segment2);
-
-            if (!cluster) [[unlikely]] {
-                continue;
-            }
-
-            clusters.push_back(*cluster);
+            clusters.emplace_back(InteractionCluster::fromRecordFragments(*segment1, *segment2));
         }
 
         return clusters;
     };
 };
-}  // namespace analyze
-}  // namespace pipelines
+}  // namespace pipelines::analyze

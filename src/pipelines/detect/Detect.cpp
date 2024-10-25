@@ -195,12 +195,12 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
         totalSplitFragmentsCount += fragmentsCount;
     }
 
-    return {recordsCount,
-            singletonTranscriptCounts,
-            totalSplitFragmentsCount,
-            totalSingletonFragmentsCount,
-            removedDueToLowMapQuality,
-            removedDueToReadLength};
+    return {.processedRecordsCount = recordsCount,
+            .transcriptCounts = singletonTranscriptCounts,
+            .splitFragmentsCount = totalSplitFragmentsCount,
+            .singletonFragmentsCount = totalSingletonFragmentsCount,
+            .removedDueToLowMappingQuality = removedDueToLowMapQuality,
+            .removedDueToFragmentLength = removedDueToReadLength};
 }
 
 auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) const
@@ -240,7 +240,7 @@ auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::
  */
 auto Detect::processReadRecords(const std::vector<SamRecord>& readRecords,
                                 const std::deque<std::string>& referenceIDs, auto& splitsOut,
-                                auto& multiSplitsOut) const -> size_t {
+                                auto& multiSplitsOut [[maybe_unused]]) const -> size_t {
     if (readRecords.empty()) {
         return 0;
     }

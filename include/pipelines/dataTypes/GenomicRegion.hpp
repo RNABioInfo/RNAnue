@@ -47,4 +47,11 @@ struct GenomicRegion {
 
     static auto fromGenomicFeature(const dataTypes::GenomicFeature &feature) -> GenomicRegion;
 };
+
+inline auto operator<<(std::ostream &outputStream, const GenomicRegion &region) -> std::ostream & {
+    return outputStream << region.referenceID << ":" << region.startPosition << "-"
+                        << region.endPosition << ' '
+                        << (region.strand.has_value() ? region.strand.value() : Strand::FORWARD)
+                        << '\n';
+};
 }  // namespace dataTypes

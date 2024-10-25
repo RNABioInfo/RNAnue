@@ -1,42 +1,90 @@
 #pragma once
 
 // Standard
-#include <optional>
+#include <algorithm>
+#include <cstddef>
 #include <ostream>
 #include <string>
 #include <utility>
 #include <vector>
 
 // Internal
-#include "Segment.hpp"
+#include "InteractionSegment.hpp"
+#include "RecordFragment.hpp"
 
 namespace pipelines::analyze {
 
-struct InteractionCluster {
-    InteractionCluster(std::pair<Segment, Segment> segments,
+class InteractionCluster {
+   public:
+    InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
+                       std::vector<std::string> firstSegmentRecordIDs,
+                       std::vector<std::string> secondSegmentRecordIDs,
                        std::vector<double> complementarityScores,
-                       std::vector<double> hybridizationEnergies, int count = 1)
-        : segments(std::move(segments)),
+                       std::vector<double> hybridizationEnergies)
+        : firstSegment(firstSegment),
+          secondSegment(secondSegment),
+          firstSegmentRecordIDs(std::move(firstSegmentRecordIDs)),
+          secondSegmentRecordIDs(std::move(secondSegmentRecordIDs)),
           complementarityScores(std::move(complementarityScores)),
+          maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
           hybridizationEnergies(std::move(hybridizationEnergies)),
-          count(count) {}
+          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)) {}
 
-    std::pair<Segment, Segment> segments;
-    std::vector<double> complementarityScores;
-    std::vector<double> hybridizationEnergies;
-    int count;
-    std::optional<std::pair<std::string, std::string>> transcriptIDs = std::nullopt;
-    std::optional<double> pValue = std::nullopt;
-    std::optional<double> pAdj = std::nullopt;
+    InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
+                       std::string firstSegmentRecordID, std::string secondSegmentRecordID,
+                       double complementarityScore, double hybridizationEnergie)
+        : InteractionCluster(firstSegment, secondSegment,
+                             std::vector<std::string>{std::move(firstSegmentRecordID)},
+                             std::vector<std::string>{std::move(secondSegmentRecordID)},
+                             std::vector<double>{complementarityScore},
+                             std::vector<double>{hybridizationEnergie}) {}
 
-    static auto fromSegments(const Segment &segment1,
-                             const Segment &segment2) -> std::optional<InteractionCluster>;
+    InteractionCluster() = delete;
+
+    static auto fromRecordFragments(const RecordFragment &firstFragment,
+                                    const RecordFragment &secondFragment) -> InteractionCluster;
+
+    // Getters
+    [[nodiscard]] auto getFirstSegment() const -> const InteractionSegment & {
+        return firstSegment;
+    }
+
+    [[nodiscard]] auto getSecondSegment() const -> const InteractionSegment & {
+        return secondSegment;
+    }
+
+    [[nodiscard]] auto getFirstSegmentRecordIDs() const -> const std::vector<std::string> & {
+        return firstSegmentRecordIDs;
+    }
+
+    [[nodiscard]] auto getSecondSegmentRecordIDs() const -> const std::vector<std::string> & {
+        return secondSegmentRecordIDs;
+    }
+
+    [[nodiscard]] auto getComplementarityScores() const -> const std::vector<double> & {
+        return complementarityScores;
+    }
+
+    [[nodiscard]] auto getMaxComplementarityScore() const -> double {
+        return maxComplementarityScore;
+    }
+
+    [[nodiscard]] auto getHybridizationEnergies() const -> const std::vector<double> & {
+        return hybridizationEnergies;
+    }
+
+    [[nodiscard]] auto getMinHybridizationEnergy() const -> double {
+        return minHybridizationEnergy;
+    }
+
+    [[nodiscard]] auto fragmentCount() const -> size_t { return firstSegmentRecordIDs.size(); }
 
     auto operator<(const InteractionCluster &other) const -> bool;
     auto operator>(const InteractionCluster &other) const -> bool;
     auto operator==(const InteractionCluster &other) const -> bool;
 
-    [[nodiscard]] auto overlaps(const InteractionCluster &other, int graceDistance) const -> bool;
+    [[nodiscard]] auto overlaps(const InteractionCluster &other, int graceDistance) const noexcept
+        -> bool;
 
     void merge(const InteractionCluster &other);
 
@@ -45,24 +93,17 @@ struct InteractionCluster {
     [[nodiscard]] auto hybridizationEnergyStatistics() const -> double;
 
    private:
-    InteractionCluster(std::pair<Segment, Segment> segments,
-                       const std::vector<double> &complementarityScores,
-                       const std::vector<double> &hybridizationEnergies);
-
-    static auto getSortedElements(const Segment &segment1, const Segment &segment2)
-        -> std::optional<std::pair<Segment, Segment>>;
+    InteractionSegment firstSegment;
+    InteractionSegment secondSegment;
+    std::vector<std::string> firstSegmentRecordIDs;
+    std::vector<std::string> secondSegmentRecordIDs;
+    std::vector<double> complementarityScores;
+    double maxComplementarityScore;
+    std::vector<double> hybridizationEnergies;
+    double minHybridizationEnergy;
 };
 
-inline auto operator<<(std::ostream &os,
-                       const InteractionCluster &interactionCluster) -> std::ostream & {
-    return os << "InteractionCluster:\n"
-              << "First segment: " << interactionCluster.segments.first
-              << "\nSecond segment id: " << interactionCluster.segments.second << "\n"
-              << "Complementarity score count: " << interactionCluster.complementarityScores.size()
-              << "\n"
-              << "Hybridization energie count: " << interactionCluster.hybridizationEnergies.size()
-              << "\n"
-              << "Count: " << interactionCluster.count << "\n";
-};
+auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)
+    -> std::ostream &;
 
 }  // namespace pipelines::analyze

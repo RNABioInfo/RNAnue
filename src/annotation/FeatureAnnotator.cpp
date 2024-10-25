@@ -90,12 +90,32 @@ auto FeatureAnnotator::insert(const dataTypes::GenomicRegion &region) -> std::st
                                        .id = uuid,
                                        .groupID = std::nullopt,
                                        .geneName = std::nullopt});
+
+    return uuid;
+}
+
+auto FeatureAnnotator::insertIndex(const dataTypes::GenomicRegion &region) -> std::string {
+    assert(region.strand.has_value() && "Strand must be specified for insertion");
+    namespace uuids = boost::uuids;
+
+    auto &tree = featureTreeMap[region.referenceID];
+    const std::string uuid = uuids::to_string(uuids::random_generator()());
+    tree.add(region.startPosition, region.endPosition,
+             dataTypes::GenomicFeature{.referenceID = region.referenceID,
+                                       .type = "supplementary_feature",
+                                       .startPosition = region.startPosition,
+                                       .endPosition = region.endPosition,
+                                       .strand = *region.strand,
+                                       .id = uuid,
+                                       .groupID = std::nullopt,
+                                       .geneName = std::nullopt});
     tree.index();
 
     return uuid;
 }
 
-auto FeatureAnnotator::mergeInsert(const dataTypes::GenomicRegion &region, const int graceDistance)
+auto FeatureAnnotator::mergeInsertIndex(const dataTypes::GenomicRegion &region,
+                                        const int graceDistance)
     -> FeatureAnnotator::MergeInsertResult {
     assert(region.strand.has_value() && "Strand must be specified for insertion");
 
@@ -111,7 +131,7 @@ auto FeatureAnnotator::mergeInsert(const dataTypes::GenomicRegion &region, const
     });
 
     if (indices.empty()) {
-        return {.featureID = insert(region), .mergedFeatureIDs = {}};
+        return {.featureID = insertIndex(region), .mergedFeatureIDs = {}};
     }
 
     auto minStartIndex = *std::ranges::min_element(indices, [&tree](size_t lhs, size_t rhs) {
@@ -142,8 +162,8 @@ auto FeatureAnnotator::mergeInsert(const dataTypes::GenomicRegion &region, const
     return {.featureID = minStartFeature.id, .mergedFeatureIDs = std::move(mergedFeatureIDs)};
 }
 
-auto FeatureAnnotator::overlappingFeatures(const dataTypes::GenomicRegion &region,
-                                           const Orientation orientation)
+auto FeatureAnnotator::getOverlappingFeatures(const dataTypes::GenomicRegion &region,
+                                              const Orientation orientation)
     -> std::vector<dataTypes::GenomicFeature> {
     std::vector<dataTypes::GenomicFeature> features;
     auto iterator = featureTreeMap.find(region.referenceID);
@@ -266,8 +286,10 @@ auto FeatureAnnotator::mergeFeatures(const dataTypes::GenomicRegion &region, int
     return {indices.begin() + 1, indices.end()};
 }
 
-void FeatureAnnotator::mergeAllOverlappingFeatures(int minOverlap) {
+void FeatureAnnotator::mergeIndexAllOverlappingFeatures(int minOverlap) {
     for (auto &tree : featureTreeMap) {
+        tree.second.index();
+
         std::unordered_set<size_t> invalidIndices;
         for (size_t index = 0; index < tree.second.size(); ++index) {
             if (invalidIndices.contains(index)) {

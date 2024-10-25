@@ -39,7 +39,7 @@ class FeatureAnnotator {
     explicit FeatureAnnotator(const dataTypes::FeatureMap& featureMap);
     explicit FeatureAnnotator() = default;
     FeatureAnnotator(const FeatureAnnotator&) = default;
-    FeatureAnnotator(FeatureAnnotator&&) = delete;
+    FeatureAnnotator(FeatureAnnotator&&) = default;
     auto operator=(const FeatureAnnotator&) -> FeatureAnnotator& = default;
     auto operator=(FeatureAnnotator&&) -> FeatureAnnotator& = delete;
     ~FeatureAnnotator() = default;
@@ -48,11 +48,14 @@ class FeatureAnnotator {
     struct MergeInsertResult;
 
     [[nodiscard]] auto featureCount() const -> size_t;
+
+    auto insertIndex(const dataTypes::GenomicRegion& region) -> std::string;
     auto insert(const dataTypes::GenomicRegion& region) -> std::string;
-    auto mergeInsert(const dataTypes::GenomicRegion& region, int graceDistance)
+
+    auto mergeInsertIndex(const dataTypes::GenomicRegion& region, int graceDistance)
         -> MergeInsertResult;
 
-    auto overlappingFeatures(const dataTypes::GenomicRegion& region, Orientation orientation)
+    auto getOverlappingFeatures(const dataTypes::GenomicRegion& region, Orientation orientation)
         -> std::vector<dataTypes::GenomicFeature>;
     [[nodiscard]] auto overlappingFeatureIterator(const dataTypes::GenomicRegion& region,
                                                   Orientation orientation) const -> Results;
@@ -66,7 +69,17 @@ class FeatureAnnotator {
 
     [[nodiscard]] auto getFeatureTreeMap() const -> const FeatureTreeMap&;
 
-    void mergeAllOverlappingFeatures(int minOverlap);
+    void mergeIndexAllOverlappingFeatures(int minOverlap);
+
+    void printAllFeatures() const {
+        for (const auto& [featureID, tree] : featureTreeMap) {
+            std::cout << "Chromosome ID: " << featureID << std::endl;
+            for (const auto& feature : tree.intervals()) {
+                std::cout << feature.data.id << feature.data.referenceID << ":"
+                          << feature.data.startPosition << "-" << feature.data.endPosition << "\n";
+            }
+        }
+    };
 
    private:
     FeatureTreeMap featureTreeMap;

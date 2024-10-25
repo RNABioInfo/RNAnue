@@ -20,6 +20,7 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsSplicingEvaluatorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/AsyncSplitRecordGroupBufferTests.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
@@ -35,9 +36,12 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsSplicingEvaluator.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/Analyze.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/Segment.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/RecordFragment.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionCluster.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionClusterGenerator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionsWriter.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/StatisticEvaluator.cpp
+
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utility.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/CooptimalPairwiseAligner.cpp
