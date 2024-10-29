@@ -168,10 +168,11 @@ auto Preprocess::passesFilters(const auto &record) const -> bool {
     return passesQual && passesLen;
 }
 
-auto Preprocess::processSingleEndRecordChunk(
-    SingleEndAsyncInputBuffer &asyncInputBuffer, const std::vector<Adapter> &adapters5,
-    const std::vector<Adapter> &adapters3,
-    const fs::path &tmpOutDir) const -> Preprocess::SingleEndResult {
+auto Preprocess::processSingleEndRecordChunk(SingleEndAsyncInputBuffer &asyncInputBuffer,
+                                             const std::vector<Adapter> &adapters5,
+                                             const std::vector<Adapter> &adapters3,
+                                             const fs::path &tmpOutDir) const
+    -> Preprocess::SingleEndResult {
     const std::string uuid = helper::getUUID();
     fs::path tmpFastqOutPath = tmpOutDir / (uuid + ".fastq.gz");
 
@@ -218,15 +219,15 @@ Preprocess::PairedEndResult Preprocess::processPairedEndRecordChunk(
     PairedEndResult result;
     const std::string uuid = helper::getUUID();
 
-    fs::path tmpMergedFastqOutPath = sampleOutput.outputMergedFastqPath / (uuid + ".fastq.gz");
+    fs::path tmpMergedFastqOutPath = sampleOutput.tmpMergedFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output mergedOut{tmpMergedFastqOutPath};
 
     fs::path tmpSingletonFwdFastqOutPath =
-        sampleOutput.outputSingletonForwardFastqPath / (uuid + ".fastq.gz");
+        sampleOutput.tmpSingletonForwardFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output snglFwdOut{tmpSingletonFwdFastqOutPath};
 
     fs::path tmpSingletonRevFastqOutPath =
-        sampleOutput.outputSingletonReverseFastqPath / (uuid + ".fastq.gz");
+        sampleOutput.tmpSingletonReverseFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output snglRevOut{tmpSingletonRevFastqOutPath};
 
     for (auto &&[record1, record2] : pairedRecordInputBuffer) {

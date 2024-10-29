@@ -1,5 +1,7 @@
 #include "StatisticEvaluator.hpp"
 
+#include <vector>
+
 #include "Logger.hpp"
 
 namespace pipelines::analyze {
@@ -17,16 +19,9 @@ auto StatisticEvaluator::getTranscriptProbabilities(
     const size_t totalTranscriptCount) -> std::unordered_map<std::string, double> {
     std::unordered_map<std::string, double> transcriptProbabilities;
 
-    double cumulativeProbability = 0;
     for (const auto &[transcriptID, count] : transcriptCounts) {
         transcriptProbabilities[transcriptID] =
             static_cast<double>(count) / static_cast<double>(totalTranscriptCount);
-        cumulativeProbability += transcriptProbabilities[transcriptID];
-    }
-
-    // Normalize probabilities to sum to 1
-    for (auto &[transcriptID, probability] : transcriptProbabilities) {
-        probability /= cumulativeProbability;
     }
 
     return transcriptProbabilities;
@@ -36,43 +31,55 @@ auto StatisticEvaluator::evaluatePValues(
     std::vector<AnnotatedInteractionCluster> &clusters,
     const std::unordered_map<std::string, size_t> &transcriptCounts,
     const size_t totalTranscriptCount) -> std::vector<EvaluatedInteractionCluster> {
-    const auto transcriptProbabilities =
+    const std::unordered_map<std::string, double> transcriptProbabilities =
         getTranscriptProbabilities(transcriptCounts, totalTranscriptCount);
 
     std::vector<EvaluatedInteractionCluster> evaluatedClusters;
     evaluatedClusters.reserve(clusters.size());
 
+    double combinedProbability = 0.0;
+
+    std::vector<double> ligationByChanceProbabilities;
+    ligationByChanceProbabilities.reserve(clusters.size());
+
     for (auto &cluster : clusters) {
         const auto &firstTranscriptID = cluster.getFirstFeatureID();
         const auto &secondTranscriptID = cluster.getSecondFeatureID();
 
-        auto findProbability = [&](const std::string &transcriptID) -> std::optional<double> {
-            auto iterator = transcriptProbabilities.find(transcriptID);
-            return (iterator != transcriptProbabilities.end())
-                       ? std::optional<double>{iterator->second}
-                       : std::nullopt;
-        };
+        auto firstIt = transcriptProbabilities.find(firstTranscriptID);
+        auto secondIt = transcriptProbabilities.find(secondTranscriptID);
 
-        auto firstTranscriptProbability = findProbability(firstTranscriptID);
-        auto secondTranscriptProbability = findProbability(secondTranscriptID);
-
-        if (!firstTranscriptProbability || !secondTranscriptProbability) {
+        if (firstIt == transcriptProbabilities.end() || secondIt == transcriptProbabilities.end()) {
             Logger::log(LogLevel::WARNING,
                         "Could not find transcript probabilities for cluster with transcripts: ",
                         firstTranscriptID, ", ", secondTranscriptID);
             continue;
         }
 
+        // Compute the ligation probability
+        const double firstTranscriptProbability = firstIt->second;
+        const double secondTranscriptProbability = secondIt->second;
+
         const double ligationByChanceProbability =
             (firstTranscriptID == secondTranscriptID)
-                ? firstTranscriptProbability.value() * secondTranscriptProbability.value()
-                : 2 * firstTranscriptProbability.value() * secondTranscriptProbability.value();
-        ;
+                ? firstTranscriptProbability * secondTranscriptProbability
+                : 2 * firstTranscriptProbability * secondTranscriptProbability;
 
-        const auto binomialDistribution =
-            math::binomial_distribution((double)totalTranscriptCount, ligationByChanceProbability);
+        combinedProbability += ligationByChanceProbability;
 
-        const double pValue = 1 - math::cdf(binomialDistribution, cluster.fragmentCount());
+        ligationByChanceProbabilities.emplace_back(ligationByChanceProbability);
+    }
+
+    for (size_t i = 0; i < clusters.size(); ++i) {
+        auto &cluster = clusters[i];
+
+        double normalizedLigationByChanceProbability =
+            ligationByChanceProbabilities[i] / combinedProbability;
+
+        const auto binomialDistribution = math::binomial_distribution(
+            static_cast<double>(totalTranscriptCount), normalizedLigationByChanceProbability);
+
+        const double pValue = 1 - math::cdf(binomialDistribution, cluster.fragmentCount() - 1);
 
         evaluatedClusters.emplace_back(std::move(cluster), pValue);
     }

@@ -75,11 +75,16 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
                     fs::create_directories(outputSampleTmpFastqSingletonReverseDir);
 
                     samples.emplace_back(PreprocessSamplePaired{
-                        inputSamplePaired,
-                        {outputSampleTmpFastqMergedDir, outputSampleTmpFastqSingletonForwardDir,
-                         outputSampleTmpFastqSingletonReverseDir, outputSampleFastqPathMerged,
-                         outputSampleFastqPathForwardSingleton,
-                         outputSampleFastqPathReverseSingleton}});
+                        .input = inputSamplePaired,
+                        .output = {
+                            .tmpMergedFastqDir = outputSampleTmpFastqMergedDir,
+                            .tmpSingletonForwardFastqDir = outputSampleTmpFastqSingletonForwardDir,
+                            .tmpSingletonReverseFastqDir = outputSampleTmpFastqSingletonReverseDir,
+                            .outputMergedFastqPath = outputSampleFastqPathMerged,
+                            .outputSingletonForwardFastqPath =
+                                outputSampleFastqPathForwardSingleton,
+                            .outputSingletonReverseFastqPath =
+                                outputSampleFastqPathReverseSingleton}});
 
                     const auto message = "Paired-end sample " + parentName + " found";
                     Logger::log(LogLevel::INFO, message);

@@ -43,7 +43,7 @@ TEST_P(StatisticEvaluatorTests, Default) {
 
     for (const auto& result : results) {
         std::cout << "Result: " << result.getFirstSegmentRecordIDs().front()
-                  << ", pvalue: " << result.getPValue() << "\n";
+                  << ", pvalue: " << result.getPValue() << ", padj: " << result.getPadj() << "\n";
     }
 }
 
@@ -64,14 +64,14 @@ const InteractionCluster interMolecularCluster(
     {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
     {-200, -200, -200, -200, -200, -200, -200, -200, -200, -200});
 
-const AnnotatedInteractionCluster intraMolecularClusterAnno(intraMolecularCluster, "A", "B");
-const AnnotatedInteractionCluster interMolecularClusterAnno(interMolecularCluster, "C", "C");
+const AnnotatedInteractionCluster intraMolecularClusterAnno(intraMolecularCluster, "C", "C");
+const AnnotatedInteractionCluster interMolecularClusterAnno(interMolecularCluster, "A", "B");
 
 const std::vector<AnnotatedInteractionCluster> clusters{intraMolecularClusterAnno,
                                                         interMolecularClusterAnno};
 
 const std::vector<EvaluatedInteractionCluster> expectedResults{
-    {intraMolecularClusterAnno, 0.0747, 0.1}, {interMolecularClusterAnno, 0.0747, 0.1}};
+    {intraMolecularClusterAnno, 0.1818, 0.1}, {interMolecularClusterAnno, 0.1818, 0.1}};
 
 INSTANTIATE_TEST_SUITE_P(Default, StatisticEvaluatorTests,
                          testing::Values(StatisticEvaluatorTestParam{
