@@ -78,6 +78,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/Preprocess.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/PreprocessData.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/Deduplicator.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/Align.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/AlignData.cpp

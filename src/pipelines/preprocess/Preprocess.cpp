@@ -7,6 +7,7 @@
 #include "PairedRecordMerger.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
+#include "seqan3/alphabet/nucleotide/dna5.hpp"
 
 namespace pipelines::preprocess {
 Preprocess::Preprocess(PreprocessParameters params) : parameters(std::move(params)) {}
@@ -156,6 +157,7 @@ void Preprocess::processPairedEnd(const PreprocessSamplePaired &sample) const {
  */
 auto Preprocess::passesFilters(const auto &record) const -> bool {
     // Filter for mean quality
+
     const auto phredQual =
         record.base_qualities() | std::views::transform([](auto qual) { return qual.to_phred(); });
     const double sum = std::accumulate(phredQual.begin(), phredQual.end(), 0);
@@ -277,9 +279,7 @@ Preprocess::PairedEndResult Preprocess::processPairedEndRecordChunk(
                 continue;
             }
 
-            const auto &mergedRecordValue = mergedRecord.value();
-
-            if (passesFilters(mergedRecordValue)) {
+            if (passesFilters(mergedRecord.value())) {
                 mergedOut.push_back(std::move(mergedRecord.value()));
 
                 result.mergedRecords += 1;

@@ -20,7 +20,7 @@ std::string testSamPath() {
 }
 
 TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
-    seqan3::sam_file_input fin{testSamPath(), dataTypes::sam_field_ids{}};
+    seqan3::sam_file_input fin{testSamPath(), dataTypes::SamFieldIDs{}};
 
     auto v = fin | AsyncSplitRecordGroupBuffer(2);
 
@@ -53,7 +53,7 @@ TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
     seqan3::sam_file_input fin{
         "/Users/christopherphd/Documents/projects/RNAnue_dev/RNAnue/tests/test_data/"
         "splitRecords.bam",
-        dataTypes::sam_field_ids{}};
+        dataTypes::SamFieldIDs{}};
 
     auto v = fin | AsyncSplitRecordGroupBuffer(2);
 

@@ -17,7 +17,7 @@ namespace fs = std::filesystem;
 
 struct SplitRecordsParser {
     static auto parse(const fs::path& splitRecordsFilePath) -> std::vector<InteractionCluster> {
-        seqan3::sam_file_input splitsIn{splitRecordsFilePath, sam_field_ids{}};
+        seqan3::sam_file_input splitsIn{splitRecordsFilePath, SamFieldIDs{}};
 
         std::vector<InteractionCluster> clusters;
 

@@ -21,17 +21,17 @@ using namespace seqan3::literals;
 
 namespace dataTypes {
 
-using sam_field_types =
+using SamFieldTypes =
     seqan3::type_list<std::string, seqan3::sam_flag, std::optional<int32_t>, std::optional<int32_t>,
                       uint8_t, std::vector<seqan3::cigar>, seqan3::dna5_vector,
                       std::vector<seqan3::phred42>, seqan3::sam_tag_dictionary>;
 
-using sam_field_ids =
+using SamFieldIDs =
     seqan3::fields<seqan3::field::id, seqan3::field::flag, seqan3::field::ref_id,
                    seqan3::field::ref_offset, seqan3::field::mapq, seqan3::field::cigar,
                    seqan3::field::seq, seqan3::field::qual, seqan3::field::tags>;
 
-using SamRecord = seqan3::sam_record<sam_field_types, sam_field_ids>;
+using SamRecord = seqan3::sam_record<SamFieldTypes, SamFieldIDs>;
 
 inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t> {
     const auto start = record.reference_position();

@@ -175,8 +175,8 @@ void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
     // TODO Adapt output format to selection from config
     const size_t SORT_DEFAULT_MEGS_PER_THREAD = 768;
     const size_t maxMem = SORT_DEFAULT_MEGS_PER_THREAD << 20;
-    const htsFormat inFmt = {sequence_data, bam, {1, 6}, no_compression, 0, 0};
-    const htsFormat outFmt = {sequence_data, bam, {1, 6}, no_compression, 0, 0};
+    const htsFormat inFmt = {sequence_data, bam, {.major = 1, .minor = 6}, no_compression, 0, 0};
+    const htsFormat outFmt = {sequence_data, bam, {.major = 1, .minor = 6}, no_compression, 0, 0};
 
     const fs::path tempDir = fs::path(alignmentsPath).parent_path();
     char emptyStr[] = "";       // NOLINT
@@ -197,8 +197,9 @@ void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
 
 auto Align::convertToCStrings(std::vector<std::string> &args) -> std::vector<char *> {
     std::vector<char *> c_args(args.size() + 1);
-    std::transform(args.begin(), args.end(), c_args.begin(),
-                   [](std::string &arg) { return const_cast<char *>(arg.c_str()); });  // NOLINT
+    std::ranges::transform(args, c_args.begin(),
+                           [](std::string &arg) { return const_cast<char *>(arg.c_str()); });
+
     c_args.back() = nullptr;  // argv must be null terminated
 
     return c_args;

@@ -48,7 +48,7 @@ void Detect::processSample(const DetectSample& sample) const {
 
     Logger::log(LogLevel::DEBUG, "Alignments path: ", sample.input.inputAlignmentsPath);
 
-    seqan3::sam_file_input alignmentsIn{sample.input.inputAlignmentsPath, sam_field_ids{}};
+    seqan3::sam_file_input alignmentsIn{sample.input.inputAlignmentsPath, SamFieldIDs{}};
 
     std::vector<size_t> referenceLengths{};
     std::ranges::transform(alignmentsIn.header().ref_id_info, std::back_inserter(referenceLengths),
@@ -104,10 +104,10 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
     const fs::path unassignedContiguousOutPath =
         outTmpDirs.outputTmpUnassignedContiguousDir / (chunkID + ".bam");
 
-    seqan3::sam_file_output splitsOut{splitsOutPath, refIDs, refLengths, sam_field_ids{}};
-    seqan3::sam_file_output multiSplitsOut{multiSplitsOutPath, refIDs, refLengths, sam_field_ids{}};
+    seqan3::sam_file_output splitsOut{splitsOutPath, refIDs, refLengths, SamFieldIDs{}};
+    seqan3::sam_file_output multiSplitsOut{multiSplitsOutPath, refIDs, refLengths, SamFieldIDs{}};
     seqan3::sam_file_output unassignedContiguousOut{unassignedContiguousOutPath, refIDs, refLengths,
-                                                    sam_field_ids{}};
+                                                    SamFieldIDs{}};
 
     size_t recordsCount = 0;
     size_t totalSplitFragmentsCount = 0;
@@ -222,7 +222,7 @@ auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) 
 }
 
 auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::string> {
-    seqan3::sam_file_input alignmentsIn{mappingsInPath.string(), sam_field_ids{}};
+    seqan3::sam_file_input alignmentsIn{mappingsInPath.string(), SamFieldIDs{}};
 
     return alignmentsIn.header().ref_ids();
 }

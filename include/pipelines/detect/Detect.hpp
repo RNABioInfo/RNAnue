@@ -19,6 +19,7 @@
 #include "DetectParameters.hpp"
 #include "DetectSample.hpp"
 #include "FeatureAnnotator.hpp"
+#include "SamRecord.hpp"
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
 #include "SplitRecordsEvaluator.hpp"
@@ -45,7 +46,7 @@ class Detect {
 
    private:
     using AsyncGroupBufferType = AsyncSplitRecordGroupBufferView<std::ranges::ref_view<
-        seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, sam_field_ids>>>;
+        seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, SamFieldIDs>>>;
 
     struct ChunkedOutTmpDirs {
         fs::path outputTmpSplitsDir;

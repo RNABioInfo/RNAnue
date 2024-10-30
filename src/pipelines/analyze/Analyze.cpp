@@ -48,7 +48,7 @@ void Analyze::processSample(AnalyzeSample sample) {
     std::vector<InteractionCluster> clusters =
         SplitRecordsParser::parse(sample.input.splitAlignmentsPath);
 
-    seqan3::sam_file_input splitsIn{sample.input.splitAlignmentsPath, sam_field_ids{}};
+    seqan3::sam_file_input splitsIn{sample.input.splitAlignmentsPath, SamFieldIDs{}};
 
     auto &header = splitsIn.header();
     const std::deque<std::string> &referenceIDs = header.ref_ids();
@@ -123,7 +123,7 @@ void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
     const fs::path &unassignedSingletonsInPath, annotation::FeatureAnnotator &featureAnnotator,
     std::unordered_map<std::string, size_t> &transcriptCounts) {
     seqan3::sam_file_input unassignedSingletonsIn{unassignedSingletonsInPath.string(),
-                                                  sam_field_ids{}};
+                                                  SamFieldIDs{}};
 
     const auto annotationOrientation = parameters.featureOrientation;
 

@@ -21,7 +21,7 @@
 #include "SamRecord.hpp"
 
 using record_input_t =
-    seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, dataTypes::sam_field_ids>;
+    seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, dataTypes::SamFieldIDs>;
 
 template <std::ranges::range urng_t>
 class AsyncSplitRecordGroupBufferView

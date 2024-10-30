@@ -13,11 +13,9 @@
 
 using namespace dataTypes;
 
-inline std::vector<SamRecord> parseSamRecords(const char* samFileRaw) {
-    std::istringstream samStream(samFileRaw);
-
+inline auto parseSamRecords(const char* samFileRaw) -> std::vector<SamRecord> {
     using sam_file_input_t =
-        seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, sam_field_ids>;
+        seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, SamFieldIDs>;
     sam_file_input_t samFile(std::istringstream{samFileRaw}, seqan3::format_sam{});
 
     std::vector<SamRecord> samRecordsVector;

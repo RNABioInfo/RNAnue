@@ -14,6 +14,10 @@
 using namespace dataTypes;
 
 struct SplitRecordsTestParams {
+    SplitRecordsTestParams(std::vector<SplitRecords> splitRecords,
+                           std::vector<std::string> expectedBackRecordIDOrder)
+        : splitRecords(std::move(splitRecords)),
+          expectedBackRecordIDOrder(std::move(expectedBackRecordIDOrder)) {}
     const std::vector<SplitRecords> splitRecords;
     const std::vector<std::string> expectedBackRecordIDOrder;
 };

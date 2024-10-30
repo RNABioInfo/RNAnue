@@ -21,6 +21,7 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/AsyncSplitRecordGroupBufferTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/DeduplicatorTests.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
@@ -28,6 +29,7 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
 
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/Deduplicator.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/Detect.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsComplementarityEvaluator.cpp
