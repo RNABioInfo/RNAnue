@@ -106,6 +106,9 @@ void Align::buildIndex() {
         return;
     }
 
+    // Index file is written to same location as reference genome
+    indexPath = referencePath.parent_path() / referencePath.filename().replace_extension(".idx");
+
     Logger::log(LogLevel::INFO, "Building index");
     std::vector<std::string> args = {"-x", indexPath.string(),     "-d", referencePath.string(),
                                      "-t", std::to_string(threads)};
