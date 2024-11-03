@@ -144,7 +144,7 @@ void Preprocess::processPairedEnd(const PreprocessSamplePaired &sample) const {
     Logger::log(LogLevel::INFO, "Finished processing sample: ", sample.input.sampleName, " (",
                 totalResult.mergedRecords, " merged, ", totalResult.singleFwdRecords,
                 " single forward, ", totalResult.singleRevRecords, " single reverse,\n",
-                totalResult.failedMergedRecords, " failed merged, ",
+                totalResult.failedMergedRecords, " failed after merging, ",
                 totalResult.failedForwardRecords, " failed forward, ",
                 totalResult.failedReverseRecords, " failed reverse)");
 }

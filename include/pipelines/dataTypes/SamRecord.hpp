@@ -50,7 +50,7 @@ inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t>
         }
     }
 
-    return end;
+    return end - 1;
 }
 
 inline auto operator<(const SamRecord& lhs, const SamRecord& rhs) -> bool {

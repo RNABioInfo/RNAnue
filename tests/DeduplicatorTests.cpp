@@ -1,9 +1,6 @@
 #include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
-
 // Standard
-#include <algorithm>
 #include <filesystem>
 #include <vector>
 
@@ -13,7 +10,6 @@
 // Internal
 #include "Deduplicator.hpp"
 #include "FastqRecord.hpp"
-#include "mathematics.h"
 
 namespace fs = std::filesystem;
 using namespace dataTypes;

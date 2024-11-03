@@ -1,9 +1,7 @@
 #include "Deduplicator.hpp"
 
 // Standard
-#include <algorithm>
 #include <array>
-#include <cstdint>
 #include <functional>
 #include <string>
 #include <unordered_map>
