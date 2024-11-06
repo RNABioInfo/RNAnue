@@ -161,7 +161,7 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
     auto args = getGeneralAlignmentArgs();
 
     args.insert(args.end(),
-                {"-q", queryForwardFastqInPath.string(), "-m", queryReverseFastqInPath.string(),
+                {"-q", queryForwardFastqInPath.string(), "-p", queryReverseFastqInPath.string(),
                  "-o", alignmentsFastqOutPath.string()});
 
     auto c_args = convertToCStrings(args);
