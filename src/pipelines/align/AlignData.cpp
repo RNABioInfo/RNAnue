@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "AlignSample.hpp"
+#include "PreprocessData.hpp"
 #include "Utility.hpp"
 
 using namespace helper;
@@ -28,7 +29,8 @@ auto AlignData::retrieveSamples(const std::string& sampleGroup, const fs::path& 
                 outputDirPipeline / inputSampleSingle->sampleName /
                 (inputSampleSingle->sampleName + outSampleAlignedSuffix);
 
-            samples.emplace_back(AlignSampleSingle{*inputSampleSingle, {outputAlignmentsPath}});
+            samples.emplace_back(
+                AlignSampleSingle{.input = *inputSampleSingle, .output = {outputAlignmentsPath}});
 
             const auto message = "Single-end sample " + inputSampleSingle->sampleName + " found";
             Logger::log(LogLevel::INFO, message);
@@ -51,11 +53,18 @@ auto AlignData::retrieveSamples(const std::string& sampleGroup, const fs::path& 
                 outputDirSample / (parentName + outSampleSingletonForwardAlignedSuffix);
             const fs::path outputAlignmentsSingletonReversePath =
                 outputDirSample / (parentName + outSampleSingletonReverseAlignedSuffix);
+            const fs::path outputAlignmentsPairedPath =
+                outputDirSample / (parentName + outSamplePairedAlignedSuffix);
 
             samples.emplace_back(AlignSampleMergedPaired{
-                *inputSamplePaired,
-                {outputAlignmentsPath, outputAlignmentsMergedReadsPath,
-                 outputAlignmentsSingletonForwardPath, outputAlignmentsSingletonReversePath}});
+                .input = *inputSamplePaired,
+                .output = {.outputAlignmentsPath = outputAlignmentsPath,
+                           .outputAlignmentsMergedReadsPath = outputAlignmentsMergedReadsPath,
+                           .outputAlignmentsSingletonForwardReadsPath =
+                               outputAlignmentsSingletonForwardPath,
+                           .outputAlignmentsSingletonReverseReadsPath =
+                               outputAlignmentsSingletonReversePath,
+                           .outputAlignmentsPairedReadsPath = outputAlignmentsPairedPath}});
 
             const auto message = "Paired-end sample " + parentName + " found";
             Logger::log(LogLevel::INFO, message);
@@ -108,41 +117,43 @@ auto AlignData::retrieveInputSample(const fs::path& sampleDir) -> InputSampleTyp
 
 auto AlignData::retrieveInputPaired(const std::string& sampleName,
                                     const std::vector<fs::path>& inputSamples) -> AlignInputPaired {
-    std::optional<fs::path> mergedFastqPath;
-    std::optional<fs::path> singletonForwardFastqPath;
-    std::optional<fs::path> singletonReverseFastqPath;
+    std::unordered_map<std::string, std::optional<fs::path>> suffixToPath = {
+        {preprocess::outSampleFastqPairedMergeSuffix, std::nullopt},
+        {preprocess::outSampleFastqPairedForwardSingletonSuffix, std::nullopt},
+        {preprocess::outSampleFastqPairedReverseSingletonSuffix, std::nullopt},
+        {preprocess::outSampleFastqPairedForwardPairedSuffix, std::nullopt},
+        {preprocess::outSampleFastqPairedReversePairedSuffix, std::nullopt}};
 
     for (const fs::path& path : inputSamples) {
-        if (hasSuffix(path, preprocess::outSampleFastqPairedMergeSuffix)) {
-            mergedFastqPath = path;
-        } else if (hasSuffix(path, preprocess::outSampleFastqPairedForwardSingletonSuffix)) {
-            singletonForwardFastqPath = path;
-        } else if (hasSuffix(path, preprocess::outSampleFastqPairedReverseSingletonSuffix)) {
-            singletonReverseFastqPath = path;
-        } else {
-            const std::string message =
-                "Unexpected file " + path.string() + " found in " + path.parent_path().string();
-            Logger::log(LogLevel::WARNING, message);
+        for (auto& [suffix, optPath] : suffixToPath) {
+            if (hasSuffix(path, suffix)) {
+                optPath = path;
+                break;
+            }
         }
     }
 
-    if (!mergedFastqPath.has_value() || !singletonForwardFastqPath.has_value() ||
-        !singletonReverseFastqPath.has_value()) {
-        const std::string message = "The directory " + inputSamples.front().parent_path().string() +
-                                    " is missing one or more of the following files: " +
-                                    preprocess::outSampleFastqPairedMergeSuffix + ", " +
-                                    preprocess::outSampleFastqPairedForwardSingletonSuffix + ", " +
-                                    preprocess::outSampleFastqPairedReverseSingletonSuffix;
-        Logger::log(LogLevel::ERROR, message);
-        throw std::runtime_error(message);
+    for (const auto& [suffix, optPath] : suffixToPath) {
+        if (!optPath.has_value()) {
+            std::string message = "The directory " + inputSamples.front().parent_path().string();
+            message += " is missing the following file: ";
+            message += suffix;
+            Logger::log(LogLevel::ERROR, message);
+            throw std::runtime_error(message);
+        }
     }
 
-    return AlignInputPaired{sampleName, mergedFastqPath.value(), singletonForwardFastqPath.value(),
-                            singletonReverseFastqPath.value()};
+    return AlignInputPaired{
+        sampleName,
+        suffixToPath[preprocess::outSampleFastqPairedMergeSuffix].value(),
+        suffixToPath[preprocess::outSampleFastqPairedForwardSingletonSuffix].value(),
+        suffixToPath[preprocess::outSampleFastqPairedReverseSingletonSuffix].value(),
+        suffixToPath[preprocess::outSampleFastqPairedForwardPairedSuffix].value(),
+        suffixToPath[preprocess::outSampleFastqPairedReversePairedSuffix].value()};
 }
 
-auto AlignData::retrieveInputSingle(const std::string& sampleName,
-                                    const fs::path& inputSample) -> AlignInputSingle {
+auto AlignData::retrieveInputSingle(const std::string& sampleName, const fs::path& inputSample)
+    -> AlignInputSingle {
     if (!hasSuffix(inputSample, preprocess::outSampleFastqSuffix)) {
         const std::string message = "The directory " + inputSample.parent_path().string() +
                                     " is missing the file: " + preprocess::outSampleFastqSuffix;

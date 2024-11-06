@@ -23,12 +23,16 @@ static const std::string outSampleTmpFastqDirPrefix = "tmp_fastq";
 static const std::string outSampleTmpMergedFastqDirPrefix = "tmp_merged_fastq";
 static const std::string outSampleTmpForwardSingletonFastqDirPrefix = "tmp_forward_singleton_fastq";
 static const std::string outSampleTmpReverseSingletonFastqDirPrefix = "tmp_reverse_singleton_fastq";
+static const std::string outSampleTmpForwardPairedFastqDirPrefix = "tmp_forward_paired_fastq";
+static const std::string outSampleTmpReversePairedFastqDirPrefix = "tmp_reverse_paired_fastq";
 
 static const std::string outSampleFastqPairedMergeSuffix = "_merged_passed.fastq.gz";
 static const std::string outSampleFastqPairedForwardSingletonSuffix =
     "_singleton_passed_R1.fastq.gz";
 static const std::string outSampleFastqPairedReverseSingletonSuffix =
     "_singleton_passed_R2.fastq.gz";
+static const std::string outSampleFastqPairedForwardPairedSuffix = "_non_merged_passed_R1.fastq.gz";
+static const std::string outSampleFastqPairedReversePairedSuffix = "_non_merged_passed_R2.fastq.gz";
 
 static const std::string pipelinePrefix = "01_preprocess";
 

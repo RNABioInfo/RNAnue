@@ -30,21 +30,7 @@ struct PipelineData {
     }
 
     static auto getSampleName(const fs::path &filePath) -> std::string {
-        std::string fileName = filePath.stem().string();
-        size_t underscorePos = fileName.find('_');
-
-        if (underscorePos != std::string::npos) {
-            return fileName.substr(0, underscorePos);
-        }
-
-        // If file is gzipped also remove the last file extension
-
-        size_t dotPos = fileName.find_last_of('.');
-        if (dotPos != std::string::npos) {
-            fileName = fileName.substr(0, dotPos);
-        }
-
-        return fileName;
+        return filePath.parent_path().stem().string();
     }
 
     static auto contains(const std::string &fullString, const std::string &substring) -> bool {

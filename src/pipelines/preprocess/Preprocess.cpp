@@ -4,10 +4,10 @@
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/sequence_file/output.hpp>
 
+#include "Logger.hpp"
 #include "PairedRecordMerger.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
-#include "seqan3/alphabet/nucleotide/dna5.hpp"
 
 namespace pipelines::preprocess {
 Preprocess::Preprocess(PreprocessParameters params) : parameters(std::move(params)) {}
@@ -72,6 +72,8 @@ void Preprocess::processSingleEnd(const PreprocessSampleSingle &sample) const {
         const auto res = result.get();
         totalResult += res;
     }
+
+    Logger::log(LogLevel::INFO, "Merging temporary files");
 
     const auto tmpFilePaths = helper::getFilePathsInDir(sample.output.tmpFastqDir);
     helper::mergeFastqFiles(tmpFilePaths, sample.output.outputFastqPath);
@@ -141,11 +143,23 @@ void Preprocess::processPairedEnd(const PreprocessSamplePaired &sample) const {
                             sample.output.outputSingletonReverseFastqPath);
     helper::deleteDir(sample.output.tmpSingletonReverseFastqDir);
 
+    auto tmpPairedForwardFilePaths =
+        helper::getFilePathsInDir(sample.output.tmpPairedForwardFastqDir);
+    std::ranges::sort(tmpPairedForwardFilePaths);
+    helper::mergeFastqFiles(tmpPairedForwardFilePaths, sample.output.outputPairedForwardFastqPath);
+    helper::deleteDir(sample.output.tmpPairedForwardFastqDir);
+
+    auto tmpPairedReverseFilePaths =
+        helper::getFilePathsInDir(sample.output.tmpPairedReverseFastqDir);
+    std::ranges::sort(tmpPairedReverseFilePaths);
+    helper::mergeFastqFiles(tmpPairedReverseFilePaths, sample.output.outputPairedReverseFastqPath);
+    helper::deleteDir(sample.output.tmpPairedReverseFastqDir);
+
     Logger::log(LogLevel::INFO, "Finished processing sample: ", sample.input.sampleName, " (",
-                totalResult.mergedRecords, " merged, ", totalResult.singleFwdRecords,
-                " single forward, ", totalResult.singleRevRecords, " single reverse,\n",
-                totalResult.failedMergedRecords, " failed after merging, ",
-                totalResult.failedForwardRecords, " failed forward, ",
+                totalResult.mergedRecords, " merged, ", totalResult.pairedRecordPairs,
+                " non-merged paired, ", totalResult.singleFwdRecords, " single forward, ",
+                totalResult.singleRevRecords, " single reverse, ", totalResult.failedMergedRecords,
+                " failed after merging, ", totalResult.failedForwardRecords, " failed forward, ",
                 totalResult.failedReverseRecords, " failed reverse)");
 }
 
@@ -221,16 +235,24 @@ Preprocess::PairedEndResult Preprocess::processPairedEndRecordChunk(
     PairedEndResult result;
     const std::string uuid = helper::getUUID();
 
-    fs::path tmpMergedFastqOutPath = sampleOutput.tmpMergedFastqDir / (uuid + ".fastq.gz");
+    const fs::path tmpMergedFastqOutPath = sampleOutput.tmpMergedFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output mergedOut{tmpMergedFastqOutPath};
 
-    fs::path tmpSingletonFwdFastqOutPath =
+    const fs::path tmpSingletonFwdFastqOutPath =
         sampleOutput.tmpSingletonForwardFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output snglFwdOut{tmpSingletonFwdFastqOutPath};
 
-    fs::path tmpSingletonRevFastqOutPath =
+    const fs::path tmpSingletonRevFastqOutPath =
         sampleOutput.tmpSingletonReverseFastqDir / (uuid + ".fastq.gz");
     seqan3::sequence_file_output snglRevOut{tmpSingletonRevFastqOutPath};
+
+    const fs::path tmpPairedFwdFastqOutPath =
+        sampleOutput.tmpPairedForwardFastqDir / (uuid + ".fastq.gz");
+    seqan3::sequence_file_output pairedFwdOut{tmpPairedFwdFastqOutPath};
+
+    const fs::path tmpPairedRevFastqOutPath =
+        sampleOutput.tmpPairedReverseFastqDir / (uuid + ".fastq.gz");
+    seqan3::sequence_file_output pairedRevOut{tmpPairedRevFastqOutPath};
 
     for (auto &&[record1, record2] : pairedRecordInputBuffer) {
         if (parameters.trimPolyG) {
@@ -270,11 +292,10 @@ Preprocess::PairedEndResult Preprocess::processPairedEndRecordChunk(
                                                     parameters.maxMissMatchFractionMerging);
 
             if (!mergedRecord.has_value()) {
-                snglFwdOut.push_back(std::move(record1));
-                snglRevOut.push_back(std::move(record2));
+                pairedFwdOut.push_back(std::move(record1));
+                pairedRevOut.push_back(std::move(record2));
 
-                result.singleFwdRecords += 1;
-                result.singleRevRecords += 1;
+                result.pairedRecordPairs += 1;
 
                 continue;
             }

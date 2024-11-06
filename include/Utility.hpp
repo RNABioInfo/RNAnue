@@ -96,6 +96,11 @@ auto getValidFilePaths(const fs::path &directory,
             continue;
         }
 
+        if (entry.path().filename().string().front() == '.') {
+            Logger::log(LogLevel::INFO, "Ignoring hidden file: ", entry);
+            continue;
+        }
+
         Logger::log(LogLevel::DEBUG, "Found file: ", entry);
 
         const auto &filePathStr = entry.path().string();

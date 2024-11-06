@@ -12,25 +12,30 @@
 #include "PreprocessData.hpp"
 #include "pipelines/PipelineData.hpp"
 
-namespace pipelines {
-namespace align {
+namespace pipelines::align {
 
 static const std::array<std::string, 1> validInputSuffixSingleton = {
     preprocess::outSampleFastqSuffix};
-static const std::array<std::string, 3> validInputSuffixesPaired{
+static const std::array<std::string, 5> validInputSuffixesPaired{
     preprocess::outSampleFastqPairedMergeSuffix,
     preprocess::outSampleFastqPairedForwardSingletonSuffix,
-    preprocess::outSampleFastqPairedReverseSingletonSuffix};
+    preprocess::outSampleFastqPairedReverseSingletonSuffix,
+    preprocess::outSampleFastqPairedForwardPairedSuffix,
+    preprocess::outSampleFastqPairedReversePairedSuffix};
 
-static const std::array<std::string, 4> validInputSuffixes{
-    preprocess::outSampleFastqSuffix, preprocess::outSampleFastqPairedMergeSuffix,
+static const std::array<std::string, 6> validInputSuffixes{
+    preprocess::outSampleFastqSuffix,
+    preprocess::outSampleFastqPairedMergeSuffix,
     preprocess::outSampleFastqPairedForwardSingletonSuffix,
-    preprocess::outSampleFastqPairedReverseSingletonSuffix};
+    preprocess::outSampleFastqPairedReverseSingletonSuffix,
+    preprocess::outSampleFastqPairedForwardPairedSuffix,
+    preprocess::outSampleFastqPairedReversePairedSuffix};
 
 static const std::string outSampleAlignedSuffix = "_complete_aligned.bam";
 static const std::string outSampleMergedAlignedSuffix = "_merged_aligned.bam";
 static const std::string outSampleSingletonForwardAlignedSuffix = "_singleton_forward_aligned.bam";
 static const std::string outSampleSingletonReverseAlignedSuffix = "_singleton_reverse_aligned.bam";
+static const std::string outSamplePairedAlignedSuffix = "_paired_aligned.bam";
 
 static const std::string pipelinePrefix = "02_align";
 
@@ -52,9 +57,8 @@ struct AlignData : public pipelines::PipelineData {
     static auto retrieveInputSample(const fs::path& sampleDir) -> InputSampleType;
     static auto retrieveInputPaired(const std::string& sampleName,
                                     const std::vector<fs::path>& inputSamples) -> AlignInputPaired;
-    static auto retrieveInputSingle(const std::string& sampleName,
-                                    const fs::path& inputSample) -> AlignInputSingle;
+    static auto retrieveInputSingle(const std::string& sampleName, const fs::path& inputSample)
+        -> AlignInputSingle;
 };
 
-}  // namespace align
-}  // namespace pipelines
+}  // namespace pipelines::align

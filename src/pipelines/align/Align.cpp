@@ -65,9 +65,14 @@ void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
     alignSingleReads(sample.input.inputSingletonReverseFastqPath,
                      sample.output.outputAlignmentsSingletonReverseReadsPath);
 
-    std::vector<fs::path> samFiles = {sample.output.outputAlignmentsMergedReadsPath,
-                                      sample.output.outputAlignmentsSingletonForwardReadsPath,
-                                      sample.output.outputAlignmentsSingletonReverseReadsPath};
+    alignPairedReads(sample.input.inputPairedForwardFastqPath,
+                     sample.input.inputPairedReverseFastqPath,
+                     sample.output.outputAlignmentsPairedReadsPath);
+
+    std::vector<fs::path> samFiles{sample.output.outputAlignmentsMergedReadsPath,
+                                   sample.output.outputAlignmentsSingletonForwardReadsPath,
+                                   sample.output.outputAlignmentsSingletonReverseReadsPath,
+                                   sample.output.outputAlignmentsPairedReadsPath};
 
     helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath);
 

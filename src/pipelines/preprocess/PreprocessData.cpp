@@ -61,6 +61,10 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
                         outputDirSample / (parentName + outSampleFastqPairedForwardSingletonSuffix);
                     const fs::path outputSampleFastqPathReverseSingleton =
                         outputDirSample / (parentName + outSampleFastqPairedReverseSingletonSuffix);
+                    const fs::path outputSampleFastqPathForwardPaired =
+                        outputDirSample / (parentName + outSampleFastqPairedForwardPairedSuffix);
+                    const fs::path outputSampleFastqPathReversePaired =
+                        outputDirSample / (parentName + outSampleFastqPairedReversePairedSuffix);
 
                     const fs::path outputSampleTmpFastqMergedDir =
                         outputDirSample / outSampleTmpMergedFastqDirPrefix;
@@ -74,17 +78,30 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
                         outputDirSample / outSampleTmpReverseSingletonFastqDirPrefix;
                     fs::create_directories(outputSampleTmpFastqSingletonReverseDir);
 
+                    const fs::path outputSampleTmpFastqForwardPairedDir =
+                        outputDirSample / outSampleTmpForwardPairedFastqDirPrefix;
+                    fs::create_directories(outputSampleTmpFastqForwardPairedDir);
+
+                    const fs::path outputSampleTmpFastqReversePairedDir =
+                        outputDirSample / outSampleTmpReversePairedFastqDirPrefix;
+                    fs::create_directories(outputSampleTmpFastqReversePairedDir);
+
                     samples.emplace_back(PreprocessSamplePaired{
                         .input = inputSamplePaired,
                         .output = {
                             .tmpMergedFastqDir = outputSampleTmpFastqMergedDir,
                             .tmpSingletonForwardFastqDir = outputSampleTmpFastqSingletonForwardDir,
                             .tmpSingletonReverseFastqDir = outputSampleTmpFastqSingletonReverseDir,
+                            .tmpPairedForwardFastqDir = outputSampleTmpFastqForwardPairedDir,
+                            .tmpPairedReverseFastqDir = outputSampleTmpFastqReversePairedDir,
                             .outputMergedFastqPath = outputSampleFastqPathMerged,
                             .outputSingletonForwardFastqPath =
                                 outputSampleFastqPathForwardSingleton,
                             .outputSingletonReverseFastqPath =
-                                outputSampleFastqPathReverseSingleton}});
+                                outputSampleFastqPathReverseSingleton,
+                            .outputPairedForwardFastqPath = outputSampleFastqPathForwardPaired,
+                            .outputPairedReverseFastqPath = outputSampleFastqPathReversePaired,
+                        }});
 
                     const auto message = "Paired-end sample " + parentName + " found";
                     Logger::log(LogLevel::INFO, message);

@@ -42,10 +42,14 @@ struct PrepocessSampleOutputPaired {
     fs::path tmpMergedFastqDir;
     fs::path tmpSingletonForwardFastqDir;
     fs::path tmpSingletonReverseFastqDir;
+    fs::path tmpPairedForwardFastqDir;
+    fs::path tmpPairedReverseFastqDir;
 
     fs::path outputMergedFastqPath;
     fs::path outputSingletonForwardFastqPath;
     fs::path outputSingletonReverseFastqPath;
+    fs::path outputPairedForwardFastqPath;
+    fs::path outputPairedReverseFastqPath;
 };
 
 using OutputSampleType = std::variant<PrepocessSampleOutputSingle, PrepocessSampleOutputPaired>;
