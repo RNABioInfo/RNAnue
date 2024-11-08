@@ -3,15 +3,14 @@
 // Standard
 #include <sys/stat.h>
 
-#include <future>
 #include <string>
 #include <vector>
 
 // Internal
 #include "Constants.hpp"
 #include "FeatureWriter.hpp"
-#include "InteractionClusterGenerator.hpp"
 #include "InteractionsWriter.hpp"
+#include "ParallelInteractionClusterGenerator.hpp"
 #include "SplitRecordsParser.hpp"
 #include "StatisticEvaluator.hpp"
 
@@ -21,11 +20,8 @@ namespace pipelines::analyze {
 void Analyze::process(const AnalyzeData &data) {
     Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
-    std::vector<std::future<void>> futures;
-
-    futures.reserve(data.treatmentSamples.size());
     for (const auto &sample : data.treatmentSamples) {
-        futures.push_back(std::async(std::launch::async, &Analyze::processSample, this, sample));
+        processSample(sample);
     }
 
     if (!data.controlSamples.has_value()) {
@@ -34,11 +30,7 @@ void Analyze::process(const AnalyzeData &data) {
     }
 
     for (const auto &sample : data.controlSamples.value()) {
-        futures.push_back(std::async(std::launch::async, &Analyze::processSample, this, sample));
-    }
-
-    for (auto &future : futures) {
-        future.get();
+        processSample(sample);
     }
 }
 
@@ -53,14 +45,16 @@ void Analyze::processSample(AnalyzeSample sample) {
     auto &header = splitsIn.header();
     const std::deque<std::string> &referenceIDs = header.ref_ids();
 
-    InteractionClusterGenerator clusterGenerator{sample.input.sampleName,
-                                                 featureAnnotator,
-                                                 referenceIDs,
-                                                 parameters.featureOrientation,
-                                                 parameters.minimumClusterReadCount,
-                                                 parameters.clusterDistanceThreshold};
+    ParallelInteractionClusterGenerator clusterGenerator{
+        featureAnnotator,
+        referenceIDs,
+        {.featureOrientation = parameters.featureOrientation,
+         .maxOverlapFraction = parameters.maxOverlapFraction,
+         .minReadCount = parameters.minimumClusterReadCount,
+         .graceDistance = parameters.clusterDistanceThreshold}};
 
-    auto mergingResult = clusterGenerator.mergeClusters(std::move(clusters));
+    auto mergingResult = clusterGenerator.mergeClusters(std::move(clusters), parameters.threadCount,
+                                                        parameters.chunkSize);
 
     assignNonAnnotatedContiguousToSupplementaryFeatures(
         sample.input.unassignedContiguousAlignmentsPath,

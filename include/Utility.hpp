@@ -23,12 +23,24 @@
 
 namespace helper {
 
-constexpr int DOUBLE_COMPARISON_GRACE_FACTOR = 10;
+constexpr auto RELATIVE_DIFFERENCE_FACTOR = 0.0001;
 
-inline auto isEqual(double lhs, double rhs,
-                    double epsilon = std::numeric_limits<double>::epsilon() *
-                                     DOUBLE_COMPARISON_GRACE_FACTOR) -> bool {
-    return fabs(lhs - rhs) < epsilon;
+inline auto isApproxEqual(double lhs, double rhs,
+                          double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR) -> bool {
+    const auto greaterMagnitude = std::max(std::fabs(lhs), std::fabs(rhs));
+    return fabs(lhs - rhs) < relativeDifferenceFactor * greaterMagnitude;
+}
+
+inline auto vectorsApproxEqual(const std::vector<double> &first, const std::vector<double> &second,
+                               double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR)
+    -> bool {
+    if (first.size() != second.size()) {
+        return false;
+    }
+
+    return std::ranges::equal(first, second, [&](double lhs, double rhs) {
+        return isApproxEqual(lhs, rhs, relativeDifferenceFactor);
+    });
 }
 
 void crashHandler(int signal);

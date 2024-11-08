@@ -37,6 +37,7 @@ class FeatureAnnotator {
                      const std::unordered_set<std::string>& includedFeatures);
 
     explicit FeatureAnnotator(const dataTypes::FeatureMap& featureMap);
+
     explicit FeatureAnnotator() = default;
     FeatureAnnotator(const FeatureAnnotator&) = default;
     FeatureAnnotator(FeatureAnnotator&&) = default;
@@ -101,7 +102,7 @@ class FeatureAnnotator {
 class FeatureAnnotator::Results {
    public:
     Results(const IITree<int, dataTypes::GenomicFeature>* tree, const std::vector<size_t>& indices,
-            std::optional<dataTypes::Strand> strand);
+            std::optional<dataTypes::GenomicStrand> strand);
 
     Results() = delete;
 
@@ -113,7 +114,7 @@ class FeatureAnnotator::Results {
    private:
     const IITree<int, dataTypes::GenomicFeature>* tree;
     std::vector<size_t> indices;
-    std::optional<dataTypes::Strand> strand;
+    std::optional<dataTypes::GenomicStrand> strand;
 };
 
 struct FeatureAnnotator::Results::Iterator {
@@ -125,7 +126,7 @@ struct FeatureAnnotator::Results::Iterator {
 
     explicit Iterator(const IITree<int, dataTypes::GenomicFeature>* tree,
                       const std::vector<size_t>& indices, size_t index,
-                      const std::optional<dataTypes::Strand>& strand);
+                      const std::optional<dataTypes::GenomicStrand>& strand);
 
     [[nodiscard]] auto operator*() const -> reference;
     [[nodiscard]] auto operator->() const -> pointer;
@@ -145,7 +146,7 @@ struct FeatureAnnotator::Results::Iterator {
     const IITree<int, dataTypes::GenomicFeature>* tree;
     std::vector<size_t> indices;
     size_t current_index;
-    std::optional<dataTypes::Strand> strand;
+    std::optional<dataTypes::GenomicStrand> strand;
 };
 
 struct FeatureAnnotator::MergeInsertResult {

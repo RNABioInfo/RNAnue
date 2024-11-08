@@ -58,11 +58,11 @@ void InteractionsWriter::writeInteractions(
         ++clusterID;
     }
 
-    Logger::log(LogLevel::INFO, "(", sampleName, ") After filtering kept ",
-                intramolecularCount + intermolecularCount, " split interactions");
-    Logger::log(LogLevel::INFO, "(", sampleName, ") Of which ", intramolecularCount,
+    Logger::log(LogLevel::INFO, "After filtering kept ", intramolecularCount + intermolecularCount,
+                " split interactions");
+    Logger::log(LogLevel::INFO, "Of which ", intramolecularCount,
                 " are intramolecular interactions");
-    Logger::log(LogLevel::INFO, "(", sampleName, ") Of which ", intermolecularCount,
+    Logger::log(LogLevel::INFO, "Of which ", intermolecularCount,
                 " are intermolecular interactions");
 }
 

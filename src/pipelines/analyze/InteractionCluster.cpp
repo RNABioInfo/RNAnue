@@ -18,11 +18,7 @@ auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment
     InteractionSegment firstSegment = {std::min(firstFragment, secondFragment)};
     InteractionSegment secondSegment = {std::max(firstFragment, secondFragment)};
 
-    return {firstSegment,
-            secondSegment,
-            firstFragment.recordID,
-            secondFragment.recordID,
-            firstFragment.complementarityScore,
+    return {firstSegment, secondSegment, firstFragment.recordID, firstFragment.complementarityScore,
             firstFragment.hybridizationEnergy};
 }
 
@@ -40,11 +36,11 @@ auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment
 auto InteractionCluster::operator<(const InteractionCluster &other) const -> bool {
     if (secondSegment.getReferenceIDIndex() < other.secondSegment.getReferenceIDIndex()) {
         return true;
-    } else if (secondSegment.getReferenceIDIndex() == other.secondSegment.getReferenceIDIndex()) {
-        return secondSegment.getEnd() < other.secondSegment.getEnd();
-    } else {
-        return false;
     }
+    if (secondSegment.getReferenceIDIndex() == other.secondSegment.getReferenceIDIndex()) {
+        return secondSegment.getEnd() < other.secondSegment.getEnd();
+    }
+    return false;
 }
 
 auto InteractionCluster::operator>(const InteractionCluster &other) const -> bool {
@@ -53,16 +49,26 @@ auto InteractionCluster::operator>(const InteractionCluster &other) const -> boo
 
 auto InteractionCluster::operator==(const InteractionCluster &other) const -> bool {
     return firstSegment == other.firstSegment && secondSegment == other.secondSegment &&
-           firstSegmentRecordIDs == other.firstSegmentRecordIDs &&
-           secondSegmentRecordIDs == other.secondSegmentRecordIDs &&
-           complementarityScores == other.complementarityScores &&
-           hybridizationEnergies == other.hybridizationEnergies;
+           recordIDs == other.recordIDs &&
+           helper::vectorsApproxEqual(complementarityScores, other.complementarityScores) &&
+           helper::vectorsApproxEqual(hybridizationEnergies, other.hybridizationEnergies);
 }
+
+auto InteractionCluster::isBefore(const InteractionCluster &other) const noexcept -> bool {
+    return (getSecondSegment().getReferenceIDIndex() <
+            other.getSecondSegment().getReferenceIDIndex()) ||
+           (getSecondSegment().getEnd() < other.getSecondSegment().getStart());
+};
 
 auto InteractionCluster::overlaps(const InteractionCluster &other,
                                   const int graceDistance) const noexcept -> bool {
     return firstSegment.overlaps(other.firstSegment, graceDistance) &&
            secondSegment.overlaps(other.secondSegment, graceDistance);
+}
+
+auto InteractionCluster::segmentsMaxOverlapFraction() const noexcept -> double {
+    return std::max(firstSegment.overlapFraction(secondSegment),
+                    secondSegment.overlapFraction(firstSegment));
 }
 
 void InteractionCluster::merge(const InteractionCluster &other) {
@@ -77,17 +83,9 @@ void InteractionCluster::merge(const InteractionCluster &other) {
     maxComplementarityScore = std::max(maxComplementarityScore, other.maxComplementarityScore);
     minHybridizationEnergy = std::min(minHybridizationEnergy, other.minHybridizationEnergy);
 
-    firstSegmentRecordIDs.reserve(firstSegmentRecordIDs.size() +
-                                  other.firstSegmentRecordIDs.size());
-    firstSegmentRecordIDs.insert(firstSegmentRecordIDs.end(),
-                                 std::make_move_iterator(other.firstSegmentRecordIDs.begin()),
-                                 std::make_move_iterator(other.firstSegmentRecordIDs.end()));
-
-    secondSegmentRecordIDs.reserve(secondSegmentRecordIDs.size() +
-                                   other.secondSegmentRecordIDs.size());
-    secondSegmentRecordIDs.insert(secondSegmentRecordIDs.end(),
-                                  std::make_move_iterator(other.secondSegmentRecordIDs.begin()),
-                                  std::make_move_iterator(other.secondSegmentRecordIDs.end()));
+    recordIDs.reserve(recordIDs.size() + other.recordIDs.size());
+    recordIDs.insert(recordIDs.end(), std::make_move_iterator(other.recordIDs.begin()),
+                     std::make_move_iterator(other.recordIDs.end()));
 
     complementarityScores.reserve(complementarityScores.size() +
                                   other.complementarityScores.size());
@@ -112,14 +110,21 @@ auto InteractionCluster::hybridizationEnergyStatistics() const -> double {
 
 auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)
     -> std::ostream & {
-    return outputStream << "InteractionCluster:\n"
-                        << "First segment: " << interactionCluster.getFirstSegment()
-                        << "\nSecond segment id: " << interactionCluster.getSecondSegment() << "\n"
-                        << "Complementarity score count: "
-                        << interactionCluster.getComplementarityScores().size() << "\n"
-                        << "Hybridization energie count: "
-                        << interactionCluster.getHybridizationEnergies().size() << "\n"
-                        << "Count: " << interactionCluster.fragmentCount() << "\n";
+    outputStream << "InteractionCluster:\n"
+                 << "First segment: " << interactionCluster.getFirstSegment()
+                 << "\nSecond segment id: " << interactionCluster.getSecondSegment() << "\n"
+                 << "Complementarity score count: "
+                 << interactionCluster.getComplementarityScores().size() << "\n"
+                 << "Hybridization energie count: "
+                 << interactionCluster.getHybridizationEnergies().size() << "\n"
+                 << "Count: " << interactionCluster.fragmentCount() << "\n";
+
+    for (const auto &recordID : interactionCluster.getRecordIDs()) {
+        outputStream << recordID << ", ";
+    }
+    outputStream << "\n";
+
+    return outputStream;
 }
 
 }  // namespace pipelines::analyze

@@ -50,6 +50,7 @@ constexpr double defaultHybridizationEnergyCutoff = 0;
 constexpr int defaultSplicingTolerance = 5;
 
 // Analyze defaults
+constexpr double defaultMaxOverlap = 0.5;
 constexpr int defaultClusterTolerance = 0;
 constexpr double defaultPAdjCutOff = 1.0;
 constexpr size_t defaultMinClusterCount = 1;

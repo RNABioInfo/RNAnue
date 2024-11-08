@@ -42,7 +42,7 @@ TEST_P(StatisticEvaluatorTests, Default) {
     ASSERT_EQ(results.size(), param.expectedResults.size());
 
     for (const auto& result : results) {
-        std::cout << "Result: " << result.getFirstSegmentRecordIDs().front()
+        std::cout << "Result: " << result.getRecordIDs().front()
                   << ", pvalue: " << result.getPValue() << ", padj: " << result.getPadj() << "\n";
     }
 }
@@ -51,16 +51,16 @@ const std::unordered_map<std::string, size_t> transcriptFrequencies1{
     {"A", 15UL}, {"B", 15UL}, {"C", 25UL}};
 
 const InteractionCluster intraMolecularCluster(
-    InteractionSegment(0, Strand::FORWARD, 0, 10), InteractionSegment(0, Strand::FORWARD, 20, 30),
+    {.firstSegment = InteractionSegment(0, GenomicStrand::FORWARD, 0, 10),
+     .secondSegment = InteractionSegment(0, GenomicStrand::FORWARD, 20, 30)},
     {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
-    {"11", "12", "13", "14", "15", "16", "17", "18", "19", "20"},
     {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
     {-200, -200, -200, -200, -200, -200, -200, -200, -200, -200});
 
 const InteractionCluster interMolecularCluster(
-    InteractionSegment(0, Strand::FORWARD, 30, 40), InteractionSegment(0, Strand::FORWARD, 45, 55),
+    {.firstSegment = InteractionSegment(0, GenomicStrand::FORWARD, 30, 40),
+     .secondSegment = InteractionSegment(0, GenomicStrand::FORWARD, 45, 55)},
     {"21", "22", "23", "24", "25", "26", "27", "28", "29", "30"},
-    {"31", "32", "33", "34", "35", "36", "37", "38", "39", "40"},
     {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
     {-200, -200, -200, -200, -200, -200, -200, -200, -200, -200});
 

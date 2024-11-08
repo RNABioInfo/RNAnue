@@ -41,28 +41,28 @@ TEST_P(SplitRecordsTests, IsSortedFromBackToFront) {
     EXPECT_EQ(expectedBackRecordIDOrder, backRecordIDOrder);
 }
 
-auto splitRecords1 = R"(@HD	VN:1.6
+const auto splitRecords1 = R"(@HD	VN:1.6
 @SQ	SN:chromosome1	LN:100
 @SQ	SN:chromosome2	LN:100
 SRR18331301.231	0	chromosome1	0	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.232	0	chromosome1	40	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
-auto splitRecords2 = R"(@HD	VN:1.6
+const auto splitRecords2 = R"(@HD	VN:1.6
 @SQ	SN:chromosome1	LN:100
 @SQ	SN:chromosome2	LN:100
 SRR18331301.233	0	chromosome1	0	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.234	0	chromosome1	50	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
-auto splitRecords3 = R"(@HD	VN:1.6
+const auto splitRecords3 = R"(@HD	VN:1.6
 @SQ	SN:chromosome1	LN:100
 @SQ	SN:chromosome2	LN:100
 SRR18331301.235	0	chromosome1	0	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.236	0	chromosome1	50	20	7M	*	0	0	ATCGCGT	@@@@@@@	AS:i:0	XS:i:0
 )";
 
-auto splitRecords4 = R"(@HD	VN:1.6
+const auto splitRecords4 = R"(@HD	VN:1.6
 @SQ	SN:chromosome1	LN:100
 @SQ	SN:chromosome2	LN:100
 SRR18331301.230	0	chromosome2	40	20	7M	*	0	0	ATCGCGT	@@@@@@@	AS:i:0	XS:i:0

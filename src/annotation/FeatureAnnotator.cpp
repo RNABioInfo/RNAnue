@@ -200,7 +200,7 @@ auto FeatureAnnotator::overlappingFeatureIterator(const dataTypes::GenomicRegion
 
     iterator->second.overlap(region.startPosition, region.endPosition, indices);
 
-    std::optional<dataTypes::Strand> strand = std::nullopt;
+    std::optional<dataTypes::GenomicStrand> strand = std::nullopt;
 
     if (orientation == Orientation::SAME) {
         strand = region.strand;
@@ -321,7 +321,7 @@ auto FeatureAnnotator::getBestOverlappingFeature(const SamRecord &record,
 // Results and Iterator implementation
 FeatureAnnotator::Results::Results(const IITree<int, dataTypes::GenomicFeature> *tree,
                                    const std::vector<size_t> &indices,
-                                   const std::optional<dataTypes::Strand> strand)
+                                   const std::optional<dataTypes::GenomicStrand> strand)
     : tree(tree), indices(indices), strand(strand) {}
 
 [[nodiscard]] auto FeatureAnnotator::Results::begin() const -> FeatureAnnotator::Results::Iterator {
@@ -342,7 +342,7 @@ FeatureAnnotator::Results::Results(const IITree<int, dataTypes::GenomicFeature> 
 
 FeatureAnnotator::Results::Iterator::Iterator(const IITree<int, dataTypes::GenomicFeature> *tree,
                                               const std::vector<size_t> &indices, size_t index,
-                                              const std::optional<dataTypes::Strand> &strand)
+                                              const std::optional<dataTypes::GenomicStrand> &strand)
     : tree(tree), indices(indices), current_index(index), strand(strand) {}
 
 [[nodiscard]] auto FeatureAnnotator::Results::Iterator::operator*() const

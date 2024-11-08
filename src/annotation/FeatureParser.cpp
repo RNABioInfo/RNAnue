@@ -114,8 +114,8 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
             .type = featureType,
             .startPosition = startPosition,
             .endPosition = endPosition,
-            .strand = tokens_v[strandTokenColumn][0] == '+' ? dataTypes::Strand::FORWARD
-                                                            : dataTypes::Strand::REVERSE,
+            .strand = tokens_v[strandTokenColumn][0] == '+' ? dataTypes::GenomicStrand::FORWARD
+                                                            : dataTypes::GenomicStrand::REVERSE,
             .id = identifier.value(),
             .groupID = getAttribute(fileType.defaultGroupKey()),
             .geneName = geneName});

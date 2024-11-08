@@ -19,7 +19,7 @@ namespace pipelines::analyze {
 struct RecordFragment {
     std::string recordID;
     int32_t referenceIDIndex;
-    dataTypes::Strand strand;
+    dataTypes::GenomicStrand strand;
     int32_t start;
     int32_t end;
     double complementarityScore;

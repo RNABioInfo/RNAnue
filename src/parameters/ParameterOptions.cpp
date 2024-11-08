@@ -143,6 +143,8 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
 
 auto ParameterOptions::getAnalyzeOptions() -> po::options_description {
     po::options_description analysis("Analyze Pipeline");
+    analysis.add_options()("maxoverlap", po::value<double>()->default_value(pi::defaultMaxOverlap),
+                           "maximum fractional overlap between two clusters (default: 0.5)");
     analysis.add_options()("clustdist",
                            po::value<int>()->default_value(pi::defaultClusterTolerance),
                            "threshold distance at which two clusters are merged into a single "

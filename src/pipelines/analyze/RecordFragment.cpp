@@ -17,8 +17,8 @@ auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<Rec
 
     const auto isReverseStrand =
         static_cast<bool>(record.flag() & seqan3::sam_flag::on_reverse_strand);
-    const dataTypes::Strand strand{isReverseStrand ? dataTypes::Strand::REVERSE
-                                                   : dataTypes::Strand::FORWARD};
+    const dataTypes::GenomicStrand strand{isReverseStrand ? dataTypes::GenomicStrand::REVERSE
+                                                          : dataTypes::GenomicStrand::FORWARD};
 
     const auto start = record.reference_position();
     const std::optional<int32_t> end = dataTypes::recordEndPosition(record);
@@ -68,8 +68,8 @@ auto RecordFragment::operator==(const RecordFragment &other) const -> bool {
     constexpr double EPSILON = 1e-6;
     return referenceIDIndex == other.referenceIDIndex && strand == other.strand &&
            start == other.start && end == other.end &&
-           helper::isEqual(complementarityScore, other.complementarityScore, EPSILON) &&
-           helper::isEqual(hybridizationEnergy, other.hybridizationEnergy, EPSILON);
+           helper::isApproxEqual(complementarityScore, other.complementarityScore, EPSILON) &&
+           helper::isApproxEqual(hybridizationEnergy, other.hybridizationEnergy, EPSILON);
 }
 
 auto RecordFragment::operator<(const RecordFragment &other) const -> bool {

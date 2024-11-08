@@ -19,7 +19,7 @@ struct GenomicRegion {
     std::string referenceID;
     int32_t startPosition;
     int32_t endPosition;
-    std::optional<Strand> strand;
+    std::optional<GenomicStrand> strand;
 
     /**
      * @brief Constructs a GenomicRegion object.
@@ -29,7 +29,7 @@ struct GenomicRegion {
      * @param strand The strand of the genomic region (optional).
      */
     GenomicRegion(std::string referenceID, int32_t startPosition, int32_t endPosition,
-                  std::optional<Strand> strand = std::nullopt)
+                  std::optional<GenomicStrand> strand = std::nullopt)
         : referenceID(std::move(referenceID)),
           startPosition(startPosition),
           endPosition(endPosition),
@@ -51,7 +51,8 @@ struct GenomicRegion {
 inline auto operator<<(std::ostream &outputStream, const GenomicRegion &region) -> std::ostream & {
     return outputStream << region.referenceID << ":" << region.startPosition << "-"
                         << region.endPosition << ' '
-                        << (region.strand.has_value() ? region.strand.value() : Strand::FORWARD)
+                        << (region.strand.has_value() ? region.strand.value()
+                                                      : GenomicStrand::FORWARD)
                         << '\n';
 };
 }  // namespace dataTypes

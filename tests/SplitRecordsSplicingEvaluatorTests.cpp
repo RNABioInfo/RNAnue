@@ -30,7 +30,7 @@ class EvaluatedSplitRecordsTests : public testing::TestWithParam<IsSplicedTestPa
                                                  .type = "exon",
                                                  .startPosition = 1,
                                                  .endPosition = 10,
-                                                 .strand = dataTypes::Strand::FORWARD,
+                                                 .strand = dataTypes::GenomicStrand::FORWARD,
                                                  .id = "exon1",
                                                  .groupID = "gene1",
                                                  .geneName = std::nullopt},
@@ -38,7 +38,7 @@ class EvaluatedSplitRecordsTests : public testing::TestWithParam<IsSplicedTestPa
                                                  .type = "exon",
                                                  .startPosition = 20,
                                                  .endPosition = 30,
-                                                 .strand = dataTypes::Strand::FORWARD,
+                                                 .strand = dataTypes::GenomicStrand::FORWARD,
                                                  .id = "exon2",
                                                  .groupID = "gene1",
                                                  .geneName = std::nullopt},
@@ -46,7 +46,7 @@ class EvaluatedSplitRecordsTests : public testing::TestWithParam<IsSplicedTestPa
                                                  .type = "exon",
                                                  .startPosition = 40,
                                                  .endPosition = 50,
-                                                 .strand = dataTypes::Strand::FORWARD,
+                                                 .strand = dataTypes::GenomicStrand::FORWARD,
                                                  .id = "exon3",
                                                  .groupID = "gene1",
                                                  .geneName = std::nullopt}}}};
@@ -54,21 +54,21 @@ class EvaluatedSplitRecordsTests : public testing::TestWithParam<IsSplicedTestPa
     annotation::FeatureAnnotator featureAnnotator;
 };
 
-auto noSpliceRaw = R"(
+const auto noSpliceRaw = R"(
 @HD     VN:1.6
 @SQ     SN:chromosome1 LN:100
 SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.232	0	chromosome1	10	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
-auto spliceRaw = R"(
+const auto spliceRaw = R"(
 @HD     VN:1.6
 @SQ     SN:chromosome1 LN:100
 SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.232	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
-auto noSpliceInBetweenExonRaw = R"(
+const auto noSpliceInBetweenExonRaw = R"(
 @HD     VN:1.6
 @SQ     SN:chromosome1 LN:100
 SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0

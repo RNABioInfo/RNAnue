@@ -15,7 +15,7 @@ struct GenomicFeature {
     std::string type;
     int32_t startPosition;
     int32_t endPosition;
-    dataTypes::Strand strand;
+    dataTypes::GenomicStrand strand;
     std::string id;
     std::optional<std::string> groupID;
     std::optional<std::string> geneName;

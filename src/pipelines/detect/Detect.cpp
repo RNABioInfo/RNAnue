@@ -382,7 +382,7 @@ auto Detect::constructSplitRecords(const SamRecord& readRecord) const
 
     if (splitRecords.size() != expectedSplitRecords) {
         Logger::log(LogLevel::WARNING, "Expected ", expectedSplitRecords,
-                    " split records, but got ", splitRecords.size(),
+                    " split fragments within record, but got ", splitRecords.size(),
                     ". Record ID: ", readRecord.id());
 
         return std::nullopt;
@@ -418,10 +418,14 @@ auto Detect::constructSplitRecords(const std::vector<SamRecord>& readRecords) co
     }
 
     if (splitRecords.size() != expectedSplitRecords) {
-        Logger::log(LogLevel::WARNING, "Expected ", expectedSplitRecords,
-                    " split records, but got ", splitRecords.size(),
-                    ". Record ID: ", readRecords.front().id());
-
+        if (static_cast<bool>(splitRecords.front().flag() & seqan3::sam_flag::paired)) {
+            Logger::log(LogLevel::DEBUG,
+                        "Non supported paired record split case: ", splitRecords.front().id());
+        } else {
+            Logger::log(LogLevel::WARNING, "Expected ", expectedSplitRecords,
+                        " records for read, but got ", splitRecords.size(),
+                        ". Record ID: ", readRecords.front().id());
+        }
         return std::nullopt;
     }
 

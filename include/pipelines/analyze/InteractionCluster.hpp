@@ -16,26 +16,23 @@ namespace pipelines::analyze {
 
 class InteractionCluster {
    public:
-    InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
-                       std::vector<std::string> firstSegmentRecordIDs,
-                       std::vector<std::string> secondSegmentRecordIDs,
+    InteractionCluster(InteractionSegmentPair interactionSegments,
+                       std::vector<std::string> recordIDs,
                        std::vector<double> complementarityScores,
                        std::vector<double> hybridizationEnergies)
-        : firstSegment(firstSegment),
-          secondSegment(secondSegment),
-          firstSegmentRecordIDs(std::move(firstSegmentRecordIDs)),
-          secondSegmentRecordIDs(std::move(secondSegmentRecordIDs)),
+        : firstSegment(interactionSegments.firstSegment),
+          secondSegment(interactionSegments.secondSegment),
+          recordIDs(std::move(recordIDs)),
           complementarityScores(std::move(complementarityScores)),
           maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
           hybridizationEnergies(std::move(hybridizationEnergies)),
           minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)) {}
 
     InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
-                       std::string firstSegmentRecordID, std::string secondSegmentRecordID,
-                       double complementarityScore, double hybridizationEnergie)
-        : InteractionCluster(firstSegment, secondSegment,
-                             std::vector<std::string>{std::move(firstSegmentRecordID)},
-                             std::vector<std::string>{std::move(secondSegmentRecordID)},
+                       std::string recordID, double complementarityScore,
+                       double hybridizationEnergie)
+        : InteractionCluster({.firstSegment = firstSegment, .secondSegment = secondSegment},
+                             std::vector<std::string>{std::move(recordID)},
                              std::vector<double>{complementarityScore},
                              std::vector<double>{hybridizationEnergie}) {}
 
@@ -53,12 +50,8 @@ class InteractionCluster {
         return secondSegment;
     }
 
-    [[nodiscard]] auto getFirstSegmentRecordIDs() const -> const std::vector<std::string> & {
-        return firstSegmentRecordIDs;
-    }
-
-    [[nodiscard]] auto getSecondSegmentRecordIDs() const -> const std::vector<std::string> & {
-        return secondSegmentRecordIDs;
+    [[nodiscard]] auto getRecordIDs() const -> const std::vector<std::string> & {
+        return recordIDs;
     }
 
     [[nodiscard]] auto getComplementarityScores() const -> const std::vector<double> & {
@@ -77,14 +70,21 @@ class InteractionCluster {
         return minHybridizationEnergy;
     }
 
-    [[nodiscard]] auto fragmentCount() const -> size_t { return firstSegmentRecordIDs.size(); }
+    [[nodiscard]] auto fragmentCount() const -> size_t { return recordIDs.size(); }
 
+    // Comparisons
     auto operator<(const InteractionCluster &other) const -> bool;
     auto operator>(const InteractionCluster &other) const -> bool;
     auto operator==(const InteractionCluster &other) const -> bool;
 
+    [[nodiscard]] auto isBefore(const InteractionCluster &other) const noexcept -> bool;
+
     [[nodiscard]] auto overlaps(const InteractionCluster &other, int graceDistance) const noexcept
         -> bool;
+
+    // Returns the fraction of the overlap between the two segments relative to the length
+    // of the shorter segment
+    [[nodiscard]] auto segmentsMaxOverlapFraction() const noexcept -> double;
 
     void merge(const InteractionCluster &other);
 
@@ -95,8 +95,7 @@ class InteractionCluster {
    private:
     InteractionSegment firstSegment;
     InteractionSegment secondSegment;
-    std::vector<std::string> firstSegmentRecordIDs;
-    std::vector<std::string> secondSegmentRecordIDs;
+    std::vector<std::string> recordIDs;
     std::vector<double> complementarityScores;
     double maxComplementarityScore;
     std::vector<double> hybridizationEnergies;

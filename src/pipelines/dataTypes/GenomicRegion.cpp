@@ -14,7 +14,7 @@ auto GenomicRegion::fromSamRecord(const dataTypes::SamRecord &record,
 
     const auto isReverseStrand =
         static_cast<bool>(record.flag() & seqan3::sam_flag::on_reverse_strand);
-    const Strand strand{isReverseStrand ? Strand::REVERSE : Strand::FORWARD};
+    const GenomicStrand strand{isReverseStrand ? GenomicStrand::REVERSE : GenomicStrand::FORWARD};
 
     return GenomicRegion{referenceIDs[record.reference_id().value()], start.value(),
                          end.value() + 1, strand};

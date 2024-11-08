@@ -1,25 +1,40 @@
 #include <gtest/gtest.h>
 
 #include <algorithm>
+#include <cstddef>
+#include <functional>
 #include <memory>
+#include <optional>
+#include <string>
+#include <unordered_map>
 #include <utility>
 #include <vector>
 
 #include "AnnotatedInteractionCluster.hpp"
 #include "FeatureAnnotator.hpp"
+#include "GenomicFeature.hpp"
 #include "GenomicStrand.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
 #include "Orientation.hpp"
+#include "PartiallyAnnotatedInteractionCluster.hpp"
 #include "RecordFragment.hpp"
 #include "SplitRecordsParser.hpp"
 
 using namespace pipelines::analyze;
 
 // Note: This is the expected clustering result:
-// Cluster 1: 1,3,6
-// Cluster 2: 2,7
-// Cluster 3: 4,5
+// Cluster 1: 1,3,6 // Fully annotated; First segment: InteractionSegment(referenceIDIndex: 0,
+// strand: +, start: 19, end: 27), Second segment id: InteractionSegment(referenceIDIndex: 1,
+// strand: +, start: 49, end: 64)
+//
+// Cluster 2: 2,7 // Partially annotated; First segment: InteractionSegment(referenceIDIndex: 1,
+// strand: +, start: 4, end: 10), Second segment id: InteractionSegment(referenceIDIndex: 1, strand:
+// +, start: 51, end: 57)
+//
+// Cluster 3: 4,5 // Non annotated; First segment: InteractionSegment(referenceIDIndex: 0, strand:
+// +, start: 4, end: 14), Second segment id: InteractionSegment(referenceIDIndex: 0, strand: +,
+// start: 39, end: 46)
 
 using namespace pipelines::analyze;
 
@@ -30,18 +45,50 @@ auto testInteractionClustersSamPath() -> std::string {
 }
 
 struct InteractionClusterGeneratorTestParam {
-    std::vector<InteractionCluster> expectedInteractionClusters;
+    std::unordered_map<std::string, size_t> expectedFeatureCounts;
+    std::vector<AnnotatedInteractionCluster> finalizedClusters;
+    std::vector<PartiallyAnnotatedInteractionCluster> partiallyAnnotatedClusters;
 };
 
-std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator =
-    std::make_shared<annotation::FeatureAnnotator>();
+static const FeatureMap featureMap = {{"chr1",
+                                       {GenomicFeature{.referenceID = "chr1",
+                                                       .type = "gene",
+                                                       .startPosition = 20,
+                                                       .endPosition = 30,
+                                                       .strand = GenomicStrand::FORWARD,
+                                                       .id = "gene1",
+                                                       .groupID = std::nullopt,
+                                                       .geneName = std::nullopt},
+                                        GenomicFeature{.referenceID = "chr1",
+                                                       .type = "gene",
+                                                       .startPosition = 50,
+                                                       .endPosition = 60,
+                                                       .strand = GenomicStrand::FORWARD,
+                                                       .id = "gene2",
+                                                       .groupID = std::nullopt,
+                                                       .geneName = std::nullopt}}},
+                                      {"chr2",
+                                       {GenomicFeature{.referenceID = "chr2",
+                                                       .type = "gene",
+                                                       .startPosition = 50,
+                                                       .endPosition = 60,
+                                                       .strand = GenomicStrand::FORWARD,
+                                                       .id = "gene3",
+                                                       .groupID = std::nullopt,
+                                                       .geneName = std::nullopt}}}};
+
+static const std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator =
+    std::make_shared<annotation::FeatureAnnotator>(featureMap);
 
 class InteractionClusterGeneratorTests
     : public testing::TestWithParam<InteractionClusterGeneratorTestParam> {
    protected:
     InteractionClusterGeneratorTests()
-        : interactionClusterGenerator("Testing Sample", featureAnnotator, {"chr1", "chr2"},
-                                      annotation::Orientation::BOTH, 0, 1) {}
+        : interactionClusterGenerator(featureAnnotator, {"chr1", "chr2"},
+                                      {.featureOrientation = annotation::Orientation::BOTH,
+                                       .maxOverlapFraction = 0.5,
+                                       .minReadCount = 1,
+                                       .graceDistance = 1}) {}
 
     InteractionClusterGenerator interactionClusterGenerator;
 };
@@ -49,105 +96,83 @@ class InteractionClusterGeneratorTests
 // TODO: Fix this test and use == operator for InteractionCluster2
 TEST_P(InteractionClusterGeneratorTests, SplitRecordsAreSortedCorrectly) {
     const auto& param = GetParam();
-    const auto& expectedClusters = param.expectedInteractionClusters;
 
     std::vector<InteractionCluster> interactionClusters =
         SplitRecordsParser::parse(testInteractionClustersSamPath());
+
+    std::ranges::sort(interactionClusters, std::less<>());
 
     EXPECT_EQ(interactionClusters.size(), 7U);
 
     auto result = interactionClusterGenerator.mergeClusters(std::move(interactionClusters));
 
-    EXPECT_EQ(result.annotatedClusters.size(), expectedClusters.size());
-
-    for (const auto& mergedCluster : result.annotatedClusters) {
-        std::cout << "Merged cluster: " << mergedCluster << "\n";
-
-        bool found = false;
-
-        for (const auto& expectedCluster : expectedClusters) {
-            if (mergedCluster.getFirstSegment().getStart() ==
-                    expectedCluster.getFirstSegment().getStart() &&
-                mergedCluster.getFirstSegment().getEnd() ==
-                    expectedCluster.getFirstSegment().getEnd() &&
-                mergedCluster.getSecondSegment().getStart() ==
-                    expectedCluster.getSecondSegment().getStart() &&
-                mergedCluster.getSecondSegment().getEnd() ==
-                    expectedCluster.getSecondSegment().getEnd() &&
-                mergedCluster.getFirstSegment().getReferenceIDIndex() ==
-                    expectedCluster.getFirstSegment().getReferenceIDIndex() &&
-                mergedCluster.getSecondSegment().getReferenceIDIndex() ==
-                    expectedCluster.getSecondSegment().getReferenceIDIndex() &&
-                mergedCluster.getFirstSegment().getStrand() ==
-                    expectedCluster.getFirstSegment().getStrand() &&
-                mergedCluster.getSecondSegment().getStrand() ==
-                    expectedCluster.getSecondSegment().getStrand()) {
-                found = true;
-                break;
-            }
-        }
-
-        EXPECT_TRUE(found);
-    }
+    EXPECT_EQ(result.finishedClusters, param.finalizedClusters);
+    EXPECT_EQ(result.partiallyAnnotatedClusters, param.partiallyAnnotatedClusters);
+    EXPECT_EQ(result.featureCounts, param.expectedFeatureCounts);
 }
 
-const InteractionCluster cluster1 = {RecordFragment{.recordID = "SRR18331301.3",
-                                                    .referenceIDIndex = 0,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 19,
-                                                    .end = 27,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     RecordFragment{.recordID = "SRR18331301.3",
-                                                    .referenceIDIndex = 1,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 49,
-                                                    .end = 64,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     {"SRR18331301.20", "SRR18331301.21", "SRR18331301.22"},
-                                     {"SRR18331301.20", "SRR18331301.21", "SRR18331301.22"},
-                                     {1, 1, 1},
-                                     {-1.7, -1.7, -1.7}};
+const AnnotatedInteractionCluster cluster1(
+    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.3",
+                                     .referenceIDIndex = 0,
+                                     .strand = dataTypes::GenomicStrand::FORWARD,
+                                     .start = 19,
+                                     .end = 27,
+                                     .complementarityScore = 1,
+                                     .hybridizationEnergy = -1.7},
+      .secondSegment = RecordFragment{.recordID = "SRR18331301.3",
+                                      .referenceIDIndex = 1,
+                                      .strand = dataTypes::GenomicStrand::FORWARD,
+                                      .start = 49,
+                                      .end = 64,
+                                      .complementarityScore = 1,
+                                      .hybridizationEnergy = -1.7}},
+     {"SRR18331301.3", "SRR18331301.1", "SRR18331301.6"},
+     {1.0, 1.0, 1.0},
+     {-1.7, -1.7, -1.7}},
+    "gene1", "gene2");
 
-const InteractionCluster cluster2 = {RecordFragment{.recordID = "SRR18331301.2",
-                                                    .referenceIDIndex = 1,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 4,
-                                                    .end = 10,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     RecordFragment{.recordID = "SRR18331301.2",
-                                                    .referenceIDIndex = 1,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 51,
-                                                    .end = 57,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     "SRR18331301.2",
-                                     "SRR18331301.2",
-                                     1,
-                                     -1.7};
+const PartiallyAnnotatedInteractionCluster cluster2(
+    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.2",
+                                     .referenceIDIndex = 1,
+                                     .strand = dataTypes::GenomicStrand::FORWARD,
+                                     .start = 4,
+                                     .end = 10,
+                                     .complementarityScore = 1.0,
+                                     .hybridizationEnergy = -1.7},
+      .secondSegment = RecordFragment{.recordID = "SRR18331301.2",
+                                      .referenceIDIndex = 1,
+                                      .strand = dataTypes::GenomicStrand::FORWARD,
+                                      .start = 51,
+                                      .end = 57,
+                                      .complementarityScore = 1.0,
+                                      .hybridizationEnergy = -1.7}},
+     {"SRR18331301.2", "SRR18331301.7"},
+     {1.0, 1.0},
+     {-1.7, -1.7}},
+    std::nullopt, "gene3");
 
-const InteractionCluster cluster3 = {RecordFragment{.recordID = "SRR18331301.4",
-                                                    .referenceIDIndex = 0,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 4,
-                                                    .end = 14,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     RecordFragment{.recordID = "SRR18331301.4",
-                                                    .referenceIDIndex = 0,
-                                                    .strand = dataTypes::Strand::FORWARD,
-                                                    .start = 39,
-                                                    .end = 46,
-                                                    .complementarityScore = 1,
-                                                    .hybridizationEnergy = -1.7},
-                                     "SRR18331301.4",
-                                     "SRR18331301.4",
-                                     1,
-                                     -1.7};
+const PartiallyAnnotatedInteractionCluster cluster3(
+    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.4",
+                                     .referenceIDIndex = 0,
+                                     .strand = dataTypes::GenomicStrand::FORWARD,
+                                     .start = 4,
+                                     .end = 14,
+                                     .complementarityScore = 1.0,
+                                     .hybridizationEnergy = -1.7},
+      .secondSegment = RecordFragment{.recordID = "SRR18331301.4",
+                                      .referenceIDIndex = 0,
+                                      .strand = dataTypes::GenomicStrand::FORWARD,
+                                      .start = 39,
+                                      .end = 46,
+                                      .complementarityScore = 1.0,
+                                      .hybridizationEnergy = -1.7}},
+     {"SRR18331301.5", "SRR18331301.4"},
+     {1.0, 1.0},
+     {-1.7, -1.7}},
+    std::nullopt, std::nullopt);
 
 INSTANTIATE_TEST_SUITE_P(Default, InteractionClusterGeneratorTests,
                          testing::Values(InteractionClusterGeneratorTestParam{
-                             {cluster1, cluster2, cluster3}}));
+                             .expectedFeatureCounts = {{"gene1", 3}, {"gene3", 3}},
+                             .finalizedClusters = {cluster1},
+                             .partiallyAnnotatedClusters = {cluster2, cluster3}}));

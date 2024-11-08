@@ -24,8 +24,9 @@ void FeatureWriter::write(const FeatureTreeMap &featureTreeMap, const std::strin
             const auto &feature = interval.data;
             outputFile << referenceID << '\t' << "." << '\t' << feature.type << '\t'
                        << feature.startPosition + 1 << '\t' << feature.endPosition + 1 << '\t'
-                       << "." << '\t' << (feature.strand == dataTypes::Strand::FORWARD ? '+' : '-')
-                       << '\t' << "." << '\t';
+                       << "." << '\t'
+                       << (feature.strand == dataTypes::GenomicStrand::FORWARD ? '+' : '-') << '\t'
+                       << "." << '\t';
 
             // Attributes field
             if (fileType == FileType::GFF) {

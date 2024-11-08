@@ -13,14 +13,14 @@ class InteractionClusterStatisticsTest : public testing::Test {
         : cluster(InteractionCluster::fromRecordFragments(
               RecordFragment{.recordID = "record1",
                              .referenceIDIndex = 0,
-                             .strand = Strand::FORWARD,
+                             .strand = GenomicStrand::FORWARD,
                              .start = 0,
                              .end = 10,
                              .complementarityScore = 0.5,
                              .hybridizationEnergy = -18},
               RecordFragment{.recordID = "record1",
                              .referenceIDIndex = 0,
-                             .strand = Strand::FORWARD,
+                             .strand = GenomicStrand::FORWARD,
                              .start = 0,
                              .end = 10,
                              .complementarityScore = 0.5,
@@ -42,14 +42,14 @@ TEST(InteractionClusterTest, OverlapsExact) {
     InteractionCluster cluster1 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.5,
                                                                .hybridizationEnergy = -18},
                                                 RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 1,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.5,
@@ -57,14 +57,14 @@ TEST(InteractionClusterTest, OverlapsExact) {
     InteractionCluster cluster2 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.5,
                                                                .hybridizationEnergy = -18},
                                                 RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 1,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.5,
@@ -75,66 +75,66 @@ TEST(InteractionClusterTest, OverlapsExact) {
 
 TEST(InteractionClusterTest, OverlapsGrace) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 0, Strand::FORWARD, 11, 20, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record2", 0, GenomicStrand::FORWARD, 11, 20, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
 
     EXPECT_TRUE(cluster1.overlaps(cluster2, 1));
 }
 
 TEST(InteractionClusterTest, OverlapsNegativeGrace) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 0, Strand::FORWARD, 9, 20, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record2", 0, GenomicStrand::FORWARD, 9, 20, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
 
     EXPECT_TRUE(cluster1.overlaps(cluster2, -1));
 }
 
 TEST(InteractionClusterTest, NoOverlapsNegativeGrace) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 0, Strand::FORWARD, 9, 20, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record2", 0, GenomicStrand::FORWARD, 9, 20, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
 
     EXPECT_FALSE(cluster1.overlaps(cluster2, -2));
 }
 
 TEST(InteractionClusterTest, NoOverlapsFirstNotOverlapping) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 0, Strand::FORWARD, 11, 20, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record2", 0, GenomicStrand::FORWARD, 11, 20, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
 
     EXPECT_FALSE(cluster1.overlaps(cluster2, 0));
 }
 
 TEST(InteractionClusterTest, NoOverlapsSecondNotOverlapping) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 11, 20, 0.5, -18});
+        RecordFragment{"record2", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 11, 20, 0.5, -18});
 
     EXPECT_FALSE(cluster1.overlaps(cluster2, 0));
 }
 
 TEST(InteractionClusterTest, NoOverlapsDifferentReferenceID) {
     InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record1", 0, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record1", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record1", 0, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record1", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
-        RecordFragment{"record2", 2, Strand::FORWARD, 0, 10, 0.5, -18},
-        RecordFragment{"record2", 1, Strand::FORWARD, 0, 10, 0.5, -18});
+        RecordFragment{"record2", 2, GenomicStrand::FORWARD, 0, 10, 0.5, -18},
+        RecordFragment{"record2", 1, GenomicStrand::FORWARD, 0, 10, 0.5, -18});
 
     EXPECT_FALSE(cluster1.overlaps(cluster2, 0));
 }
@@ -144,14 +144,14 @@ TEST(InteractionClusterTest, BasicMerge) {
     InteractionCluster cluster1 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 5,
                                                                .end = 15,
                                                                .complementarityScore = 0.5,
                                                                .hybridizationEnergy = -18},
                                                 RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 20,
                                                                .end = 25,
                                                                .complementarityScore = 0.5,
@@ -159,14 +159,14 @@ TEST(InteractionClusterTest, BasicMerge) {
     InteractionCluster cluster2 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.8,
                                                                .hybridizationEnergy = -15},
                                                 RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 20,
                                                                .end = 30,
                                                                .complementarityScore = 0.8,
@@ -196,14 +196,14 @@ TEST(InteractionClusterTest, MergeWithDifferentReferenceIDIndex) {
     InteractionCluster cluster1 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 1,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 5,
                                                                .end = 15,
                                                                .complementarityScore = 0.5,
                                                                .hybridizationEnergy = -18},
                                                 RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 20,
                                                                .end = 25,
                                                                .complementarityScore = 0.5,
@@ -211,14 +211,14 @@ TEST(InteractionClusterTest, MergeWithDifferentReferenceIDIndex) {
     InteractionCluster cluster2 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 20,
                                                                .end = 30,
                                                                .complementarityScore = 0.8,
                                                                .hybridizationEnergy = -15},
                                                 RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 1,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.8,
@@ -243,22 +243,22 @@ TEST(InteractionClusterTest, MergeWithDifferentReferenceIDIndex) {
 
     EXPECT_EQ(cluster1.getMaxComplementarityScore(), 0.8);
 
-    EXPECT_EQ(cluster1.getFirstSegment().getStrand(), Strand::FORWARD);
-    EXPECT_EQ(cluster1.getSecondSegment().getStrand(), Strand::FORWARD);
+    EXPECT_EQ(cluster1.getFirstSegment().getStrand(), GenomicStrand::FORWARD);
+    EXPECT_EQ(cluster1.getSecondSegment().getStrand(), GenomicStrand::FORWARD);
 }
 
 TEST(InteractionClusterTest, MergeWithDifferentStrands) {
     InteractionCluster cluster1 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 5,
                                                                .end = 15,
                                                                .complementarityScore = 0.5,
                                                                .hybridizationEnergy = -18},
                                                 RecordFragment{.recordID = "record1",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::FORWARD,
+                                                               .strand = GenomicStrand::FORWARD,
                                                                .start = 20,
                                                                .end = 25,
                                                                .complementarityScore = 0.5,
@@ -266,14 +266,14 @@ TEST(InteractionClusterTest, MergeWithDifferentStrands) {
     InteractionCluster cluster2 =
         InteractionCluster::fromRecordFragments(RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::REVERSE,
+                                                               .strand = GenomicStrand::REVERSE,
                                                                .start = 0,
                                                                .end = 10,
                                                                .complementarityScore = 0.8,
                                                                .hybridizationEnergy = -15},
                                                 RecordFragment{.recordID = "record2",
                                                                .referenceIDIndex = 0,
-                                                               .strand = Strand::REVERSE,
+                                                               .strand = GenomicStrand::REVERSE,
                                                                .start = 20,
                                                                .end = 30,
                                                                .complementarityScore = 0.8,

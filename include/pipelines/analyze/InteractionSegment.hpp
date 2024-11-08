@@ -17,7 +17,7 @@ struct InteractionSegment {
           start(recordFragment.start),
           end(recordFragment.end) {}
 
-    InteractionSegment(int32_t referenceIDIndex, dataTypes::Strand strand, int32_t start,
+    InteractionSegment(int32_t referenceIDIndex, dataTypes::GenomicStrand strand, int32_t start,
                        int32_t end)
         : referenceIDIndex(referenceIDIndex), strand(strand), start(start), end(end) {}
 
@@ -27,6 +27,7 @@ struct InteractionSegment {
     [[nodiscard]] auto getStart() const { return start; }
     [[nodiscard]] auto getEnd() const { return end; }
 
+    // Operators
     auto operator<(const InteractionSegment& other) const -> bool {
         if (referenceIDIndex != other.referenceIDIndex) {
             return referenceIDIndex < other.referenceIDIndex;
@@ -55,11 +56,34 @@ struct InteractionSegment {
         end = std::max(end, other.end);
     }
 
+    [[nodiscard]] auto overlapFraction(const InteractionSegment& other) const noexcept -> double {
+        if (referenceIDIndex != other.referenceIDIndex || strand != other.strand) {
+            return 0.0;
+        }
+
+        const auto overlapStart = std::max(start, other.start);
+        const auto overlapEnd = std::min(end, other.end);
+        const auto overlapLength = overlapEnd - overlapStart;
+
+        if (overlapLength <= 0) {
+            return 0.0;
+        }
+
+        const auto thisLength = end - start;
+
+        return static_cast<double>(overlapLength) / thisLength;
+    }
+
    private:
     int32_t referenceIDIndex;
-    dataTypes::Strand strand;
+    dataTypes::GenomicStrand strand;
     int32_t start;
     int32_t end;
+};
+
+struct InteractionSegmentPair {
+    InteractionSegment firstSegment;
+    InteractionSegment secondSegment;
 };
 
 inline auto operator<<(std::ostream& outputStream, const InteractionSegment& segment)
