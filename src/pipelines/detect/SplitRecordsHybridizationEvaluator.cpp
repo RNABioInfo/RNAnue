@@ -40,7 +40,8 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
 
     vrna_fold_compound_free(foldCompound);
 
-    return SplitRecordsHybridizationEvaluator::Result{mfe, crosslinkingResult};
+    return SplitRecordsHybridizationEvaluator::Result{.energy = mfe,
+                                                      .crosslinkingResult = crosslinkingResult};
 }
 
 const std::map<SplitRecordsHybridizationEvaluator::NucleotideWindowPair, size_t>
@@ -85,10 +86,10 @@ auto SplitRecordsHybridizationEvaluator::findCrosslinkingSites(
     }
 
     // Sort pairing sites by first position
-    std::sort(interactionPositions.begin(), interactionPositions.end(),
-              [](const NucleotidePairPositions &a, const NucleotidePairPositions &b) {
-                  return a.first < b.first;
-              });
+    std::ranges::sort(interactionPositions,
+                      [](const NucleotidePairPositions &lhs, const NucleotidePairPositions &rhs) {
+                          return lhs.first < rhs.first;
+                      });
 
     if (!openPos.empty()) {
         Logger::log(LogLevel::WARNING, "Unpaired bases in dot-bracket notation! (" +
@@ -97,7 +98,11 @@ auto SplitRecordsHybridizationEvaluator::findCrosslinkingSites(
     }
 
     if (interactionPositions.empty()) {
-        return Result::CrosslinkingResult{0, 0, 0, 0};
+        return Result::CrosslinkingResult{.crosslinkingSites = {},
+                                          .normCrosslinkingScore = 0,
+                                          .preferredCrosslinkingScore = 0,
+                                          .nonPreferredCrosslinkingScore = 0,
+                                          .wobbleCrosslinkingScore = 0};
     }
 
     std::vector<NucleotidePositionsWindow> crosslinkingSites;
@@ -126,9 +131,9 @@ auto SplitRecordsHybridizationEvaluator::findCrosslinkingSites(
                 std::make_pair(v_interactionWindow.forwardWindowNucleotides,
                                v_interactionWindow.reverseWindowNucleotides);
 
-            const auto it = crosslinkingScoringScheme.find(nucleotidePairs);
-            if (it != crosslinkingScoringScheme.end()) {
-                const size_t score = it->second;
+            const auto iterator = crosslinkingScoringScheme.find(nucleotidePairs);
+            if (iterator != crosslinkingScoringScheme.end()) {
+                const size_t score = iterator->second;
                 if (v_interactionWindow.isInterFragment) {
                     interCrosslinkingScore += score;
                     if (score == 3) {
@@ -153,9 +158,14 @@ auto SplitRecordsHybridizationEvaluator::findCrosslinkingSites(
         return std::nullopt;
     }
 
-    double normCrosslinkingScore = static_cast<double>(interCrosslinkingScore) / minSeqLength;
-    return Result::CrosslinkingResult{normCrosslinkingScore, preferredCrosslinkingCount,
-                                      nonPreferredCrosslinkingCount, wobbleCrosslinkingCount};
+    double normCrosslinkingScore =
+        static_cast<double>(interCrosslinkingScore) / static_cast<double>(minSeqLength);
+    return Result::CrosslinkingResult{
+        .crosslinkingSites = crosslinkingSites,
+        .normCrosslinkingScore = normCrosslinkingScore,
+        .preferredCrosslinkingScore = preferredCrosslinkingCount,
+        .nonPreferredCrosslinkingScore = nonPreferredCrosslinkingCount,
+        .wobbleCrosslinkingScore = wobbleCrosslinkingCount};
 }
 
 auto SplitRecordsHybridizationEvaluator::getContinuosNucleotideWindows(
@@ -190,28 +200,40 @@ auto SplitRecordsHybridizationEvaluator::getContinuosNucleotideWindows(
     // Both pairs are in the first sequence
     if (firstPairInSequence1 && secondPairInSequence1) {
         return InteractionWindow{
-            seqan3::dna5_vector{sequence1[forwardPair.first], sequence1[forwardPair.second]},
-            seqan3::dna5_vector{sequence1[reversePair.first], sequence1[reversePair.second]},
-            forwardPair, reversePair, false};
+            .forwardWindowNucleotides =
+                seqan3::dna5_vector{sequence1[forwardPair.first], sequence1[forwardPair.second]},
+            .reverseWindowNucleotides =
+                seqan3::dna5_vector{sequence1[reversePair.first], sequence1[reversePair.second]},
+            .forwardWindowPositions = forwardPair,
+            .reverseWindowPositions = reversePair,
+            .isInterFragment = false};
     }
 
     // Both pairs are in the second sequence
     if (!firstPairInSequence1 && !secondPairInSequence1) {
         return InteractionWindow{
-            seqan3::dna5_vector{sequence2[forwardPair.first - sequence1Length - 1],
-                                sequence2[forwardPair.second - sequence1Length - 1]},
-            seqan3::dna5_vector{sequence2[reversePair.first - sequence1Length - 1],
-                                sequence2[reversePair.second - sequence1Length - 1]},
-            forwardPair, reversePair, false};
+            .forwardWindowNucleotides =
+                seqan3::dna5_vector{sequence2[forwardPair.first - sequence1Length - 1],
+                                    sequence2[forwardPair.second - sequence1Length - 1]},
+            .reverseWindowNucleotides =
+                seqan3::dna5_vector{sequence2[reversePair.first - sequence1Length - 1],
+                                    sequence2[reversePair.second - sequence1Length - 1]},
+            .forwardWindowPositions = forwardPair,
+            .reverseWindowPositions = reversePair,
+            .isInterFragment = false};
     }
 
     // The first pair is in the first sequence and the second pair is in the second sequence
     if (firstPairInSequence1 && !secondPairInSequence1) {
         return InteractionWindow{
-            seqan3::dna5_vector{sequence1[forwardPair.first], sequence1[forwardPair.second]},
-            seqan3::dna5_vector{sequence2[reversePair.first - sequence1Length - 1],
-                                sequence2[reversePair.second - sequence1Length - 1]},
-            forwardPair, reversePair, true};
+            .forwardWindowNucleotides =
+                seqan3::dna5_vector{sequence1[forwardPair.first], sequence1[forwardPair.second]},
+            .reverseWindowNucleotides =
+                seqan3::dna5_vector{sequence2[reversePair.first - sequence1Length - 1],
+                                    sequence2[reversePair.second - sequence1Length - 1]},
+            .forwardWindowPositions = forwardPair,
+            .reverseWindowPositions = reversePair,
+            .isInterFragment = true};
     }
 
     // Due to sorting of base pairs first pair in second sequence and second pair in first

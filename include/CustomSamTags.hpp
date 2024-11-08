@@ -55,3 +55,8 @@ template <>
 struct seqan3::sam_tag_type<"XE"_tag> {
     using type = float;
 };
+
+template <>
+struct seqan3::sam_tag_type<"XO"_tag> {
+    using type = int32_t;
+};

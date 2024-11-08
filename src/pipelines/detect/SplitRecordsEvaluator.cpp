@@ -1,5 +1,6 @@
 #include "SplitRecordsEvaluator.hpp"
 
+#include "CustomSamTags.hpp"
 #include "Logger.hpp"
 #include "SplitRecordsSplicingEvaluator.hpp"
 
@@ -33,9 +34,10 @@ auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords,
         std::get<SplitRecordsEvaluationParameters::SplicingParameters>(parameters));
 }
 
-auto SplitRecordsEvaluator::evaluateBase(SplitRecords &splitRecords,
-                                         const SplitRecordsEvaluationParameters::BaseParameters
-                                             &parameters) const -> SplitRecordsEvaluator::Result {
+auto SplitRecordsEvaluator::evaluateBase(
+    SplitRecords &splitRecords,
+    const SplitRecordsEvaluationParameters::BaseParameters &parameters) const
+    -> SplitRecordsEvaluator::Result {
     const auto complementarityResult =
         SplitRecordsComplementarityEvaluator::evaluate(splitRecords, parameters);
 
@@ -52,8 +54,10 @@ auto SplitRecordsEvaluator::evaluateBase(SplitRecords &splitRecords,
 
     addTagsToRecords(splitRecords, complementarityResult.value(), hybridizationResult.value());
 
-    return SplitRecordsEvaluator::EvaluatedSplitRecords{splitRecords, complementarityResult.value(),
-                                                        hybridizationResult.value()};
+    return SplitRecordsEvaluator::EvaluatedSplitRecords{
+        .splitRecords = splitRecords,
+        .complementarityResult = complementarityResult.value(),
+        .hybridizationResult = hybridizationResult.value()};
 }
 
 auto SplitRecordsEvaluator::evaluateSplicing(
@@ -81,10 +85,6 @@ void SplitRecordsEvaluator::addTagsToRecords(
         record.tags()["XC"_tag] = static_cast<float>(complementarity.complementarity);
         record.tags()["XR"_tag] = static_cast<float>(complementarity.fraction);
         record.tags()["XS"_tag] = complementarity.score;
-        // rec1.tags()["XA"_tag] = res.a;
-        // rec2.tags()["XA"_tag] = res.b;
-        // rec1.tags()["XM"_tag] = res.matches;
-        // rec2.tags()["XM"_tag] = res.matches;
 
         // Hybridization tags
         record.tags()["XE"_tag] = static_cast<float>(hybridization.energy);
@@ -97,6 +97,8 @@ void SplitRecordsEvaluator::addTagsToRecords(
                 hybridization.crosslinkingResult.value().nonPreferredCrosslinkingScore;
             record.tags()["XW"_tag] =
                 hybridization.crosslinkingResult.value().wobbleCrosslinkingScore;
+            record.tags()["XO"_tag] = static_cast<int32_t>(
+                hybridization.crosslinkingResult.value().crosslinkingSites.size());
         }
     }
 }
@@ -138,8 +140,8 @@ auto SplitRecordsEvaluator::EvaluatedSplitRecords::operator>(
     return !(*this < other);
 }
 
-auto operator<<(std::ostream &ostream,
-                const SplitRecordsEvaluator::FilterReason &reason) -> std::ostream & {
+auto operator<<(std::ostream &ostream, const SplitRecordsEvaluator::FilterReason &reason)
+    -> std::ostream & {
     switch (reason) {
         case SplitRecordsEvaluator::FilterReason::NO_SPLIT_READ:
             ostream << "No split read";

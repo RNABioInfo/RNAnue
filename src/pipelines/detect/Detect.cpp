@@ -499,7 +499,9 @@ auto Detect::prepareTmpOutputDirs(const fs::path& tmpOutDir) -> Detect::ChunkedO
     fs::create_directories(outputTmpMultisplitsDir);
     fs::create_directories(outputTmpUnassignedContiguousRecordsDir);
 
-    return {outputTmpSplitsDir, outputTmpMultisplitsDir, outputTmpUnassignedContiguousRecordsDir};
+    return {.outputTmpSplitsDir = outputTmpSplitsDir,
+            .outputTmpMultisplitsDir = outputTmpMultisplitsDir,
+            .outputTmpUnassignedContiguousDir = outputTmpUnassignedContiguousRecordsDir};
 }
 
 void Detect::writeReadCountsSummaryFile(const Result& results, const std::string& sampleName,
@@ -510,7 +512,7 @@ void Detect::writeReadCountsSummaryFile(const Result& results, const std::string
         throw std::runtime_error("Could not open the stats file.");
     }
 
-    statsFileStream << "sample\tsplits\tsingletons" << std::endl;
+    statsFileStream << "sample\tsplits\tsingletons\n";
     statsFileStream << sampleName << "\t" << results.splitFragmentsCount << "\t"
                     << results.singletonFragmentsCount << "\n";
 }
