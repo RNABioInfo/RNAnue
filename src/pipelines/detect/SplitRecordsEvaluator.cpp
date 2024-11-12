@@ -1,8 +1,12 @@
 #include "SplitRecordsEvaluator.hpp"
 
+#include <cstddef>
+
 #include "CustomSamTags.hpp"
 #include "Logger.hpp"
 #include "SplitRecordsSplicingEvaluator.hpp"
+
+namespace pipelines::detect {
 
 SplitRecordsEvaluator::SplitRecordsEvaluator(
     const std::variant<SplitRecordsEvaluationParameters::BaseParameters,
@@ -35,8 +39,7 @@ auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords,
 }
 
 auto SplitRecordsEvaluator::evaluateBase(
-    SplitRecords &splitRecords,
-    const SplitRecordsEvaluationParameters::BaseParameters &parameters) const
+    SplitRecords &splitRecords, const SplitRecordsEvaluationParameters::BaseParameters &parameters)
     -> SplitRecordsEvaluator::Result {
     const auto complementarityResult =
         SplitRecordsComplementarityEvaluator::evaluate(splitRecords, parameters);
@@ -62,7 +65,7 @@ auto SplitRecordsEvaluator::evaluateBase(
 
 auto SplitRecordsEvaluator::evaluateSplicing(
     SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs,
-    const SplitRecordsEvaluationParameters::SplicingParameters &parameters) const
+    const SplitRecordsEvaluationParameters::SplicingParameters &parameters)
     -> SplitRecordsEvaluator::Result {
     const auto isSplicing =
         SplitRecordsSplicingEvaluator::isSplicedSplitRecord(splitRecords, referenceIDs, parameters);
@@ -77,6 +80,9 @@ auto SplitRecordsEvaluator::evaluateSplicing(
 void SplitRecordsEvaluator::addTagsToRecords(
     SplitRecords &splitRecords, const SplitRecordsComplementarityEvaluator::Result &complementarity,
     const SplitRecordsHybridizationEvaluator::Result &hybridization) {
+    assert(splitRecords.size() == 2);  // Currently only two split records are supported
+
+    size_t index = 0;
     for (auto &record : splitRecords) {
         // Complementarity tags
         const int length = static_cast<int>(complementarity.endPositions.first) -
@@ -88,18 +94,19 @@ void SplitRecordsEvaluator::addTagsToRecords(
 
         // Hybridization tags
         record.tags()["XE"_tag] = static_cast<float>(hybridization.energy);
-        if (hybridization.crosslinkingResult.has_value()) {
-            record.tags()["XN"_tag] =
-                static_cast<float>(hybridization.crosslinkingResult.value().normCrosslinkingScore);
-            record.tags()["XP"_tag] =
-                hybridization.crosslinkingResult.value().preferredCrosslinkingScore;
-            record.tags()["XQ"_tag] =
-                hybridization.crosslinkingResult.value().nonPreferredCrosslinkingScore;
-            record.tags()["XW"_tag] =
-                hybridization.crosslinkingResult.value().wobbleCrosslinkingScore;
-            record.tags()["XO"_tag] = static_cast<int32_t>(
-                hybridization.crosslinkingResult.value().crosslinkingSites.size());
+        if (hybridization.crosslinkingResult) {
+            record.tags()["XD"_tag] = hybridization.crosslinkingResult->getDotbracket();
+            record.tags()["XO"_tag] =
+                static_cast<int32_t>(hybridization.crosslinkingResult->getTotalCrosslinkingCount());
+
+            record.tags()["XA"_tag] =
+                hybridization.crosslinkingResult->getIntraSequenceCrosslinking(index);
+
+            record.tags()["XI"_tag] =
+                hybridization.crosslinkingResult->getInterSequenceCrosslinking(index);
         }
+
+        ++index;
     }
 }
 
@@ -128,8 +135,8 @@ auto SplitRecordsEvaluator::EvaluatedSplitRecords::operator<(
     // If both have crosslinking results prefer the one with higher crosslinking score
     if (hybridizationResult.crosslinkingResult.has_value() &&
         other.hybridizationResult.crosslinkingResult.has_value()) {
-        return hybridizationResult.crosslinkingResult.value().normCrosslinkingScore <
-               other.hybridizationResult.crosslinkingResult.value().normCrosslinkingScore;
+        return hybridizationResult.crosslinkingResult->getTotalCrosslinkingCount() <
+               other.hybridizationResult.crosslinkingResult->getTotalCrosslinkingCount();
     }
 
     return false;
@@ -162,3 +169,5 @@ auto operator<<(std::ostream &ostream, const SplitRecordsEvaluator::FilterReason
 
     return ostream;
 }
+
+}  // namespace pipelines::detect

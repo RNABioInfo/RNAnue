@@ -12,14 +12,16 @@
 
 using namespace annotation;
 
-struct TestParam {
-    TestParam(dataTypes::GenomicRegion region, annotation::Orientation orientation,
-              std::vector<std::string> expectedFeatureIds)
+struct FeatureAnnotatorTestParameters {
+    FeatureAnnotatorTestParameters(dataTypes::GenomicRegion region,
+                                   annotation::Orientation orientation,
+                                   std::vector<std::string> expectedFeatureIds)
         : region(std::move(region)),
           expectedFeatureIds(std::move(expectedFeatureIds)),
           orientation(orientation) {}
 
-    TestParam(dataTypes::GenomicRegion region, std::vector<std::string> expectedFeatureIds)
+    FeatureAnnotatorTestParameters(dataTypes::GenomicRegion region,
+                                   std::vector<std::string> expectedFeatureIds)
         : region(std::move(region)), expectedFeatureIds(std::move(expectedFeatureIds)) {}
 
     dataTypes::GenomicRegion region;
@@ -28,33 +30,69 @@ struct TestParam {
 };
 
 // Tests for FeatureAnnotator::overlappingFeatures and FeatureAnnotator::overlappingFeatureIterator
-class FeatureAnnotatorTest : public testing::TestWithParam<TestParam> {
+class FeatureAnnotatorTest : public testing::TestWithParam<FeatureAnnotatorTestParameters> {
    protected:
     FeatureAnnotatorTest() : annotator(featureMap) {}
 
     const dataTypes::FeatureMap featureMap = {
         {
             "chromosome1",
-            {{"chromosome1", "transcript", 1, 10, dataTypes::GenomicStrand::FORWARD, "feature1",
-              "group1", std::nullopt},
-             {"chromosome1", "transcript", 20, 30, dataTypes::GenomicStrand::FORWARD, "feature2",
-              "group1", std::nullopt},
-             {"chromosome1", "transcript", 40, 50, dataTypes::GenomicStrand::FORWARD, "feature3",
-              "group2", std::nullopt},
-             {"chromosome1", "transcript", 5, 25, dataTypes::GenomicStrand::REVERSE, "feature4",
-              "group3", std::nullopt}},
+            {{.referenceID = "chromosome1",
+              .type = "transcript",
+              .startPosition = 1,
+              .endPosition = 10,
+              .strand = dataTypes::GenomicStrand::FORWARD,
+              .id = "feature1",
+              .groupID = "group1",
+              .geneName = std::nullopt},
+             {.referenceID = "chromosome1",
+              .type = "transcript",
+              .startPosition = 20,
+              .endPosition = 30,
+              .strand = dataTypes::GenomicStrand::FORWARD,
+              .id = "feature2",
+              .groupID = "group1",
+              .geneName = std::nullopt},
+             {.referenceID = "chromosome1",
+              .type = "transcript",
+              .startPosition = 40,
+              .endPosition = 50,
+              .strand = dataTypes::GenomicStrand::FORWARD,
+              .id = "feature3",
+              .groupID = "group2",
+              .geneName = std::nullopt},
+             {.referenceID = "chromosome1",
+              .type = "transcript",
+              .startPosition = 5,
+              .endPosition = 25,
+              .strand = dataTypes::GenomicStrand::REVERSE,
+              .id = "feature4",
+              .groupID = "group3",
+              .geneName = std::nullopt}},
         },
         {"chromosome2",
-         {{"chromosome2", "transcript", 1, 10, dataTypes::GenomicStrand::FORWARD, "feature3",
-           "group4", std::nullopt},
-          {"chromosome2", "transcript", 20, 30, dataTypes::GenomicStrand::FORWARD, "feature4",
-           "group4", std::nullopt}}},
+         {{.referenceID = "chromosome2",
+           .type = "transcript",
+           .startPosition = 1,
+           .endPosition = 10,
+           .strand = dataTypes::GenomicStrand::FORWARD,
+           .id = "feature3",
+           .groupID = "group4",
+           .geneName = std::nullopt},
+          {.referenceID = "chromosome2",
+           .type = "transcript",
+           .startPosition = 20,
+           .endPosition = 30,
+           .strand = dataTypes::GenomicStrand::FORWARD,
+           .id = "feature4",
+           .groupID = "group4",
+           .geneName = std::nullopt}}},
     };
 
     FeatureAnnotator annotator;
 };
 
-void PrintTo(const TestParam& param, std::ostream* outputStream) {
+void PrintTo(const FeatureAnnotatorTestParameters& param, std::ostream* outputStream) {
     *outputStream << "GenomicRegion{referenceID: " << param.region.referenceID
                   << ", startPosition: " << param.region.startPosition
                   << ", endPosition: " << param.region.endPosition << ", strand: "
@@ -88,18 +126,21 @@ TEST_P(FeatureAnnotatorTest, OverlappingFeatureIterator) {
 INSTANTIATE_TEST_SUITE_P(
     Default, FeatureAnnotatorTest,
     testing::Values(
-        TestParam{{"chromosome1", 9, 15, dataTypes::GenomicStrand::FORWARD}, {"feature1"}},
-        TestParam{{"chromosome1", 5, 15, dataTypes::GenomicStrand::REVERSE}, {"feature4"}},
-        TestParam{{"chromosome1", 5, 15, std::nullopt}, {"feature1", "feature4"}},
-        TestParam{{"chromosome1", 31, 39, std::nullopt}, {}},
-        TestParam{{"chromosome2", 5, 15, std::nullopt}, {"feature3"}},
-        TestParam{{"chromosome3", 5, 25, std::nullopt}, {}},
-        TestParam{{"chromosome1", 5, 15, dataTypes::GenomicStrand::FORWARD},
-                  annotation::Orientation::OPPOSITE,
-                  {"feature4"}}));
+        FeatureAnnotatorTestParameters{{"chromosome1", 9, 15, dataTypes::GenomicStrand::FORWARD},
+                                       {"feature1"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 5, 15, dataTypes::GenomicStrand::REVERSE},
+                                       {"feature4"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 5, 15, std::nullopt},
+                                       {"feature1", "feature4"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 31, 39, std::nullopt}, {}},
+        FeatureAnnotatorTestParameters{{"chromosome2", 5, 15, std::nullopt}, {"feature3"}},
+        FeatureAnnotatorTestParameters{{"chromosome3", 5, 25, std::nullopt}, {}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 5, 15, dataTypes::GenomicStrand::FORWARD},
+                                       annotation::Orientation::OPPOSITE,
+                                       {"feature4"}}));
 
 // Tests for FeatureAnnotator::getBestOverlappingFeature
-class BestFeatureAnnotatorTest : public testing::TestWithParam<TestParam> {
+class BestFeatureAnnotatorTest : public testing::TestWithParam<FeatureAnnotatorTestParameters> {
    protected:
     BestFeatureAnnotatorTest() : annotator(featureMap) {}
 
@@ -139,12 +180,14 @@ TEST_P(BestFeatureAnnotatorTest, GetBestOverlappingFeature) {
 INSTANTIATE_TEST_SUITE_P(
     Default, BestFeatureAnnotatorTest,
     testing::Values(
-        TestParam{{"chromosome1", 1, 7, dataTypes::GenomicStrand::FORWARD}, {"feature1"}},
-        TestParam{{"chromosome1", 5, 15, dataTypes::GenomicStrand::REVERSE}, {"feature4"}},
-        TestParam{{"chromosome1", 5, 15, std::nullopt}, {"feature4"}},
-        TestParam{{"chromosome1", 31, 39, std::nullopt}, {}},
-        TestParam{{"chromosome2", 5, 15, std::nullopt}, {"feature3"}},
-        TestParam{{"chromosome3", 5, 25, std::nullopt}, {}}));
+        FeatureAnnotatorTestParameters{{"chromosome1", 1, 7, dataTypes::GenomicStrand::FORWARD},
+                                       {"feature1"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 5, 15, dataTypes::GenomicStrand::REVERSE},
+                                       {"feature4"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 5, 15, std::nullopt}, {"feature4"}},
+        FeatureAnnotatorTestParameters{{"chromosome1", 31, 39, std::nullopt}, {}},
+        FeatureAnnotatorTestParameters{{"chromosome2", 5, 15, std::nullopt}, {"feature3"}},
+        FeatureAnnotatorTestParameters{{"chromosome3", 5, 25, std::nullopt}, {}}));
 
 // Tests for FeatureAnnotator::insert and FeatureAnnotator::mergeInsert
 class InsertFeatureAnnotatorTest : public testing::Test {

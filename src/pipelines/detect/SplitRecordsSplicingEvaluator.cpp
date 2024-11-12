@@ -22,7 +22,6 @@ auto SplitRecordsSplicingEvaluator::isSplicedSplitRecord(
     const auto features = getGroupedFeatures(record1, record2, referenceIDs, parameters);
 
     if (!features.has_value()) {
-        std::cout << "No features found for split record\n";
         return false;
     }
 

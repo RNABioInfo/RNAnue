@@ -11,6 +11,8 @@
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
 
+namespace pipelines::detect {
+
 class SplitRecordsComplementarityEvaluator {
    public:
     using Result = CoOptimalPairwiseAligner::Result;
@@ -36,3 +38,5 @@ class SplitRecordsComplementarityEvaluator {
         double minComplementarity, double minComplementarityFraction)
         -> std::optional<SplitRecordsComplementarityEvaluator::Result>;
 };
+
+}  // namespace pipelines::detect

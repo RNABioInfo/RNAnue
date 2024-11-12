@@ -1,5 +1,7 @@
 #include "SplitRecordsComplementarityEvaluator.hpp"
 
+namespace pipelines::detect {
+
 auto SplitRecordsComplementarityEvaluator::evaluate(
     const SplitRecords &splitRecords,
     const SplitRecordsEvaluationParameters::BaseParameters &parameters)
@@ -72,3 +74,5 @@ auto SplitRecordsComplementarityEvaluator::getOptimalAlignment(
 
     return optimalAlignment;
 }
+
+}  // namespace pipelines::detect

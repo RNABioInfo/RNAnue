@@ -83,6 +83,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/Align.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/AlignData.cpp
 
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/Detect.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/DetectData.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplitRecordsComplementarityEvaluator.cpp

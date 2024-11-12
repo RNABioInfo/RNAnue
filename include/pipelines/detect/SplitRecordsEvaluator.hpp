@@ -12,6 +12,8 @@
 
 using namespace seqan3::literals;
 
+namespace pipelines::detect {
+
 class SplitRecordsEvaluator {
    public:
     struct EvaluatedSplitRecords {
@@ -31,21 +33,21 @@ class SplitRecordsEvaluator {
         const std::variant<SplitRecordsEvaluationParameters::BaseParameters,
                            SplitRecordsEvaluationParameters::SplicingParameters> &parameters);
 
-    auto evaluate(SplitRecords &splitRecords,
-                  const std::deque<std::string> &referenceIDs) const -> Result;
+    auto evaluate(SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs) const
+        -> Result;
 
    private:
     std::variant<SplitRecordsEvaluationParameters::BaseParameters,
                  SplitRecordsEvaluationParameters::SplicingParameters>
         parameters;
 
-    auto evaluateBase(SplitRecords &splitRecords,
-                      const SplitRecordsEvaluationParameters::BaseParameters &parameters) const
+    static auto evaluateBase(SplitRecords &splitRecords,
+                             const SplitRecordsEvaluationParameters::BaseParameters &parameters)
         -> Result;
 
-    auto evaluateSplicing(
+    static auto evaluateSplicing(
         SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs,
-        const SplitRecordsEvaluationParameters::SplicingParameters &parameters) const -> Result;
+        const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> Result;
 
     static void addTagsToRecords(
         SplitRecords &splitRecords,
@@ -53,5 +55,7 @@ class SplitRecordsEvaluator {
         const SplitRecordsHybridizationEvaluator::Result &hybridization);
 };
 
-auto operator<<(std::ostream &ostream,
-                const SplitRecordsEvaluator::FilterReason &reason) -> std::ostream &;
+auto operator<<(std::ostream &ostream, const SplitRecordsEvaluator::FilterReason &reason)
+    -> std::ostream &;
+
+}  // namespace pipelines::detect
