@@ -51,8 +51,10 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
     preprocess.add_options()(pi::PREPROCESS.c_str(), po::bool_switch()->default_value(true),
                              "whether to include preprocessing of the raw reads in the "
                              "workflow of RNAnue (default: true)");
+    preprocess.add_options()("deduplicate", po::bool_switch()->default_value(pi::deduplicate),
+                             "remove duplicate reads based on the sequence (default: true)");
     preprocess.add_options()(
-        "trimpolyg", po::bool_switch()->default_value(false),
+        "trimpolyg", po::bool_switch()->default_value(pi::trimpolyG),
         "trim high quality polyG tails from the reads. Applicable for Illumina "
         "NextSeq reads. (default: false)");
     preprocess.add_options()(

@@ -8,35 +8,33 @@
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 
 // Internal
+#include "DeduplicationConfig.hpp"
+#include "DeduplicationOutput.hpp"
 #include "Deduplicator.hpp"
 #include "FastqRecord.hpp"
+#include "TestFilePath.hpp"
 
 namespace fs = std::filesystem;
 using namespace dataTypes;
 using namespace pipelines::preprocess;
 using namespace seqan3::literals;
 
-auto testDeduplicatorFastqPath() -> std::string {
-    return (std::filesystem::path{__FILE__}.parent_path() / "test_data/duplicated_records.fastq")
-        .string();
-}
-
-struct DeduplicatorTestParams {
+struct DeduplicatorSingleTestParams {
     fs::path recordsPath;
     std::vector<FastqRecord> expectedRecords;
 };
 
-class DeduplicatorTests : public ::testing::TestWithParam<DeduplicatorTestParams> {};
+class DeduplicatorSingleTests : public ::testing::TestWithParam<DeduplicatorSingleTestParams> {};
 
-TEST_P(DeduplicatorTests, DeduplicateBySequence) {
+TEST_P(DeduplicatorSingleTests, DeduplicateBySequenceSingle) {
     const auto& params = GetParam();
 
-    Deduplicator deduplicator(Deduplicator::BySequenceConfig{params.recordsPath});
-    const auto results = deduplicator.deduplicate();
+    const auto results =
+        Deduplicator::deduplicate(DeduplicationBySequenceSingleConfig{params.recordsPath});
 
-    ASSERT_EQ(results.size(), params.expectedRecords.size());
+    ASSERT_EQ(results.records.size(), params.expectedRecords.size());
 
-    for (const auto& record : results) {
+    for (const auto& record : results.records) {
         std::cout << record.id() << "\n";
 
         bool found = false;
@@ -58,7 +56,61 @@ const std::vector<FastqRecord> expectedRecords1{
     {"CAGCCATCTTCAAAACGATGCTGACCTCGTGACCAA"_dna5, "SRR18331301.4 4 length=36",
      "GIIIIGIIIIIIGIIIIIIIIIIIGGIIIIIGGIIJ"_phred42}};
 
-const DeduplicatorTestParams deduplicatorTestParams1{.recordsPath = testDeduplicatorFastqPath(),
-                                                     .expectedRecords = expectedRecords1};
+const DeduplicatorSingleTestParams deduplicatorTestParams1{
+    .recordsPath = getTestFilePath("duplicatedRecords.fastq"), .expectedRecords = expectedRecords1};
 
-INSTANTIATE_TEST_SUITE_P(Default, DeduplicatorTests, testing::Values(deduplicatorTestParams1));
+INSTANTIATE_TEST_SUITE_P(Default, DeduplicatorSingleTests,
+                         testing::Values(deduplicatorTestParams1));
+
+struct DeduplicatorPairedTestParams {
+    fs::path recordsPathFwd;
+    fs::path recordsPathRev;
+    std::vector<std::pair<FastqRecord, FastqRecord>> expectedRecordPairs;
+};
+
+class DeduplicatorPairedTests : public ::testing::TestWithParam<DeduplicatorPairedTestParams> {};
+
+TEST_P(DeduplicatorPairedTests, DeduplicateBySequencePaired) {
+    const auto& params = GetParam();
+
+    const auto results = Deduplicator::deduplicate(DeduplicationBySequencePairedConfig{
+        .recordsPathFwd = params.recordsPathFwd, .recordsPathRev = params.recordsPathRev});
+
+    ASSERT_EQ(results.recordPairs.size(), params.expectedRecordPairs.size());
+
+    for (auto&& [record1, record2] : results.recordPairs) {
+        bool found = false;
+
+        for (const auto& expectedRecord : params.expectedRecordPairs) {
+            if (record1.id() == expectedRecord.first.id() ||
+                record2.id() == expectedRecord.second.id()) {
+                found = true;
+                break;
+            }
+        }
+
+        EXPECT_TRUE(found);
+    }
+}
+
+const std::vector<std::pair<FastqRecord, FastqRecord>> expectedRecords2{
+    {{"AGGTGGAGTCGACGTATAAGCCGGGTTCTGTTCCGC"_dna5, "SRR18331301.1 1 length=36",
+      "GGIIGIIIGGIGIIIIIGIAGGGGGGGIIGIGIIGI"_phred42},
+     {"AGGTGGAGTCGACGTATAAGCCGGGTTCTGTTCCGC"_dna5, "SRR18331301.1 1 length=36",
+      "GGIIGIIIGGIGIIIIIGIAGGGGGGGIIGIGIIGI"_phred42}},
+    {{"AGGTGGAGTCGACGTATAAGCCGGGTTCTGTTCCGC"_dna5, "SRR18331301.2 2 length=36",
+      "GGIIGIIIGGIGIIIIIGIAGGGGGGGIIGIGIIGI"_phred42},
+     {"AGGTGGAGTCGACGTATAAGCCGGGTTCTGTTCCGA"_dna5, "SRR18331301.2 2 length=36",
+      "GGIIGIIIGGIGIIIIIGIAGGGGGGGIIGIGIIGI"_phred42}},
+    {{"CAGCCATCTTCAAAACGATGCTGACCTCGTGACCAA"_dna5, "SRR18331301.4 4 length=36",
+      "GIIIIGIIIIIIGIIIIIIIIIIIGGIIIIIGGIIJ"_phred42},
+     {"CAGCCATCTTCAAAACGATGCTGACCTCGTGACCAA"_dna5, "SRR18331301.4 4 length=36",
+      "GIIIIGIIIIIIGIIIIIIIIIIIGGIIIIIGGIIJ"_phred42}}};
+
+const DeduplicatorPairedTestParams deduplicatorTestParams2{
+    .recordsPathFwd = getTestFilePath("duplicatedRecords.fastq"),
+    .recordsPathRev = getTestFilePath("duplicatedRecords2.fastq"),
+    .expectedRecordPairs = expectedRecords2};
+
+INSTANTIATE_TEST_SUITE_P(Default, DeduplicatorPairedTests,
+                         testing::Values(deduplicatorTestParams2));

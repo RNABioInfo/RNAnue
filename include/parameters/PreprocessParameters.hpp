@@ -29,8 +29,10 @@ using AdapterInput = std::variant<std::monostate, std::filesystem::path, seqan3:
 
 class PreprocessParameters : public GeneralParameters {
    public:
-    bool trimPolyG;
     bool preprocessEnabled;
+
+    bool trimPolyG;
+    bool deduplicate;
 
     AdapterInput adapter5Forward;
     AdapterInput adapter3Forward;
@@ -48,20 +50,21 @@ class PreprocessParameters : public GeneralParameters {
 
     PreprocessParameters(const po::variables_map& params)
         : GeneralParameters(params),
-          trimPolyG(validateTrimPolyG(params)),
           preprocessEnabled(validatePreprocessEnabled(params)),
+          trimPolyG(validateTrimPolyG(params)),
+          deduplicate(validateDedupliate(params)),
           adapter5Forward(validateAdapter(params, "adpt5f")),
           adapter3Forward(validateAdapter(params, "adpt3f")),
           adapter5Reverse(validateAdapter(params, "adpt5r")),
           adapter3Reverse(validateAdapter(params, "adpt3r")),
           maxMissMatchFractionTrimming(
-              ParameterValidator::validateArithmetic(params, "mtrim", double{0.0}, double{1.0})),
+              ParameterValidator::validateArithmetic(params, "mtrim", 0.0, 1.0)),
           minOverlapTrimming(
               ParameterValidator::validateArithmetic(params, "minovltrim", size_t{0}, SIZE_MAX)),
           minQualityThreshold(
               ParameterValidator::validateArithmetic(params, "minqual", size_t{0}, SIZE_MAX)),
           minLengthThreshold(ParameterValidator::validateArithmetic<size_t>(params, "minlen",
-                                                                            size_t{0}, SIZE_MAX)),
+                                                                            size_t{1}, SIZE_MAX)),
           minMeanWindowQuality(
               ParameterValidator::validateArithmetic(params, "wqual", size_t{0}, SIZE_MAX)),
           windowTrimmingSize(
@@ -69,19 +72,23 @@ class PreprocessParameters : public GeneralParameters {
           minOverlapMerging(
               ParameterValidator::validateArithmetic(params, "minovl", size_t{0}, SIZE_MAX)),
           maxMissMatchFractionMerging(
-              ParameterValidator::validateArithmetic(params, "mmerge", double{0.0}, double{1.0})) {}
+              ParameterValidator::validateArithmetic(params, "mmerge", 0.0, 1.0)) {}
 
    private:
     static auto validateTrimPolyG(const po::variables_map& params) -> bool {
         return params["trimpolyg"].as<bool>();
     }
 
+    static auto validateDedupliate(const po::variables_map& params) -> bool {
+        return params["deduplicate"].as<bool>();
+    }
+
     static auto validatePreprocessEnabled(const po::variables_map& params) -> bool {
         return params[constants::pipelines::PREPROCESS].as<bool>();
     }
 
-    static auto validateAdapter(const po::variables_map& params,
-                                const std::string& paramName) -> AdapterInput {
+    static auto validateAdapter(const po::variables_map& params, const std::string& paramName)
+        -> AdapterInput {
         if (params.count(paramName) != 0U) {
             const std::string adapterStr = params[paramName].as<std::string>();
 

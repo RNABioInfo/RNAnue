@@ -32,6 +32,8 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/Deduplicator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequenceSingleEnd.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequencePairedEnd.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/Detect.cpp

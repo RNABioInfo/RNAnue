@@ -39,7 +39,8 @@ auto FeatureParser::parse(const fs::path &featureFilePath) const -> dataTypes::F
 auto FeatureParser::getFileType(const fs::path &featureFilePath) -> FileType {
     std::ifstream file(featureFilePath.string());
     if (!file) {
-        Logger::log(LogLevel::ERROR, "Could not open file: " + featureFilePath.string());
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: " +
+                                                            featureFilePath.string());
     }
 
     std::string line;
@@ -64,7 +65,8 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
     std::ifstream file(featureFilePath.string());
 
     if (!file.is_open()) {
-        Logger::log(LogLevel::ERROR, "Could not open file: ", featureFilePath.string());
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            featureFilePath.string());
     }
 
     size_t parsedFeatures = 0;
@@ -96,7 +98,7 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
         const auto identifier = getAttribute(featureIDFlag);
 
         if (!identifier.has_value()) {
-            Logger::log(LogLevel::WARNING, "Could not find identifier in GFF file");
+            Logger::log<LogLevel::WARNING>("Could not find identifier in GFF file");
             continue;
         }
 
@@ -138,7 +140,7 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
             ? ""
             : " Found " + std::to_string(featureGroups.size()) + " feature groups.";
 
-    Logger::log(LogLevel::INFO, "Parsed ", std::to_string(parsedFeatures),
+    Logger::log("Parsed ", std::to_string(parsedFeatures),
                 " features of type: ", includedFeatureTypes, ".", featureGroupLog);
 
     return featureMap;

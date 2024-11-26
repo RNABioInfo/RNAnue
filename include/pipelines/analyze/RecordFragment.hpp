@@ -24,6 +24,7 @@ struct RecordFragment {
     int32_t end;
     double complementarityScore;
     double hybridizationEnergy;
+    int32_t crosslinkingSiteCount;
 
     static auto fromSamRecord(const SamRecord &record) -> std::optional<RecordFragment>;
 

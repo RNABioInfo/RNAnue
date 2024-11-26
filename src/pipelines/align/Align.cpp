@@ -18,7 +18,7 @@ namespace pipelines::align {
 void Align::process(const AlignData &data) {
     buildIndex();
 
-    Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
+    Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
     for (const auto &sample : data.treatmentSamples) {
         processSample(sample);
@@ -28,7 +28,7 @@ void Align::process(const AlignData &data) {
         return;
     }
 
-    Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_CONTROL_MESSAGE);
+    Logger::log(constants::pipelines::PROCESSING_CONTROL_MESSAGE);
 
     for (const auto &sample : *data.controlSamples) {
         processSample(sample);
@@ -46,7 +46,7 @@ void Align::processSample(const AlignSampleType &sample) {
 }
 
 void Align::processSingleEnd(const AlignSampleSingle &sample) {
-    Logger::log(LogLevel::INFO, "Processing single end reads");
+    Logger::log("Processing single end reads");
 
     alignSingleReads(sample.input.inputFastqPath, sample.output.outputAlignmentsPath);
     sortAlignmentsByQueryName(sample.output.outputAlignmentsPath,
@@ -54,7 +54,7 @@ void Align::processSingleEnd(const AlignSampleSingle &sample) {
 }
 
 void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
-    Logger::log(LogLevel::INFO, "Processing merged paired end reads");
+    Logger::log("Processing merged paired end reads");
 
     alignSingleReads(sample.input.inputMergedFastqPath,
                      sample.output.outputAlignmentsMergedReadsPath);
@@ -106,7 +106,7 @@ void Align::buildIndex() {
     const auto indexFilePath = findIndex(referencePath);
 
     if (indexFilePath.has_value() && !indexFilePath.value().empty()) {
-        Logger::log(LogLevel::INFO, "Existing index found: ", indexPath);
+        Logger::log("Existing index found: ", indexPath);
         indexPath = *indexFilePath;
         return;
     }
@@ -114,7 +114,7 @@ void Align::buildIndex() {
     // Index file is written to same location as reference genome
     indexPath = referencePath.parent_path() / referencePath.filename().replace_extension(".idx");
 
-    Logger::log(LogLevel::INFO, "Building index");
+    Logger::log("Building index");
     std::vector<std::string> args = {"-x", indexPath.string(),     "-d", referencePath.string(),
                                      "-t", std::to_string(threads)};
 
@@ -123,7 +123,8 @@ void Align::buildIndex() {
     int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
 
     if (result != 0) {
-        Logger::log(LogLevel::ERROR, "Could not create index for: ", referencePath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not create index for: ",
+                                                            referencePath);
     }
 }
 
@@ -151,7 +152,7 @@ void Align::alignSingleReads(const fs::path &queryFastqInPath,
     int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
 
     if (result != 0) {
-        Logger::log(LogLevel::ERROR, "Could not align reads");
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not align reads");
     }
 }
 
@@ -169,13 +170,13 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
     int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
 
     if (result != 0) {
-        Logger::log(LogLevel::ERROR, "Could not align reads");
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not align reads");
     }
 }
 
 void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
                                       const fs::path &sortedAlignmentsPath) const {
-    Logger::log(LogLevel::INFO, "Sorting alignments");
+    Logger::log("Sorting alignments");
 
     // TODO Adapt output format to selection from config
     const size_t SORT_DEFAULT_MEGS_PER_THREAD = 768;
@@ -194,10 +195,10 @@ void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
     // NOLINTEND
 
     if (ret != 0) {
-        Logger::log(LogLevel::ERROR, "Could not sort alignments");
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not sort alignments");
     }
 
-    Logger::log(LogLevel::INFO, "Sorting alignments done");
+    Logger::log("Sorting alignments done");
 }
 
 auto Align::convertToCStrings(std::vector<std::string> &args) -> std::vector<char *> {

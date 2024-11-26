@@ -39,12 +39,12 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
 
     std::vector<InteractionCluster> localClusters = std::move(clusters);
 
-    Logger::log(LogLevel::INFO, "Sorting clusters");
+    Logger::log("Sorting clusters");
 
     // Clusters should be sorted from back to front
     std::ranges::sort(localClusters, std::less<>{});
 
-    Logger::log(LogLevel::INFO, "Finished sorting clusters");
+    Logger::log("Finished sorting clusters");
 
     std::queue<std::vector<InteractionCluster>> clusterBatches;
 
@@ -134,7 +134,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     annotateSupplementaryFeatures();
 
     const size_t totalClusterCount = includedClusterCount + excludedClusterCount;
-    Logger::log(LogLevel::INFO, "Finished processing ", totalClusterCount, " clusters. Included ",
+    Logger::log("Finished processing ", totalClusterCount, " clusters. Included ",
                 includedClusterCount, " clusters, excluded ", excludedClusterCount, " clusters");
 
     return {.annotatedClusters = std::move(finishedClusters),
@@ -205,8 +205,8 @@ void ParallelInteractionClusterGenerator::annotateSupplementaryFeatures() noexce
 
 void ParallelInteractionClusterGenerator::logClusteringStatus() const noexcept {
     const size_t totalClusterCount = includedClusterCount + excludedClusterCount;
-    Logger::log(LogLevel::INFO, "Processed ", totalClusterCount, " clusters. Included ",
-                includedClusterCount, " clusters, excluded ", excludedClusterCount, " clusters");
+    Logger::log("Processed ", totalClusterCount, " clusters. Included ", includedClusterCount,
+                " clusters, excluded ", excludedClusterCount, " clusters");
 }
 
 }  // namespace pipelines::analyze

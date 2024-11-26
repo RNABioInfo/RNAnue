@@ -18,14 +18,14 @@ namespace pipelines::analyze {
 
 // Analyze
 void Analyze::process(const AnalyzeData &data) {
-    Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
+    Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
     for (const auto &sample : data.treatmentSamples) {
         processSample(sample);
     }
 
     if (!data.controlSamples.has_value()) {
-        Logger::log(LogLevel::INFO, "No control samples provided");
+        Logger::log("No control samples provided");
         return;
     }
 
@@ -35,7 +35,7 @@ void Analyze::process(const AnalyzeData &data) {
 }
 
 void Analyze::processSample(AnalyzeSample sample) {
-    Logger::log(LogLevel::INFO, "Processing sample: ", sample.input.sampleName);
+    Logger::log("Processing sample: ", sample.input.sampleName);
 
     std::vector<InteractionCluster> clusters =
         SplitRecordsParser::parse(sample.input.splitAlignmentsPath);
@@ -91,7 +91,8 @@ void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
     std::ifstream transcriptCountsIn(contiguousTranscriptCountsInPath);
 
     if (!transcriptCountsIn.is_open()) {
-        Logger::log(LogLevel::ERROR, "Could not open file: ", contiguousTranscriptCountsInPath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            contiguousTranscriptCountsInPath);
     }
 
     std::string line;
@@ -146,7 +147,8 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> si
     std::ifstream sampleCountsIn(sampleCountsInPath);
 
     if (!sampleCountsIn.is_open()) {
-        Logger::log(LogLevel::ERROR, "Could not open file: ", sampleCountsInPath.string());
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            sampleCountsInPath.string());
     }
 
     sampleCountsIn.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  // skip header
@@ -175,7 +177,8 @@ void Analyze::writeTranscriptCounts(const std::unordered_map<std::string, size_t
     std::ofstream transcriptCountsOut(transcriptCountsOutPath);
 
     if (!transcriptCountsOut.is_open()) {
-        Logger::log(LogLevel::ERROR, "Could not open file: ", transcriptCountsOutPath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            transcriptCountsOutPath);
     }
 
     for (const auto &[transcriptID, count] : featureCounts) {

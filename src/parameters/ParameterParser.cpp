@@ -32,7 +32,7 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
         return analyze::AnalyzeParameters{params};
     }
 
-    Logger::log(LogLevel::ERROR, "Unknown subcall: " + subcall);
+    Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Unknown subcall: " + subcall);
     exit(EXIT_FAILURE);
 }
 
@@ -65,7 +65,7 @@ auto ParameterParser::parseParameters(int argc,
     }
 
     if (params.count("subcall") == 0U) {
-        Logger::log(LogLevel::ERROR, "Please provide a subcall.");
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
     Logger::setLogLevel(params["loglevel"].as<std::string>());
@@ -87,7 +87,8 @@ void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
     std::ifstream configIn{configFilePath};
 
     if (!configIn) {
-        Logger::log(LogLevel::ERROR, "Configuration file could not be opened!");
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Configuration file could not be opened!");
     }
 
     po::store(po::parse_config_file(configIn, configFileOptions), params);
@@ -147,7 +148,7 @@ void ParameterParser::printVersion() {
         std::to_string(RNAnue_VERSION_MINOR) + "." + std::to_string(RNAnue_VERSION_PATCH) + " - " +
         "Detect RNA-RNA interactions from Direct-Duplex-Detection (DDD) data.";
 
-    Logger::log(LogLevel::INFO, versionString);
+    Logger::log(versionString);
 }
 
 }  // namespace pipelines

@@ -16,4 +16,7 @@ using FastqFieldTypes =
 using FastqFieldIDs = seqan3::fields<seqan3::field::seq, seqan3::field::id, seqan3::field::qual>;
 
 using FastqRecord = seqan3::sequence_record<FastqFieldTypes, FastqFieldIDs>;
+
+using PairedFastqRecords = std::pair<FastqRecord, FastqRecord>;
+
 }  // namespace dataTypes

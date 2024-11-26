@@ -19,7 +19,7 @@ auto CrosslinkingSitesEvaluator::evaluate(std::span<const seqan3::dna5> sequence
                                           const std::vector<seqan3::dot_bracket3> &dotbracket)
     -> std::optional<CrosslinkingSitesEvaluator::Result> {
     if (sequence1.empty() || sequence2.empty() || dotbracket.empty()) [[unlikely]] {
-        Logger::log(LogLevel::WARNING, "Empty input sequences or dot-bracket vector!");
+        Logger::log<LogLevel::WARNING>("Empty input sequences or dot-bracket vector!");
         return std::nullopt;
     }
 

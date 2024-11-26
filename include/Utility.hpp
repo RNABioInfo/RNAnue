@@ -15,6 +15,7 @@
 
 // seqan3
 #include <seqan3/alphabet/cigar/cigar.hpp>
+#include <seqan3/alphabet/quality/phred42.hpp>
 #include <seqan3/io/sam_file/all.hpp>
 #include <seqan3/io/sequence_file/all.hpp>
 
@@ -104,16 +105,16 @@ auto getValidFilePaths(const fs::path &directory,
 
     for (const auto &entry : fs::directory_iterator(directory)) {
         if (!entry.is_regular_file()) {
-            Logger::log(LogLevel::WARNING, "Found not supported type in directory: ", entry.path());
+            Logger::log<LogLevel::WARNING>("Found not supported type in directory: ", entry.path());
             continue;
         }
 
         if (entry.path().filename().string().front() == '.') {
-            Logger::log(LogLevel::INFO, "Ignoring hidden file: ", entry);
+            Logger::log("Ignoring hidden file: ", entry);
             continue;
         }
 
-        Logger::log(LogLevel::DEBUG, "Found file: ", entry);
+        Logger::log<LogLevel::DEBUG>("Found file: ", entry);
 
         const auto &filePathStr = entry.path().string();
 
@@ -219,3 +220,32 @@ struct fold_left_fn {
 };
 
 inline constexpr fold_left_fn fold_left;
+
+// inline auto meanQualityScore(std::vector<seqan3::phred42> &qualities) {
+//     constexpr double PHRED_SCALE_BASE = 10;
+
+//     const double sumQualities =
+//         fold_left(qualities | std::views::transform([](seqan3::phred42 &qual) {
+//                       return std::pow(PHRED_SCALE_BASE,
+//                                       -static_cast<double>(qual.to_phred()) / PHRED_SCALE_BASE);
+//                   }),
+//                   0.0, std::plus<>());
+//     const double meanErrorProbability =
+//         static_cast<double>(sumQualities) / static_cast<double>(qualities.size());
+
+//     return (-PHRED_SCALE_BASE * std::log10(meanErrorProbability));
+// }
+
+// inline auto meanQualityScore(const std::span<seqan3::phred42> &qualities) {
+//     constexpr double PHRED_SCALE_BASE = 10;
+//     const double sumQualities =
+//         fold_left(qualities | std::views::transform([](seqan3::phred42 &qual) {
+//                       return std::pow(PHRED_SCALE_BASE,
+//                                       -static_cast<double>(qual.to_phred()) / PHRED_SCALE_BASE);
+//                   }),
+//                   0.0, std::plus<>());
+//     const double meanErrorProbability =
+//         static_cast<double>(sumQualities) / static_cast<double>(qualities.size());
+
+//     return (-PHRED_SCALE_BASE * std::log10(meanErrorProbability));
+// }

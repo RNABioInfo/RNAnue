@@ -30,7 +30,7 @@ void crashHandler(int sig) {
 }
 
 void createTmpDir(const fs::path& path) {
-    Logger::log(LogLevel::INFO, "Create temporary directory " + path.string());
+    Logger::log("Create temporary directory " + path.string());
     deleteDir(path);
     fs::create_directory(path);
 }
@@ -57,13 +57,16 @@ auto getUUID() -> std::string {
 
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
     if (inputPaths.empty()) {
-        Logger::log(LogLevel::WARNING, "No input files to merge");
+        Logger::log<LogLevel::WARNING>("No input files to merge");
         return;
     }
 
     seqan3::sam_file_output outputFile{outputPath};
 
     for (const auto& inputPath : inputPaths) {
+        if (!fs::exists(inputPath) || fs::file_size(inputPath) == 0) {
+            continue;
+        }
         seqan3::sam_file_input inputFile{inputPath};
         inputFile | outputFile;
     }
@@ -71,13 +74,16 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
 
 void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
     if (inputPaths.empty()) {
-        Logger::log(LogLevel::WARNING, "No input files to merge");
+        Logger::log<LogLevel::WARNING>("No input files to merge");
         return;
     }
 
     seqan3::sequence_file_output outputFile{outputPath};
 
     for (const auto& inputPath : inputPaths) {
+        if (!fs::exists(inputPath) || fs::file_size(inputPath) == 0) {
+            continue;
+        }
         seqan3::sequence_file_input inputFile{inputPath};
         inputFile | outputFile;
     }

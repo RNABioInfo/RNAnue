@@ -27,6 +27,8 @@ const std::string PROCESSING_CONTROL_MESSAGE = "Processing control data";
 
 // Preprocess defaults
 constexpr size_t defaultChunkSize = 1000000;
+constexpr bool trimpolyG = false;
+constexpr bool deduplicate = true;
 constexpr double defaultAdapterTrimMissmatchRate = 0.05;
 constexpr size_t defaultAdapterTrimMinOverlap = 5;
 constexpr size_t defaultMinMeanPhreadQuality = 20;

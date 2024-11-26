@@ -57,7 +57,7 @@ auto DetectData::retrieveInputSamples(const fs::path& parentDir) -> std::vector<
             const std::string message = "Expected 1 input file in " + sampleDir.string() +
                                         " but found " + std::to_string(sampleFiles.size()) +
                                         " valid files";
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
 
@@ -67,12 +67,12 @@ auto DetectData::retrieveInputSamples(const fs::path& parentDir) -> std::vector<
         if (!hasSuffix(sampleFile, validInputSuffix)) {
             const std::string message = "Invalid input file suffix: " + sampleFile.string() +
                                         " . Expected: " + validInputSuffix;
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
 
-        Logger::log(LogLevel::DEBUG,
-                    "Found input sample: " + sampleName + " file: " + sampleFile.string());
+        Logger::log<LogLevel::DEBUG>("Found input sample: " + sampleName +
+                                     " file: " + sampleFile.string());
 
         samples.emplace_back(sampleName, sampleFile);
     }

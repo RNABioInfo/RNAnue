@@ -1,7 +1,10 @@
 #include "SplitRecordsHybridizationEvaluator.hpp"
 
 // seqan3
+#include <subopt.h>
+
 #include <cassert>
+#include <memory>
 #include <seqan3/alphabet/views/char_to.hpp>
 #include <seqan3/alphabet/views/to_char.hpp>
 #include <seqan3/utility/all.hpp>
@@ -9,6 +12,7 @@
 
 // Internal
 #include "CrosslinkingSitesEvaluator.hpp"
+#include "Logger.hpp"
 
 namespace pipelines::detect {
 
@@ -28,23 +32,33 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
     vrna_fold_compound_t *foldCompound = vrna_fold_compound(
         interactionSeq.c_str(), nullptr, VRNA_OPTION_DEFAULT | VRNA_OPTION_HYBRID);
     std::unique_ptr<char[]> structure(new char[interactionSeq.size() + 1]);  // NOLINT
-    float mfe = vrna_cofold(interactionSeq.c_str(), structure.get());
 
-    if (mfe > parameters.mfeThreshold) {
+    constexpr int DELTA_MFE = 0;
+    std::unique_ptr<vrna_subopt_sol_s, decltype(&free)> result{
+        vrna_subopt(foldCompound, DELTA_MFE, 1, nullptr), free};
+
+    if (result == nullptr || result->energy > parameters.mfeThreshold) {
+        vrna_fold_compound_free(foldCompound);
         return std::nullopt;
     }
 
-    auto secondaryStructure = std::string(vrna_cut_point_insert(
-                                  structure.get(), static_cast<int>(sequence1.size()) + 1)) |
+    auto secondaryStructure = std::string(result->structure) |
                               seqan3::views::char_to<seqan3::dot_bracket3> |
                               seqan3::ranges::to<std::vector>();
+
+    if (secondaryStructure.size() != (sequence1.size() + sequence2.size() + 1)) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Expected size: ", (sequence1.size() + sequence2.size() + 1),
+            ", Got: ", secondaryStructure.size(), "\n", secondaryStructure, "\n",
+            std::string(result->structure));
+    }
 
     const auto crosslinkingResult =
         CrosslinkingSitesEvaluator::evaluate(sequence1, sequence2, secondaryStructure);
 
     vrna_fold_compound_free(foldCompound);
 
-    return SplitRecordsHybridizationEvaluator::Result{.energy = mfe,
+    return SplitRecordsHybridizationEvaluator::Result{.energy = result->energy,
                                                       .crosslinkingResult = crosslinkingResult};
 }
 

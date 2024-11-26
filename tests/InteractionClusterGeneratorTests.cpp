@@ -20,6 +20,7 @@
 #include "PartiallyAnnotatedInteractionCluster.hpp"
 #include "RecordFragment.hpp"
 #include "SplitRecordsParser.hpp"
+#include "TestFilePath.hpp"
 
 using namespace pipelines::analyze;
 
@@ -37,12 +38,6 @@ using namespace pipelines::analyze;
 // start: 39, end: 46)
 
 using namespace pipelines::analyze;
-
-auto testInteractionClustersSamPath() -> std::string {
-    return (std::filesystem::path{__FILE__}.parent_path() /
-            "test_data/interactionClusterRecords.sam")
-        .string();
-}
 
 struct InteractionClusterGeneratorTestParam {
     std::unordered_map<std::string, size_t> expectedFeatureCounts;
@@ -98,7 +93,7 @@ TEST_P(InteractionClusterGeneratorTests, SplitRecordsAreSortedCorrectly) {
     const auto& param = GetParam();
 
     std::vector<InteractionCluster> interactionClusters =
-        SplitRecordsParser::parse(testInteractionClustersSamPath());
+        SplitRecordsParser::parse(getTestFilePath("interactionClusterRecords.sam"));
 
     std::ranges::sort(interactionClusters, std::less<>());
 
@@ -118,37 +113,44 @@ const AnnotatedInteractionCluster cluster1(
                                      .start = 19,
                                      .end = 27,
                                      .complementarityScore = 1,
-                                     .hybridizationEnergy = -1.7},
+                                     .hybridizationEnergy = -1.7,
+                                     .crosslinkingSiteCount = 1},
       .secondSegment = RecordFragment{.recordID = "SRR18331301.3",
                                       .referenceIDIndex = 1,
                                       .strand = dataTypes::GenomicStrand::FORWARD,
                                       .start = 49,
                                       .end = 64,
                                       .complementarityScore = 1,
-                                      .hybridizationEnergy = -1.7}},
+                                      .hybridizationEnergy = -1.7,
+                                      .crosslinkingSiteCount = 1}},
      {"SRR18331301.3", "SRR18331301.1", "SRR18331301.6"},
      {1.0, 1.0, 1.0},
-     {-1.7, -1.7, -1.7}},
+     {-1.7, -1.7, -1.7},
+     {1, 1, 1}},
     "gene1", "gene2");
 
 const PartiallyAnnotatedInteractionCluster cluster2(
-    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.2",
-                                     .referenceIDIndex = 1,
-                                     .strand = dataTypes::GenomicStrand::FORWARD,
-                                     .start = 4,
-                                     .end = 10,
-                                     .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7},
-      .secondSegment = RecordFragment{.recordID = "SRR18331301.2",
-                                      .referenceIDIndex = 1,
-                                      .strand = dataTypes::GenomicStrand::FORWARD,
-                                      .start = 51,
-                                      .end = 57,
-                                      .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7}},
+    {InteractionSegmentPair{
+         .firstSegment = RecordFragment{.recordID = "SRR18331301.2",
+                                        .referenceIDIndex = 1,
+                                        .strand = dataTypes::GenomicStrand::FORWARD,
+                                        .start = 4,
+                                        .end = 10,
+                                        .complementarityScore = 1.0,
+                                        .hybridizationEnergy = -1.7,
+                                        .crosslinkingSiteCount = 1},
+         .secondSegment = RecordFragment{.recordID = "SRR18331301.2",
+                                         .referenceIDIndex = 1,
+                                         .strand = dataTypes::GenomicStrand::FORWARD,
+                                         .start = 51,
+                                         .end = 57,
+                                         .complementarityScore = 1.0,
+                                         .hybridizationEnergy = -1.7,
+                                         .crosslinkingSiteCount = 1}},
      {"SRR18331301.2", "SRR18331301.7"},
      {1.0, 1.0},
-     {-1.7, -1.7}},
+     {-1.7, -1.7},
+     {1, 1}},
     std::nullopt, "gene3");
 
 const PartiallyAnnotatedInteractionCluster cluster3(
@@ -158,17 +160,20 @@ const PartiallyAnnotatedInteractionCluster cluster3(
                                      .start = 4,
                                      .end = 14,
                                      .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7},
+                                     .hybridizationEnergy = -1.7,
+                                     .crosslinkingSiteCount = 1},
       .secondSegment = RecordFragment{.recordID = "SRR18331301.4",
                                       .referenceIDIndex = 0,
                                       .strand = dataTypes::GenomicStrand::FORWARD,
                                       .start = 39,
                                       .end = 46,
                                       .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7}},
+                                      .hybridizationEnergy = -1.7,
+                                      .crosslinkingSiteCount = 1}},
      {"SRR18331301.5", "SRR18331301.4"},
      {1.0, 1.0},
-     {-1.7, -1.7}},
+     {-1.7, -1.7},
+     {1, 1}},
     std::nullopt, std::nullopt);
 
 INSTANTIATE_TEST_SUITE_P(Default, InteractionClusterGeneratorTests,

@@ -19,16 +19,10 @@
 #include "ParallelInteractionClusterGenerator.hpp"
 #include "RecordFragment.hpp"
 #include "SplitRecordsParser.hpp"
+#include "TestFilePath.hpp"
 
 using namespace pipelines::analyze;
 using namespace annotation;
-
-// Helper function to get the test SAM file path
-auto testParallelInteractionClustersSamPath() -> std::string {
-    return (std::filesystem::path{__FILE__}.parent_path() /
-            "test_data/interactionClusterRecords.sam")
-        .string();
-}
 
 // Expected Clusters Definitions (Same as in InteractionClusterGeneratorTests)
 const AnnotatedInteractionCluster expectedCluster1(
@@ -38,17 +32,20 @@ const AnnotatedInteractionCluster expectedCluster1(
                                      .start = 19,
                                      .end = 27,
                                      .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7},
+                                     .hybridizationEnergy = -1.7,
+                                     .crosslinkingSiteCount = 1},
       .secondSegment = RecordFragment{.recordID = "SRR18331301.3",
                                       .referenceIDIndex = 1,
                                       .strand = dataTypes::GenomicStrand::FORWARD,
                                       .start = 49,
                                       .end = 64,
                                       .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7}},
+                                      .hybridizationEnergy = -1.7,
+                                      .crosslinkingSiteCount = 1}},
      {"SRR18331301.3", "SRR18331301.1", "SRR18331301.6"},
      {1.0, 1.0, 1.0},
-     {-1.7, -1.7, -1.7}},
+     {-1.7, -1.7, -1.7},
+     {1, 1, 1}},
     "gene1", "gene2");
 
 const AnnotatedInteractionCluster expectedCluster2(
@@ -58,17 +55,20 @@ const AnnotatedInteractionCluster expectedCluster2(
                                      .start = 4,
                                      .end = 10,
                                      .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7},
+                                     .hybridizationEnergy = -1.7,
+                                     .crosslinkingSiteCount = 1},
       .secondSegment = RecordFragment{.recordID = "SRR18331301.2",
                                       .referenceIDIndex = 1,
                                       .strand = dataTypes::GenomicStrand::FORWARD,
                                       .start = 51,
                                       .end = 57,
                                       .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7}},
+                                      .hybridizationEnergy = -1.7,
+                                      .crosslinkingSiteCount = 1}},
      {"SRR18331301.2", "SRR18331301.7"},
      {1.0, 1.0},
-     {-1.7, -1.7}},
+     {-1.7, -1.7},
+     {1, 1}},
     "random", "gene3");
 
 const AnnotatedInteractionCluster expectedCluster3(
@@ -78,17 +78,20 @@ const AnnotatedInteractionCluster expectedCluster3(
                                      .start = 4,
                                      .end = 14,
                                      .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7},
+                                     .hybridizationEnergy = -1.7,
+                                     .crosslinkingSiteCount = 1},
       .secondSegment = RecordFragment{.recordID = "SRR18331301.4",
                                       .referenceIDIndex = 0,
                                       .strand = dataTypes::GenomicStrand::FORWARD,
                                       .start = 39,
                                       .end = 46,
                                       .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7}},
+                                      .hybridizationEnergy = -1.7,
+                                      .crosslinkingSiteCount = 1}},
      {"SRR18331301.5", "SRR18331301.4"},
      {1.0, 1.0},
-     {-1.7, -1.7}},
+     {-1.7, -1.7},
+     {1, 1}},
     "random", "random");
 
 // Test Parameters Structure
@@ -150,7 +153,7 @@ TEST_P(ParallelInteractionClusterGeneratorTests, MergeClustersCorrectly) {
 
     // Parse and sort interaction clusters
     std::vector<InteractionCluster> interactionClusters =
-        SplitRecordsParser::parse(testParallelInteractionClustersSamPath());
+        SplitRecordsParser::parse(getTestFilePath("interactionClusterRecords.sam"));
 
     std::ranges::sort(interactionClusters, std::less<>());
 
@@ -160,7 +163,6 @@ TEST_P(ParallelInteractionClusterGeneratorTests, MergeClustersCorrectly) {
                                                    .maxOverlapFraction = 0.5,
                                                    .minReadCount = 1,
                                                    .graceDistance = 1});
-
     // Merge clusters in parallel
     auto result =
         generator.mergeClusters(std::move(interactionClusters), param.threadCount, param.batchSize);

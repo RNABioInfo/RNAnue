@@ -52,7 +52,7 @@ auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector
             const std::string message = "Expected " + std::to_string(validSuffices.size()) +
                                         " files in " + sampleDir.string() + " but found " +
                                         std::to_string(sampleFiles.size()) + " valid files";
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
 
@@ -79,7 +79,7 @@ auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector
             } else {
                 const std::string message =
                     "Unexpected file " + sampleFile.string() + " found in " + sampleDir.string();
-                Logger::log(LogLevel::WARNING, message);
+                Logger::log<LogLevel::WARNING>(message);
             }
         }
 
@@ -89,7 +89,7 @@ auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector
             !sharedReadCountsPath.has_value()) {
             const std::string message =
                 "Missing one or more required files in " + sampleDir.string();
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
 

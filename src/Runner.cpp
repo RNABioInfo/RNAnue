@@ -17,10 +17,10 @@ void Runner::runPipeline(int argc, const char *const argv[]) {  // NOLINT
 }
 
 void Runner::runPreprocessPipeline(const preprocess::PreprocessParameters &parameters) {
-    Logger::log(LogLevel::INFO, "Running preprocess pipeline");
+    Logger::log("Running preprocess pipeline");
 
     if (!parameters.preprocessEnabled) {
-        Logger::log(LogLevel::INFO, "Preprocess pipeline is disabled in the parameters");
+        Logger::log("Preprocess pipeline is disabled in the parameters");
         return;
     }
 
@@ -32,7 +32,7 @@ void Runner::runPreprocessPipeline(const preprocess::PreprocessParameters &param
 }
 
 void Runner::runAlignPipeline(const align::AlignParameters &parameters) {
-    Logger::log(LogLevel::INFO, "Running align pipeline");
+    Logger::log("Running align pipeline");
 
     const auto inputDirs = InputDirectories(parameters.outputDir, preprocess::pipelinePrefix);
 
@@ -44,7 +44,7 @@ void Runner::runAlignPipeline(const align::AlignParameters &parameters) {
 }
 
 void Runner::runDetectPipeline(const detect::DetectParameters &parameters) {
-    Logger::log(LogLevel::INFO, "Running detect pipeline");
+    Logger::log("Running detect pipeline");
 
     const auto inputDirs = InputDirectories(parameters.outputDir, align::pipelinePrefix);
 
@@ -56,7 +56,7 @@ void Runner::runDetectPipeline(const detect::DetectParameters &parameters) {
 }
 
 void Runner::runAnalyzePipeline(const analyze::AnalyzeParameters &parameters) {
-    Logger::log(LogLevel::INFO, "Running analyze pipeline");
+    Logger::log("Running analyze pipeline");
 
     const auto inputDirs = InputDirectories(parameters.outputDir, detect::pipelinePrefix);
 
@@ -68,7 +68,7 @@ void Runner::runAnalyzePipeline(const analyze::AnalyzeParameters &parameters) {
 }
 
 void Runner::runCompletePipeline(const CompleteParameters &parameters) {
-    Logger::log(LogLevel::INFO, "Running complete pipeline");
+    Logger::log("Running complete pipeline");
 
     runPreprocessPipeline(parameters.preprocessParameters);
     runAlignPipeline(parameters.alignParameters);

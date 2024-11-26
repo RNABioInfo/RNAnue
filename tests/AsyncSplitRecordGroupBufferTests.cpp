@@ -1,26 +1,27 @@
 #include <gtest/gtest.h>
 
+// Standard
 #include <cstddef>
 #include <filesystem>
 #include <future>
 #include <iostream>
-#include <seqan3/io/sam_file/all.hpp>
-#include <seqan3/io/views/async_input_buffer.hpp>
 #include <set>
 #include <stdexcept>
 #include <string>
 #include <thread>
 
+// seqan3
+#include <seqan3/io/sam_file/all.hpp>
+#include <seqan3/io/views/async_input_buffer.hpp>
+
+// Internal
 #include "AsyncSplitRecordGroupBuffer.hpp"
+#include "TestFilePath.hpp"
 
 using namespace seqan3::literals;
 
-std::string testSamPath() {
-    return (std::filesystem::path{__FILE__}.parent_path() / "test_data/splitRecords.bam").string();
-}
-
 TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
-    seqan3::sam_file_input fin{testSamPath(), dataTypes::SamFieldIDs{}};
+    seqan3::sam_file_input fin{getTestFilePath("splitRecords.bam"), dataTypes::SamFieldIDs{}};
 
     auto v = fin | AsyncSplitRecordGroupBuffer(2);
 
@@ -50,17 +51,14 @@ TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
 };
 
 TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
-    seqan3::sam_file_input fin{
-        "/Users/christopherphd/Documents/projects/RNAnue_dev/RNAnue/tests/test_data/"
-        "splitRecords.bam",
-        dataTypes::SamFieldIDs{}};
+    seqan3::sam_file_input fin{getTestFilePath("splitRecords.bam"), dataTypes::SamFieldIDs{}};
 
-    auto v = fin | AsyncSplitRecordGroupBuffer(2);
+    auto asyncInputBuffer = fin | AsyncSplitRecordGroupBuffer(2);
 
-    auto worker = [&v]() -> size_t {
+    auto worker = [&asyncInputBuffer]() -> size_t {
         size_t count = 0;
 
-        for (auto& group : v) {
+        for (auto& group : asyncInputBuffer) {
             std::cout << "Thread ID: " << std::this_thread::get_id() << "\n";
             std::cout << "GROUP ID: " << group.front().id() << std::endl;
             count++;

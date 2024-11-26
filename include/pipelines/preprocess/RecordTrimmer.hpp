@@ -5,27 +5,29 @@
 #include <ranges>
 
 // seqan3
-#include "seqan3/alignment/configuration/align_config_gap_cost_affine.hpp"
-#include "seqan3/alignment/configuration/align_config_output.hpp"
-#include "seqan3/alignment/configuration/align_config_scoring_scheme.hpp"
-#include "seqan3/alignment/pairwise/align_pairwise.hpp"
-#include "seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp"
-#include "seqan3/alphabet/quality/concept.hpp"
-#include "seqan3/utility/views/slice.hpp"
+#include <seqan3/alignment/configuration/align_config_gap_cost_affine.hpp>
+#include <seqan3/alignment/configuration/align_config_output.hpp>
+#include <seqan3/alignment/configuration/align_config_scoring_scheme.hpp>
+#include <seqan3/alignment/pairwise/align_pairwise.hpp>
+#include <seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp>
+#include <seqan3/alphabet/quality/concept.hpp>
+#include <seqan3/utility/views/slice.hpp>
 
 // Internal
 #include "Adapter.hpp"
+#include "SequenceQualityAlgorithms.hpp"  // NOLINT
 
 using seqan3::operator""_dna5;
 
 namespace pipelines::preprocess {
 
 struct RecordTrimmer {
+    struct TrimWindowedConfig {
+        std::size_t windowTrimmingSize;
+        std::size_t minMeanWindowPhred;
+    };
+
     RecordTrimmer() = delete;
-    RecordTrimmer(RecordTrimmer &&) = delete;
-    RecordTrimmer &operator=(RecordTrimmer &&) = delete;
-    RecordTrimmer(const RecordTrimmer &) = delete;
-    auto operator=(const RecordTrimmer &) -> RecordTrimmer & = delete;
 
     /**
      * Trims adapter sequences from the given record.
@@ -48,18 +50,19 @@ struct RecordTrimmer {
         const auto alignment_config = TrimConfig::alignmentConfigFor(adapter.trimmingMode) |
                                       scoringSchemeConfig | gapSchemeConfig | outputConfig;
 
+        const auto seqCopy = record.sequence();
         auto &seq = record.sequence();
         auto &qual = record.base_qualities();
 
         for (auto const &result :
-             seqan3::align_pairwise(std::tie(adapter.sequence, seq), alignment_config)) {
+             seqan3::align_pairwise(std::tie(adapter.sequence, seqCopy), alignment_config)) {
             const int overlap = result.sequence2_end_position() - result.sequence2_begin_position();
 
             if (overlap < int(minOverlapTrimming)) {
                 continue;
             }
 
-            const int minScore = overlap - (overlap * adapter.maxMissMatchFraction) * 2;
+            const int minScore = overlap - ((overlap * adapter.maxMissMatchFraction) * 2);
 
             if (result.score() >= minScore) {
                 if (adapter.trimmingMode == TrimConfig::Mode::FIVE_PRIME) {
@@ -69,6 +72,8 @@ struct RecordTrimmer {
                     seq.erase(seq.begin() + result.sequence2_begin_position(), seq.end());
                     qual.erase(qual.begin() + result.sequence2_begin_position(), qual.end());
                 }
+
+                break;
             }
         }
     }
@@ -133,25 +138,20 @@ struct RecordTrimmer {
      * @param record The record to trim.
      */
     template <typename record_type>
-    static void trimWindowedQuality(record_type &record, const std::size_t windowTrimmingSize,
-                                    const std::size_t minMeanWindowPhred) {
+    static void trimWindowedQuality(record_type &record, const TrimWindowedConfig &config) {
         auto trimmingEnd = static_cast<std::ptrdiff_t>(record.sequence().size());
 
-        while ((trimmingEnd - static_cast<std::ptrdiff_t>(windowTrimmingSize)) >=
-               static_cast<std::ptrdiff_t>(windowTrimmingSize)) {
-            const auto windowQual =
+        while ((trimmingEnd - static_cast<std::ptrdiff_t>(config.windowTrimmingSize)) >=
+               static_cast<std::ptrdiff_t>(config.windowTrimmingSize)) {
+            auto windowQual =
                 record.base_qualities() |
-                seqan3::views::slice(trimmingEnd - static_cast<std::ptrdiff_t>(windowTrimmingSize),
-                                     trimmingEnd);
+                seqan3::views::slice(
+                    trimmingEnd - static_cast<std::ptrdiff_t>(config.windowTrimmingSize),
+                    trimmingEnd);
 
-            const auto windowPhred = windowQual | std::views::transform([](auto quality) {
-                                         return seqan3::to_phred(quality);
-                                     });
+            const double meanQuality = SequenceQualityAlgorithms::meanQualityScore(windowQual);
 
-            const auto windowPhredSum = std::accumulate(windowPhred.begin(), windowPhred.end(), 0);
-            const auto windowMeanPhred = windowPhredSum / std::ranges::size(windowPhred);
-
-            if (windowMeanPhred >= minMeanWindowPhred) {
+            if (meanQuality >= static_cast<double>(config.minMeanWindowPhred)) {
                 break;
             }
             trimmingEnd--;

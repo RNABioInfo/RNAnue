@@ -2,7 +2,9 @@
 
 // Standard
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
+#include <numeric>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -19,22 +21,23 @@ class InteractionCluster {
     InteractionCluster(InteractionSegmentPair interactionSegments,
                        std::vector<std::string> recordIDs,
                        std::vector<double> complementarityScores,
-                       std::vector<double> hybridizationEnergies)
+                       std::vector<double> hybridizationEnergies,
+                       std::vector<int32_t> crosslinkingSiteCounts)
         : firstSegment(interactionSegments.firstSegment),
           secondSegment(interactionSegments.secondSegment),
           recordIDs(std::move(recordIDs)),
           complementarityScores(std::move(complementarityScores)),
           maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
           hybridizationEnergies(std::move(hybridizationEnergies)),
-          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)) {}
+          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
+          crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {}
 
     InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
                        std::string recordID, double complementarityScore,
-                       double hybridizationEnergie)
+                       double hybridizationEnergie, int32_t crosslinkingSiteCount)
         : InteractionCluster({.firstSegment = firstSegment, .secondSegment = secondSegment},
-                             std::vector<std::string>{std::move(recordID)},
-                             std::vector<double>{complementarityScore},
-                             std::vector<double>{hybridizationEnergie}) {}
+                             {std::move(recordID)}, {complementarityScore}, {hybridizationEnergie},
+                             {crosslinkingSiteCount}) {}
 
     InteractionCluster() = delete;
 
@@ -70,6 +73,14 @@ class InteractionCluster {
         return minHybridizationEnergy;
     }
 
+    [[nodiscard]] auto getCrosslinkingSiteCounts() const -> const std::vector<int32_t> & {
+        return crosslinkingSiteCounts;
+    }
+
+    [[nodiscard]] auto meanCrosslinkingSiteCount() const -> double;
+
+    [[nodiscard]] auto standardDeviationCrosslinkingSiteCount() const -> double;
+
     [[nodiscard]] auto fragmentCount() const -> size_t { return recordIDs.size(); }
 
     // Comparisons
@@ -100,6 +111,7 @@ class InteractionCluster {
     double maxComplementarityScore;
     std::vector<double> hybridizationEnergies;
     double minHybridizationEnergy;
+    std::vector<int32_t> crosslinkingSiteCounts;
 };
 
 auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)

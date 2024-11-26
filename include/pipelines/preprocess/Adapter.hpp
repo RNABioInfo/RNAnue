@@ -48,7 +48,7 @@ struct Adapter {
             adapterInput);
 
         for (const auto &adapter : adapters) {
-            Logger::log(LogLevel::INFO, "Loaded adapter: ", adapter, " with ",
+            Logger::log("Loaded adapter: ", adapter, " with ",
                         std::to_string(adapter.maxMissMatchFraction),
                         " allowed miss-match fraction.");
         }

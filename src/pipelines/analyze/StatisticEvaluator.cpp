@@ -50,9 +50,9 @@ auto StatisticEvaluator::evaluatePValues(
         auto secondIt = transcriptProbabilities.find(secondTranscriptID);
 
         if (firstIt == transcriptProbabilities.end() || secondIt == transcriptProbabilities.end()) {
-            Logger::log(LogLevel::WARNING,
-                        "Could not find transcript probabilities for cluster with transcripts: ",
-                        firstTranscriptID, ", ", secondTranscriptID);
+            Logger::log<LogLevel::WARNING>(
+                "Could not find transcript probabilities for cluster with transcripts: ",
+                firstTranscriptID, ", ", secondTranscriptID);
             continue;
         }
 

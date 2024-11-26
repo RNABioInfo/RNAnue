@@ -33,7 +33,7 @@ auto AlignData::retrieveSamples(const std::string& sampleGroup, const fs::path& 
                 AlignSampleSingle{.input = *inputSampleSingle, .output = {outputAlignmentsPath}});
 
             const auto message = "Single-end sample " + inputSampleSingle->sampleName + " found";
-            Logger::log(LogLevel::INFO, message);
+            Logger::log(message);
 
             continue;
         }
@@ -67,7 +67,7 @@ auto AlignData::retrieveSamples(const std::string& sampleGroup, const fs::path& 
                            .outputAlignmentsPairedReadsPath = outputAlignmentsPairedPath}});
 
             const auto message = "Paired-end sample " + parentName + " found";
-            Logger::log(LogLevel::INFO, message);
+            Logger::log(message);
 
             continue;
         }
@@ -100,7 +100,7 @@ auto AlignData::retrieveInputSample(const fs::path& sampleDir) -> InputSampleTyp
             "Found invalid number of sample files (" + std::to_string(numSamples) + ")" +
             ". Expectected either " + std::to_string(validInputSuffixSingleton.size()) + " or " +
             std::to_string(validInputSuffixesPaired.size()) + " in " + sampleDir.string();
-        Logger::log(LogLevel::ERROR, message);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
         throw std::runtime_error(message);
     }
 
@@ -138,7 +138,7 @@ auto AlignData::retrieveInputPaired(const std::string& sampleName,
             std::string message = "The directory " + inputSamples.front().parent_path().string();
             message += " is missing the following file: ";
             message += suffix;
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
     }
@@ -157,7 +157,7 @@ auto AlignData::retrieveInputSingle(const std::string& sampleName, const fs::pat
     if (!hasSuffix(inputSample, preprocess::outSampleFastqSuffix)) {
         const std::string message = "The directory " + inputSample.parent_path().string() +
                                     " is missing the file: " + preprocess::outSampleFastqSuffix;
-        Logger::log(LogLevel::ERROR, message);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
         throw std::runtime_error(message);
     }
     return AlignInputSingle{sampleName, inputSample};

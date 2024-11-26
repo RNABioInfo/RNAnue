@@ -44,16 +44,17 @@ class GeneralParameters {
           chunkSize(ParameterValidator::validateArithmetic(params, "chunksize", 1, INT_MAX)) {};
 
    private:
-    static std::optional<std::filesystem::path> validateControlDir(
-        const po::variables_map& params) {
-        if (params.count("ctrls") && !params["ctrls"].as<std::string>().empty()) {
+    static auto validateControlDir(const po::variables_map& params)
+        -> std::optional<std::filesystem::path> {
+        if ((params.count("ctrls") != 0U) && !params["ctrls"].as<std::string>().empty()) {
             return ParameterValidator::validateDirectory(params, "ctrls");
         } else {
             return std::nullopt;
         }
     }
 
-    static std::unordered_set<std::string> validateFeatureTypes(const po::variables_map& params) {
+    static auto validateFeatureTypes(const po::variables_map& params)
+        -> std::unordered_set<std::string> {
         const auto featureTypesString = params["featuretypes"].as<std::string>();
 
         std::unordered_set<std::string> uniqueIncludedFeatures;
@@ -68,11 +69,12 @@ class GeneralParameters {
         return uniqueIncludedFeatures;
     }
 
-    static annotation::Orientation validateFeatureOrientation(const po::variables_map& params) {
+    static auto validateFeatureOrientation(const po::variables_map& params)
+        -> annotation::Orientation {
         return params["orientation"].as<annotation::Orientation>();
     }
 
-    static LogLevel validateLogLevel(const po::variables_map& params) {
+    static auto validateLogLevel(const po::variables_map& params) -> LogLevel {
         const std::string logLevelStr = params["loglevel"].as<std::string>();
 
         if (logLevelStr == "debug" || logLevelStr == "DEBUG") {
@@ -84,7 +86,7 @@ class GeneralParameters {
         } else if (logLevelStr == "error" || logLevelStr == "ERROR") {
             return LogLevel::ERROR;
         } else {
-            Logger::log(LogLevel::ERROR, "Invalid log level specified.");
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Invalid log level specified.");
             return LogLevel::INFO;
         }
     }

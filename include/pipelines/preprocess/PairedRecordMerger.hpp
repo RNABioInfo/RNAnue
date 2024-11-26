@@ -14,7 +14,12 @@
 #include <seqan3/alphabet/quality/phred42.hpp>
 #include <seqan3/alphabet/views/complement.hpp>
 
+// Internal
+#include "FastqRecord.hpp"
+
 namespace pipelines::preprocess {
+
+using namespace dataTypes;
 
 struct PairedRecordMerger {
     /**
@@ -31,10 +36,10 @@ struct PairedRecordMerger {
      * @return An optional containing the merged record if the overlap is sufficient, otherwise
      * std::nullopt.
      */
-    template <typename record_type>
-    static auto mergeRecordPair(
-        const record_type &record1, const record_type &record2, size_t minOverlapMerge,  // NOLINT
-        double maxMissMatchRateMerge) -> std::optional<record_type> {                    // NOLINT
+    static auto mergeRecordPair(const PairedFastqRecords &records,
+                                size_t minOverlapMerge,  // NOLINT
+                                double maxMissMatchRateMerge)
+        -> std::optional<FastqRecord> {  // NOLINT
         const seqan3::align_cfg::method_global endGapConfig{
             seqan3::align_cfg::free_end_gaps_sequence1_leading{true},
             seqan3::align_cfg::free_end_gaps_sequence2_leading{true},
@@ -54,22 +59,24 @@ struct PairedRecordMerger {
         const auto alignmentConfig =
             endGapConfig | scoringSchemeConfig | gapSchemeConfig | outputConfig;
 
-        const auto &seq1 = record1.sequence();
+        const auto &seq1 = records.first.sequence();
         const auto &seq2ReverseComplement =
-            record2.sequence() | std::views::reverse | seqan3::views::complement;
+            records.second.sequence() | std::views::reverse | seqan3::views::complement;
 
-        std::optional<record_type> mergedRecord{std::nullopt};
+        std::optional<FastqRecord> mergedRecord{std::nullopt};
 
         for (auto const &result :
              seqan3::align_pairwise(std::tie(seq1, seq2ReverseComplement), alignmentConfig)) {
-            const int overlap = result.sequence1_end_position() - result.sequence1_begin_position();
+            const int overlap = static_cast<int>(result.sequence1_end_position()) -
+                                static_cast<int>(result.sequence1_begin_position());
             if (overlap < int(minOverlapMerge)) {
                 continue;
             }
 
-            const int minScore = overlap - (overlap * maxMissMatchRateMerge) * 2;
+            const int minScore =
+                static_cast<int>(overlap - ((overlap * maxMissMatchRateMerge) * 2));
             if (result.score() >= minScore) {
-                mergedRecord = constructMergedRecord(record1, record2, result);
+                mergedRecord = constructMergedRecord(records, result);
             }
         }
 
@@ -85,30 +92,30 @@ struct PairedRecordMerger {
      * @param overlap The length of the overlap between the two records.
      * @return The merged record.
      */
-    template <typename record_type, typename result_type>
-    static auto constructMergedRecord(const record_type &record1, const record_type &record2,
+    template <typename result_type>
+    static auto constructMergedRecord(const PairedFastqRecords &records,
                                       const seqan3::alignment_result<result_type> &alignmentResult)
-        -> record_type {
-        const auto &record1Qualities = record1.base_qualities();
-        const auto &record2Qualities = record2.base_qualities();
+        -> FastqRecord {
+        const auto &record1Qualities = records.first.base_qualities();
+        const auto &record2Qualities = records.first.base_qualities();
 
         seqan3::dna5_vector mergedSequence{};
         std::vector<seqan3::phred42> mergedQualities{};
 
-        mergedSequence.reserve(record1.sequence().size() + record2.sequence().size());
+        mergedSequence.reserve(records.first.sequence().size() + records.second.sequence().size());
         mergedQualities.reserve(record1Qualities.size() + record2Qualities.size());
 
         const auto &record2RevCompSequence =
-            record2.sequence() | seqan3::views::complement | std::views::reverse;
+            records.second.sequence() | seqan3::views::complement | std::views::reverse;
         const auto &record2RevCompQualities = record2Qualities | std::views::reverse;
 
         // 5' overhang of read one that is not in overlap region
         mergedSequence.insert(
-            mergedSequence.end(), record1.sequence().begin(),
-            record1.sequence().begin() + alignmentResult.sequence1_begin_position());
+            mergedSequence.end(), records.first.sequence().begin(),
+            records.first.sequence().begin() + alignmentResult.sequence1_begin_position());
         mergedQualities.insert(
-            mergedQualities.end(), record1.base_qualities().begin(),
-            record1.base_qualities().begin() + alignmentResult.sequence1_begin_position());
+            mergedQualities.end(), records.first.base_qualities().begin(),
+            records.first.base_qualities().begin() + alignmentResult.sequence1_begin_position());
 
         size_t posRecord1 = alignmentResult.sequence1_begin_position();
         size_t posRecord2 = alignmentResult.sequence2_begin_position();
@@ -174,7 +181,8 @@ struct PairedRecordMerger {
             record2RevCompQualities.begin() + alignmentResult.sequence2_end_position(),
             record2RevCompQualities.end());
 
-        return record_type{std::move(mergedSequence), record1.id(), std::move(mergedQualities)};
+        return FastqRecord{std::move(mergedSequence), records.first.id(),
+                           std::move(mergedQualities)};
     }
 };
 

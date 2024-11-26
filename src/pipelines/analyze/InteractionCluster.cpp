@@ -14,12 +14,17 @@ auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment
     assert(firstFragment.recordID == secondFragment.recordID);
     assert(firstFragment.complementarityScore == secondFragment.complementarityScore);
     assert(firstFragment.hybridizationEnergy == secondFragment.hybridizationEnergy);
+    assert(firstFragment.crosslinkingSiteCount == secondFragment.crosslinkingSiteCount);
 
     InteractionSegment firstSegment = {std::min(firstFragment, secondFragment)};
     InteractionSegment secondSegment = {std::max(firstFragment, secondFragment)};
 
-    return {firstSegment, secondSegment, firstFragment.recordID, firstFragment.complementarityScore,
-            firstFragment.hybridizationEnergy};
+    return {firstSegment,
+            secondSegment,
+            firstFragment.recordID,
+            firstFragment.complementarityScore,
+            firstFragment.hybridizationEnergy,
+            firstFragment.crosslinkingSiteCount};
 }
 
 /**
@@ -51,7 +56,8 @@ auto InteractionCluster::operator==(const InteractionCluster &other) const -> bo
     return firstSegment == other.firstSegment && secondSegment == other.secondSegment &&
            recordIDs == other.recordIDs &&
            helper::vectorsApproxEqual(complementarityScores, other.complementarityScores) &&
-           helper::vectorsApproxEqual(hybridizationEnergies, other.hybridizationEnergies);
+           helper::vectorsApproxEqual(hybridizationEnergies, other.hybridizationEnergies) &&
+           crosslinkingSiteCounts == other.crosslinkingSiteCounts;
 }
 
 auto InteractionCluster::isBefore(const InteractionCluster &other) const noexcept -> bool {
@@ -98,6 +104,12 @@ void InteractionCluster::merge(const InteractionCluster &other) {
     hybridizationEnergies.insert(hybridizationEnergies.end(),
                                  std::make_move_iterator(other.hybridizationEnergies.begin()),
                                  std::make_move_iterator(other.hybridizationEnergies.end()));
+
+    crosslinkingSiteCounts.reserve(crosslinkingSiteCounts.size() +
+                                   other.crosslinkingSiteCounts.size());
+    crosslinkingSiteCounts.insert(crosslinkingSiteCounts.end(),
+                                  std::make_move_iterator(other.crosslinkingSiteCounts.begin()),
+                                  std::make_move_iterator(other.crosslinkingSiteCounts.end()));
 }
 
 auto InteractionCluster::complementarityStatistics() const -> double {
@@ -108,21 +120,50 @@ auto InteractionCluster::hybridizationEnergyStatistics() const -> double {
     return std::sqrt(helper::calculateMedian(hybridizationEnergies) * minHybridizationEnergy);
 }
 
+[[nodiscard]] auto InteractionCluster::meanCrosslinkingSiteCount() const -> double {
+    return std::accumulate(crosslinkingSiteCounts.begin(), crosslinkingSiteCounts.end(), 0.0) /
+           static_cast<double>(crosslinkingSiteCounts.size());
+}
+
+[[nodiscard]] auto InteractionCluster::standardDeviationCrosslinkingSiteCount() const -> double {
+    if (crosslinkingSiteCounts.size() < 2) {
+        return 0.0;
+    }
+
+    const double mean = meanCrosslinkingSiteCount();
+    const double squaredDifferences =
+        std::accumulate(crosslinkingSiteCounts.begin(), crosslinkingSiteCounts.end(), 0.0,
+                        [mean](double accumulator, int32_t count) {
+                            return accumulator + std::pow(count - mean, 2);
+                        });
+    return std::sqrt(squaredDifferences / static_cast<double>(crosslinkingSiteCounts.size()));
+}
+
 auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)
     -> std::ostream & {
     outputStream << "InteractionCluster:\n"
                  << "First segment: " << interactionCluster.getFirstSegment()
                  << "\nSecond segment id: " << interactionCluster.getSecondSegment() << "\n"
-                 << "Complementarity score count: "
-                 << interactionCluster.getComplementarityScores().size() << "\n"
-                 << "Hybridization energie count: "
-                 << interactionCluster.getHybridizationEnergies().size() << "\n"
                  << "Count: " << interactionCluster.fragmentCount() << "\n";
 
     for (const auto &recordID : interactionCluster.getRecordIDs()) {
         outputStream << recordID << ", ";
     }
-    outputStream << "\n";
+    outputStream << "\nComplementarity scores: ";
+
+    for (const auto &complementarityScore : interactionCluster.getComplementarityScores()) {
+        outputStream << complementarityScore << ", ";
+    }
+    outputStream << "\nHybridization energies: ";
+
+    for (const auto &hybridizationEnergy : interactionCluster.getHybridizationEnergies()) {
+        outputStream << hybridizationEnergy << ", ";
+    }
+
+    outputStream << "\nCrosslinking site counts: ";
+    for (const auto &crosslinkingSiteCount : interactionCluster.getCrosslinkingSiteCounts()) {
+        outputStream << crosslinkingSiteCount << ", ";
+    }
 
     return outputStream;
 }

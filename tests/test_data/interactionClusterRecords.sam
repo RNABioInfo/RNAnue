@@ -1,17 +1,17 @@
 @HD	VN:1.6
 @SQ	SN:chromosome1	LN:100
 @SQ	SN:chromosome2	LN:100
-SRR18331301.1	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.1	0	chromosome2	55	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.2	0	chromosome2	5	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.2	0	chromosome2	53	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.3	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.3	0	chromosome2	50	20	15M	*	0	0	ATCGAAAAAAAAAAC	@@@@@@@@@@@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.4	0	chromosome1	5	20	10M	*	0	0	ATCGCCCCCC	@@@@@@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.4	0	chromosome1	40	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.5	0	chromosome1	10	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.5	0	chromosome1	42	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.6	0	chromosome1	23	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.6	0	chromosome2	54	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.7	0	chromosome2	6	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
-SRR18331301.7	0	chromosome2	52	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.1	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.1	0	chromosome2	55	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.2	0	chromosome2	5	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.2	0	chromosome2	53	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.3	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.3	0	chromosome2	50	20	15M	*	0	0	ATCGAAAAAAAAAAC	@@@@@@@@@@@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.4	0	chromosome1	5	20	10M	*	0	0	ATCGCCCCCC	@@@@@@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.4	0	chromosome1	40	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.5	0	chromosome1	10	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.5	0	chromosome1	42	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.6	0	chromosome1	23	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.6	0	chromosome2	54	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.7	0	chromosome2	6	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20
+SRR18331301.7	0	chromosome2	52	20	5M	*	0	0	ATCGC	@@@@@	XC:f:1	XE:f:-1.7	XL:i:3	XN:f:0	XO:i:1	XP:i:0	XQ:i:0	XR:f:0.1875	XS:i:3	XW:i:0	XX:i:0	XY:i:20

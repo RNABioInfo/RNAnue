@@ -21,18 +21,18 @@ using namespace dataTypes;
 namespace pipelines::detect {
 
 void Detect::process(const DetectData& data) {
-    Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
+    Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
     for (const auto& sample : data.treatmentSamples) {
         processSample(sample);
     }
 
     if (!data.controlSamples.has_value()) {
-        Logger::log(LogLevel::INFO, "No control samples provided");
+        Logger::log("No control samples provided");
         return;
     }
 
-    Logger::log(LogLevel::INFO, constants::pipelines::PROCESSING_CONTROL_MESSAGE);
+    Logger::log(constants::pipelines::PROCESSING_CONTROL_MESSAGE);
 
     for (const auto& sample : data.controlSamples.value()) {
         processSample(sample);
@@ -40,13 +40,13 @@ void Detect::process(const DetectData& data) {
 }
 
 void Detect::processSample(const DetectSample& sample) const {
-    Logger::log(LogLevel::INFO, "Processing sample: ", sample.input.sampleName);
+    Logger::log("Processing sample: ", sample.input.sampleName);
 
     const fs::path outputTmpDir = sample.output.outputSplitAlignmentsPath.parent_path() / "tmp";
 
     const ChunkedOutTmpDirs outTmpDirs = prepareTmpOutputDirs(outputTmpDir);
 
-    Logger::log(LogLevel::DEBUG, "Alignments path: ", sample.input.inputAlignmentsPath);
+    Logger::log<LogLevel::DEBUG>("Alignments path: ", sample.input.inputAlignmentsPath);
 
     seqan3::sam_file_input alignmentsIn{sample.input.inputAlignmentsPath, SamFieldIDs{}};
 
@@ -74,7 +74,7 @@ void Detect::processSample(const DetectSample& sample) const {
         mergedResults += resultFuture.get();
     }
 
-    Logger::log(LogLevel::INFO, "Processed ", mergedResults.processedRecordsCount, " reads. Found ",
+    Logger::log("Processed ", mergedResults.processedRecordsCount, " reads. Found ",
                 mergedResults.splitFragmentsCount, " valid split fragments and ",
                 mergedResults.singletonFragmentsCount, " singleton fragments. Removed ",
                 mergedResults.removedDueToLowMappingQuality,
@@ -381,9 +381,9 @@ auto Detect::constructSplitRecords(const SamRecord& readRecord) const
     }
 
     if (splitRecords.size() != expectedSplitRecords) {
-        Logger::log(LogLevel::WARNING, "Expected ", expectedSplitRecords,
-                    " split fragments within record, but got ", splitRecords.size(),
-                    ". Record ID: ", readRecord.id());
+        Logger::log<LogLevel::WARNING>("Expected ", expectedSplitRecords,
+                                       " split fragments within record, but got ",
+                                       splitRecords.size(), ". Record ID: ", readRecord.id());
 
         return std::nullopt;
     }
@@ -419,12 +419,12 @@ auto Detect::constructSplitRecords(const std::vector<SamRecord>& readRecords) co
 
     if (splitRecords.size() != expectedSplitRecords) {
         if (static_cast<bool>(splitRecords.front().flag() & seqan3::sam_flag::paired)) {
-            Logger::log(LogLevel::DEBUG,
-                        "Non supported paired record split case: ", splitRecords.front().id());
+            Logger::log<LogLevel::DEBUG>("Non supported paired record split case: ",
+                                         splitRecords.front().id());
         } else {
-            Logger::log(LogLevel::WARNING, "Expected ", expectedSplitRecords,
-                        " records for read, but got ", splitRecords.size(),
-                        ". Record ID: ", readRecords.front().id());
+            Logger::log<LogLevel::WARNING>("Expected ", expectedSplitRecords,
+                                           " records for read, but got ", splitRecords.size(),
+                                           ". Record ID: ", readRecords.front().id());
         }
         return std::nullopt;
     }
@@ -466,8 +466,9 @@ auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords,
                     std::get<SplitRecordsEvaluator::EvaluatedSplitRecords>(evaluationResult));
             }
         } else {
-            Logger::log(LogLevel::DEBUG, "Split records failed evaluation. Reason: ",
-                        std::get<SplitRecordsEvaluator::FilterReason>(evaluationResult));
+            Logger::log<LogLevel::DEBUG>(
+                "Split records failed evaluation. Reason: ",
+                std::get<SplitRecordsEvaluator::FilterReason>(evaluationResult));
         }
     };
 

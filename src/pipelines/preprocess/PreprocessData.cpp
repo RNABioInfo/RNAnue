@@ -46,7 +46,7 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
 
                     const auto message =
                         "Single-end sample " + inputSampleSingle.sampleName + " found";
-                    Logger::log(LogLevel::INFO, message);
+                    Logger::log(message);
                 },
                 [&outputDirPipeline,
                  &samples](const PreprocessSampleInputPaired& inputSamplePaired) {
@@ -104,7 +104,7 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
                         }});
 
                     const auto message = "Paired-end sample " + parentName + " found";
-                    Logger::log(LogLevel::INFO, message);
+                    Logger::log(message);
                 }},
             inputSample);
     }
@@ -134,7 +134,7 @@ auto PreprocessData::retrieveInputSample(const fs::path& sampleDir) -> InputSamp
     if (numSamples == 0 || numSamples > 2) {
         const std::string message = (numSamples == 0 ? "No"s : "More than two"s) +
                                     " valid sample files found in " + sampleDir.string();
-        Logger::log(LogLevel::ERROR, message);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
         throw std::runtime_error(message);
     }
 
@@ -147,7 +147,7 @@ auto PreprocessData::retrieveInputSample(const fs::path& sampleDir) -> InputSamp
             const auto message =
                 "Found single valid file, but expected two based on file ending in " +
                 sampleDir.string();
-            Logger::log(LogLevel::ERROR, message);
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
             throw std::runtime_error(message);
         }
         return PreprocessSampleInputSingle{sampleName, firstFile};
@@ -157,7 +157,7 @@ auto PreprocessData::retrieveInputSample(const fs::path& sampleDir) -> InputSamp
 
     if (!validatePairedFilePaths(pairedInputPaths)) {
         const auto message = "Invalid paired file paths found in " + sampleDir.string();
-        Logger::log(LogLevel::ERROR, message);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(message);
         throw std::runtime_error(message);
     }
 

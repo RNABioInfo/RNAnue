@@ -60,5 +60,5 @@ void Closing::printQuote() {
     std::vector<std::string> selectedQuote;
     std::ranges::sample(quotes, std::back_inserter(selectedQuote), 1,
                         std::mt19937{std::random_device{}()});
-    Logger::log(LogLevel::INFO, selectedQuote.front());
+    Logger::log(selectedQuote.front());
 }

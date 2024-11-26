@@ -1,17 +1,15 @@
 #pragma once
 
 // Standard
-#include <map>
 #include <optional>
 
 // seqan3
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/structure/dot_bracket3.hpp>
-#include <string>
 
 // ViennaRNA
 extern "C" {
-#include <ViennaRNA/cofold.h>
+#include <ViennaRNA/subopt.h>
 #include <ViennaRNA/utils/basic.h>
 #include <ViennaRNA/utils/strings.h>
 }

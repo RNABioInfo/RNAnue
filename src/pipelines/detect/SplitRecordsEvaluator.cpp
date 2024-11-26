@@ -17,14 +17,14 @@ auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords,
                                      const std::deque<std::string> &referenceIDs) const
     -> SplitRecordsEvaluator::Result {
     if (splitRecords.size() != 2) {
-        Logger::log(LogLevel::DEBUG, "Currently only two split records are supported!");
+        Logger::log<LogLevel::DEBUG>("Currently only two split records are supported!");
         return SplitRecordsEvaluator::FilterReason::NO_SPLIT_READ;
     }
 
     if (!splitRecords[0].reference_position().has_value() ||
         !splitRecords[1].reference_position().has_value()) [[unlikely]] {
-        Logger::log(LogLevel::WARNING, "Could not determine reference position of split records: ",
-                    splitRecords[0].id(), " or ", splitRecords[1].id());
+        Logger::log<LogLevel::WARNING>("Could not determine reference position of split records: ",
+                                       splitRecords[0].id(), " or ", splitRecords[1].id());
         return SplitRecordsEvaluator::FilterReason::UNMAPPED;
     }
 

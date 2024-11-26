@@ -17,21 +17,22 @@ void InteractionsWriter::writeInteractions(
     std::ofstream interactionsOutput(outputPaths.interactionsOutputPath);
 
     if (!interactionsOutput.is_open()) {
-        Logger::log(LogLevel::ERROR, "Could not open file: ", outputPaths.interactionsOutputPath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            outputPaths.interactionsOutputPath);
     }
 
     std::ofstream interactionsBEDOutput(outputPaths.interactionsBEDOutputPath);
 
     if (!interactionsBEDOutput.is_open()) {
-        Logger::log(LogLevel::ERROR,
-                    "Could not open file: ", outputPaths.interactionsBEDOutputPath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+                                                            outputPaths.interactionsBEDOutputPath);
     }
 
     std::ofstream interactionsBEDArcOutput(outputPaths.interactionsBEDArcOutputPath);
 
     if (!interactionsBEDArcOutput.is_open()) {
-        Logger::log(LogLevel::ERROR,
-                    "Could not open file: ", outputPaths.interactionsBEDArcOutputPath);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Could not open file: ", outputPaths.interactionsBEDArcOutputPath);
     }
 
     writeInteractionsHeader(interactionsOutput);
@@ -58,18 +59,17 @@ void InteractionsWriter::writeInteractions(
         ++clusterID;
     }
 
-    Logger::log(LogLevel::INFO, "After filtering kept ", intramolecularCount + intermolecularCount,
+    Logger::log("After filtering kept ", intramolecularCount + intermolecularCount,
                 " split interactions");
-    Logger::log(LogLevel::INFO, "Of which ", intramolecularCount,
-                " are intramolecular interactions");
-    Logger::log(LogLevel::INFO, "Of which ", intermolecularCount,
-                " are intermolecular interactions");
+    Logger::log("Of which ", intramolecularCount, " are intramolecular interactions");
+    Logger::log("Of which ", intermolecularCount, " are intermolecular interactions");
 }
 
 void InteractionsWriter::writeInteractionsHeader(std::ofstream& interactionsOut) {
     interactionsOut << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strd\tfst_seg_strt\tfst_seg_"
                        "end\tsec_feat_id\t"
-                       "sec_seg_chr\tsec_seg_strd\tsec_seg_strt\tsec_seg_end\tno_splits\t"
+                       "sec_seg_chr\tsec_seg_strd\tsec_seg_strt\tsec_seg_end\tno_splits\tmean_"
+                       "crosslinks\tsd_crosslinks\t"
                        "gcs\tghs\tp_value\tpadj_value\n";
 }
 
@@ -109,6 +109,8 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
     interactionOut << cluster.getSecondSegment().getEnd() << "\t";
 
     interactionOut << cluster.fragmentCount() << "\t";
+    interactionOut << cluster.meanCrosslinkingSiteCount() << "\t";
+    interactionOut << cluster.standardDeviationCrosslinkingSiteCount() << "\t";
     interactionOut << cluster.complementarityStatistics() << "\t";
     interactionOut << cluster.hybridizationEnergyStatistics() << "\t";
     interactionOut << cluster.getPValue() << "\t";

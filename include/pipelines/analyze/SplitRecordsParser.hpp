@@ -20,7 +20,6 @@ struct SplitRecordsParser {
         seqan3::sam_file_input splitsIn{splitRecordsFilePath, SamFieldIDs{}};
 
         std::vector<InteractionCluster> clusters;
-
         for (auto&& records : splitsIn | seqan3::views::chunk(2)) {
             std::optional<RecordFragment> segment1 =
                 RecordFragment::fromSamRecord(*records.begin());

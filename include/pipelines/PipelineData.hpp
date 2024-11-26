@@ -53,8 +53,8 @@ struct PipelineData {
             if (entry.is_directory()) {
                 directories.push_back(entry.path());
             } else if (entry.is_regular_file() && !isHidden(entry)) {
-                Logger::log(LogLevel::WARNING,
-                            "Found file in directory, which is not allowed: ", entry.path());
+                Logger::log<LogLevel::WARNING>("Found file in directory, which is not allowed: ",
+                                               entry.path());
             }
         }
         return directories;
