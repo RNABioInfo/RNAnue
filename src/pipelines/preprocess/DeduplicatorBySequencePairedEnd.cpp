@@ -13,7 +13,8 @@ namespace pipelines::preprocess {
 auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
                                                   const fs::path& recordsRev)
     -> DeduplicationOutputPaired {
-    std::unordered_map<std::pair<std::string, std::string>, DeduplicationRecordPairedEnd, PairHash>
+    std::unordered_map<std::pair<seqan3::dna5_vector, seqan3::dna5_vector>,
+                       DeduplicationRecordPairedEnd, PairHash>
         recordsMap;
 
     size_t duplicateRecords = 0;
@@ -29,28 +30,22 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
 
         const double meanQuality = (meanQuality1 + meanQuality2) / 2;
 
-        const auto charView1 = record1.sequence() | std::views::transform([](seqan3::dna5& base) {
-                                   return base.to_char();
-                               });
-        const auto charView2 = record2.sequence() | std::views::transform([](seqan3::dna5& base) {
-                                   return base.to_char();
-                               });
-        std::string sequence1(charView1.begin(), charView1.end());
-        std::string sequence2(charView2.begin(), charView2.end());
-
-        auto key = std::make_pair(sequence1, sequence2);
+        auto key = std::make_pair(record1.sequence(), record2.sequence());
 
         if (recordsMap.find(key) == recordsMap.end()) {
-            recordsMap[key] = {
-                .recordFwd = record1, .recordRev = record2, .meanQuality = meanQuality};
+            recordsMap.emplace(key, DeduplicationRecordPairedEnd{.recordFwd = std::move(record1),
+                                                                 .recordRev = std::move(record2),
+                                                                 .meanQuality = meanQuality});
             continue;
         }
 
         ++duplicateRecords;
 
         if (meanQuality > recordsMap[key].meanQuality) {
-            recordsMap[key] = {
-                .recordFwd = record1, .recordRev = record2, .meanQuality = meanQuality};
+            recordsMap.insert_or_assign(
+                key, DeduplicationRecordPairedEnd{.recordFwd = std::move(record1),
+                                                  .recordRev = std::move(record2),
+                                                  .meanQuality = meanQuality});
         }
     }
 

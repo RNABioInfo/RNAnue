@@ -74,7 +74,7 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
         "single sequence or file [.fasta] of the adapter sequences to be removed "
         "from the 3' end of the reverse read (PE only)");
     preprocess.add_options()(
-        "mtrim", po::value<double>()->default_value(pi::defaultAdapterTrimMissmatchRate),
+        "mtrim", po::value<double>()->default_value(pi::defaultAdapterTrimMissmatchRate, "0.05"),
         "rate of mismatches allowed when aligning adapters to sequences (default: 0.05)");
     preprocess.add_options()("minovltrim",
                              po::value<size_t>()->default_value(pi::defaultAdapterTrimMinOverlap),
@@ -95,7 +95,8 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
                              po::value<size_t>()->default_value(pi::defaultMinOverlapMergeSize),
                              "minimal overlap to merge paired-end reads (default: 5)");
     preprocess.add_options()(
-        "mmerge", po::value<double>()->default_value(pi::defaultMinOverlapMergeMissmatchRate),
+        "mmerge",
+        po::value<double>()->default_value(pi::defaultMinOverlapMergeMissmatchRate, "0.05"),
         "rate of mismatches allowed when merging paired end reads (default: 0.05)");
 
     return preprocess;
@@ -127,7 +128,7 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
                          po::value<double>()->default_value(pi::defaultMinComplementarity),
                          "complementarity cutoff for split reads (default: 0.0; range: 0.0-1.0)");
     detect.add_options()("sitelenratio",
-                         po::value<double>()->default_value(pi::defaultMinSitelenRatio),
+                         po::value<double>()->default_value(pi::defaultMinSitelenRatio, "0.01"),
                          "aligned portion of the read (default: 0.1, range: 0.0-1.0)");
     detect.add_options()(
         "nrgmax", po::value<double>()->default_value(pi::defaultHybridizationEnergyCutoff),
@@ -145,7 +146,8 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
 
 auto ParameterOptions::getAnalyzeOptions() -> po::options_description {
     po::options_description analysis("Analyze Pipeline");
-    analysis.add_options()("maxoverlap", po::value<double>()->default_value(pi::defaultMaxOverlap),
+    analysis.add_options()("maxoverlap",
+                           po::value<double>()->default_value(pi::defaultMaxOverlap, "0.05"),
                            "maximum fractional overlap between two clusters (default: 0.5)");
     analysis.add_options()("clustdist",
                            po::value<int>()->default_value(pi::defaultClusterTolerance),
