@@ -71,7 +71,7 @@ static_assert(probability('!'_phred42) == 1.0);
 static_assert(probability('5'_phred42) == 0.01);
 
 template <IterableSequenceQuality T>
-static auto meanQualityScore(const T &qualities) -> double {
+static constexpr auto meanQualityScore(const T &qualities) -> double {
     typename T::const_iterator iter;
 
     double qualitySum = 0.0;
@@ -85,6 +85,11 @@ static auto meanQualityScore(const T &qualities) -> double {
 
     return (-PHRED_SCALE_BASE * std::log10(meanErrorProbability));
 }
+
+static_assert(meanQualityScore(std::array<seqan3::phred42, 1>{'!'_phred42}) == 0.0);
+static_assert(meanQualityScore(std::array<seqan3::phred42, 1>{'5'_phred42}) == 20.0);
+static_assert(helper::isApproxEqual(
+    meanQualityScore(std::array<seqan3::phred42, 2>{'!'_phred42, '5'_phred42}), 2.967086219));
 
 // std::span does not support const_iterator as of c++20 (remove with c++23)
 template <IterableSequenceQuality T>
@@ -101,5 +106,4 @@ static constexpr auto meanQualityScore(T &qualities) -> double {
 }
 
 // NOLINTEND
-
 };  // namespace SequenceQualityAlgorithms

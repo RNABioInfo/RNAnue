@@ -128,12 +128,12 @@ class Logger {
             }
             seqan3::debug_stream << levelStr << " " << getTime() << " ";
 
+            (seqan3::debug_stream << ... << std::forward<Args>(args)) << "; ";
+
             if (level == LogLevel::ERROR) {
                 seqan3::debug_stream << "File: " << Source.fileName << "; Line: " << Source.line
-                                     << "; Message: ";
+                                     << std::endl;
             }
-
-            (seqan3::debug_stream << ... << std::forward<Args>(args)) << "\n";
 
             if (level == LogLevel::ERROR) {
                 exit(EXIT_FAILURE);

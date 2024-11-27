@@ -80,8 +80,13 @@ void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& ou
 
     seqan3::sequence_file_output outputFile{outputPath};
 
+    constexpr size_t MIN_ZIPPED_FILE_SIZE = 24;
+
     for (const auto& inputPath : inputPaths) {
-        if (!fs::exists(inputPath) || fs::file_size(inputPath) == 0) {
+        if (!fs::exists(inputPath) || inputPath.extension() == ".gz"
+                ? fs::file_size(inputPath) <= MIN_ZIPPED_FILE_SIZE
+                : fs::file_size(inputPath) == 0) {
+            Logger::log<LogLevel::DEBUG>(inputPath);
             continue;
         }
         seqan3::sequence_file_input inputFile{inputPath};

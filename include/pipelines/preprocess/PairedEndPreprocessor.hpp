@@ -17,6 +17,10 @@ namespace pipelines::preprocess {
 
 using namespace dataTypes;
 
+using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
+    seqan::stl::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
+                                 std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
+
 class PairedEndPreprocessor {
    public:
     PairedEndPreprocessor(PreprocessParameters parameters) : parameters(std::move(parameters)) {}

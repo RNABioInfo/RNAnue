@@ -29,12 +29,6 @@ class Preprocess {
     void process(const PreprocessData &data) const;
 
    private:
-    using SingleEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<
-        std::ranges::ref_view<seqan3::sequence_file_input<>>>;
-    using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
-        seqan::stl::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
-                                     std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
-
     PreprocessParameters parameters;
 
     void processSample(const PreprocessSampleType &sample) const;

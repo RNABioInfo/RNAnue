@@ -15,6 +15,9 @@
 
 namespace pipelines::preprocess {
 
+using SingleEndAsyncInputBuffer =
+    seqan3::detail::async_input_buffer_view<std::ranges::ref_view<seqan3::sequence_file_input<>>>;
+
 class SingleEndPreprocessor {
    public:
     SingleEndPreprocessor(PreprocessParameters parameters)

@@ -14,6 +14,7 @@
 #include "PreprocessFilter.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
+#include "seqan3/core/debug_stream.hpp"
 
 namespace pipelines::preprocess {
 
@@ -206,8 +207,8 @@ template <typename T>
         PairedFastqRecords records{std::make_pair(std::move(record1), std::move(record2))};
 
         if (parameters.trimPolyG) {
-            RecordTrimmer::trim3PolyG(record1);
-            RecordTrimmer::trim3PolyG(record2);
+            RecordTrimmer::trim3PolyG(records.first);
+            RecordTrimmer::trim3PolyG(records.second);
         }
 
         trimWindowedQuality(records, {.windowTrimmingSize = parameters.windowTrimmingSize,
@@ -218,23 +219,23 @@ template <typename T>
         const PreprocessFilter::Criteria filterCriteria{
             .minLengthThreshold = parameters.minLengthThreshold,
             .minQualityThreshold = parameters.minQualityThreshold};
-        const bool filtFwd = PreprocessFilter::passes(filterCriteria, record1);
-        const bool filtRev = PreprocessFilter::passes(filterCriteria, record2);
+        const bool filtFwd = PreprocessFilter::passes(filterCriteria, records.first);
+        const bool filtRev = PreprocessFilter::passes(filterCriteria, records.second);
 
         if (filtFwd && filtRev) {
             auto mergedRecord = PairedRecordMerger::mergeRecordPair(
                 records, parameters.minOverlapMerging, parameters.maxMissMatchFractionMerging);
 
             if (!mergedRecord.has_value()) {
-                pairedFwdOut.push_back(std::move(records.first));
-                pairedRevOut.push_back(std::move(records.second));
+                pairedFwdOut.push_back(records.first);
+                pairedRevOut.push_back(records.second);
 
                 result.incrementPairedRecords();
                 continue;
             }
 
-            if (PreprocessFilter::passes(filterCriteria, (mergedRecord.value()))) {
-                mergedOut.push_back(std::move(mergedRecord.value()));
+            if (PreprocessFilter::passes(filterCriteria, mergedRecord.value())) {
+                mergedOut.push_back(mergedRecord.value());
 
                 result.incrementMergedRecords();
                 continue;
@@ -245,7 +246,7 @@ template <typename T>
         }
 
         if (filtFwd) {
-            snglFwdOut.push_back(std::move(records.first));
+            pairedFwdOut.push_back(records.first);
 
             result.incrementSingleFwdRecords();
         } else {
@@ -253,7 +254,7 @@ template <typename T>
         }
 
         if (filtRev) {
-            snglRevOut.push_back(std::move(records.second));
+            pairedRevOut.push_back(records.second);
 
             result.incrementSingleRevRecords();
         } else {

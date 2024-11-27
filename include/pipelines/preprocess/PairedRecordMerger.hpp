@@ -16,6 +16,7 @@
 
 // Internal
 #include "FastqRecord.hpp"
+#include "Logger.hpp"
 
 namespace pipelines::preprocess {
 
@@ -97,7 +98,7 @@ struct PairedRecordMerger {
                                       const seqan3::alignment_result<result_type> &alignmentResult)
         -> FastqRecord {
         const auto &record1Qualities = records.first.base_qualities();
-        const auto &record2Qualities = records.first.base_qualities();
+        const auto &record2Qualities = records.second.base_qualities();
 
         seqan3::dna5_vector mergedSequence{};
         std::vector<seqan3::phred42> mergedQualities{};
@@ -127,7 +128,7 @@ struct PairedRecordMerger {
             const seqan3::phred42 qual2 = record2RevCompQualities[posRecord2];
 
             if (el1 == el2) {
-                const seqan3::dna5 base1 = el1.template convert_to<seqan3::dna5>();
+                const auto base1 = el1.template convert_to<seqan3::dna5>();
                 mergedSequence.insert(mergedSequence.end(), base1);
                 mergedQualities.insert(mergedQualities.end(), std::max(qual1, qual2));
 
@@ -138,11 +139,11 @@ struct PairedRecordMerger {
 
             if (el1 != seqan3::gap{} && el2 != seqan3::gap{}) {
                 if (qual1 < qual2) {
-                    const seqan3::dna5 base2 = el2.template convert_to<seqan3::dna5>();
+                    const auto base2 = el2.template convert_to<seqan3::dna5>();
                     mergedSequence.insert(mergedSequence.end(), base2);
                     mergedQualities.insert(mergedQualities.end(), qual2);
                 } else {
-                    const seqan3::dna5 base1 = el1.template convert_to<seqan3::dna5>();
+                    const auto base1 = el1.template convert_to<seqan3::dna5>();
                     mergedSequence.insert(mergedSequence.end(), base1);
                     mergedQualities.insert(mergedQualities.end(), qual1);
                 }
@@ -153,7 +154,7 @@ struct PairedRecordMerger {
             }
 
             if (el1 == seqan3::gap{}) {
-                const seqan3::dna5 base2 = el2.template convert_to<seqan3::dna5>();
+                const auto base2 = el2.template convert_to<seqan3::dna5>();
                 mergedSequence.insert(mergedSequence.end(), base2);
                 mergedQualities.insert(mergedQualities.end(), qual2);
 
@@ -162,7 +163,7 @@ struct PairedRecordMerger {
             }
 
             if (el2 == seqan3::gap{}) {
-                const seqan3::dna5 base1 = el1.template convert_to<seqan3::dna5>();
+                const auto base1 = el1.template convert_to<seqan3::dna5>();
                 mergedSequence.insert(mergedSequence.end(), base1);
                 mergedQualities.insert(mergedQualities.end(), qual1);
 
@@ -180,6 +181,8 @@ struct PairedRecordMerger {
             mergedQualities.end(),
             record2RevCompQualities.begin() + alignmentResult.sequence2_end_position(),
             record2RevCompQualities.end());
+
+        assert(mergedSequence.size() == mergedQualities.size());
 
         return FastqRecord{std::move(mergedSequence), records.first.id(),
                            std::move(mergedQualities)};

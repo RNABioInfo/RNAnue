@@ -16,6 +16,8 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
     std::unordered_map<std::pair<std::string, std::string>, DeduplicationRecordPairedEnd, PairHash>
         recordsMap;
 
+    size_t duplicateRecords = 0;
+
     seqan3::sequence_file_input recForwardIn{recordsFwd};
     seqan3::sequence_file_input recReverseIn{recordsRev};
 
@@ -38,12 +40,18 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
 
         auto key = std::make_pair(sequence1, sequence2);
 
-        if (recordsMap.find(key) != recordsMap.end() &&
-            recordsMap[key].meanQuality >= meanQuality) {
+        if (recordsMap.find(key) == recordsMap.end()) {
+            recordsMap[key] = {
+                .recordFwd = record1, .recordRev = record2, .meanQuality = meanQuality};
             continue;
         }
 
-        recordsMap[key] = {.recordFwd = record1, .recordRev = record2, .meanQuality = meanQuality};
+        ++duplicateRecords;
+
+        if (meanQuality > recordsMap[key].meanQuality) {
+            recordsMap[key] = {
+                .recordFwd = record1, .recordRev = record2, .meanQuality = meanQuality};
+        }
     }
 
     auto recordFwdView = recordsMap | std::views::values |
@@ -57,6 +65,9 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
                          });
 
     assert(std::ranges::distance(recordFwdView) == std::ranges::distance(recordRevView));
+
+    Logger::log("Duplicate records: ", duplicateRecords);
+    Logger::log("Unique records: ", recordsMap.size());
 
     auto pairView =
         seqan3::views::zip(recordFwdView, recordRevView) |

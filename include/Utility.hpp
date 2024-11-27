@@ -26,14 +26,15 @@ namespace helper {
 
 constexpr auto RELATIVE_DIFFERENCE_FACTOR = 0.0001;
 
-inline auto isApproxEqual(double lhs, double rhs,
-                          double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR) -> bool {
+constexpr auto isApproxEqual(double lhs, double rhs,
+                             double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR) -> bool {
     const auto greaterMagnitude = std::max(std::fabs(lhs), std::fabs(rhs));
     return fabs(lhs - rhs) < relativeDifferenceFactor * greaterMagnitude;
 }
 
-inline auto vectorsApproxEqual(const std::vector<double> &first, const std::vector<double> &second,
-                               double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR)
+constexpr auto vectorsApproxEqual(const std::vector<double> &first,
+                                  const std::vector<double> &second,
+                                  double relativeDifferenceFactor = RELATIVE_DIFFERENCE_FACTOR)
     -> bool {
     if (first.size() != second.size()) {
         return false;
