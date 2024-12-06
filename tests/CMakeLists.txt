@@ -29,6 +29,9 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureWriter.cpp
 
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SamFileUtility.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SequenceFileUtility.cpp
+
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/Deduplicator.cpp
@@ -65,6 +68,7 @@ target_include_directories (tests PRIVATE   ${CMAKE_CURRENT_SOURCE_DIR}/../inclu
                                             ${CMAKE_CURRENT_SOURCE_DIR}/../include/annotation
                                             ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/detect
                                             ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
+                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
                                             ${VIENNA_RNA_INCLUDE_DIR}
                                             ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
                                             ${HTSlib_INCLUDE_DIRS}

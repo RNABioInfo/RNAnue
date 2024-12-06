@@ -2,8 +2,8 @@
 
 // Standard
 #include <algorithm>
+#include <cstddef>
 #include <optional>
-#include <ranges>
 #include <vector>
 
 // seqan3
@@ -26,8 +26,8 @@ class CoOptimalPairwiseAligner {
         int score;
         double complementarity;
         double fraction;
-        std::pair<size_t, size_t> beginPositions;
-        std::pair<size_t, size_t> endPositions;
+        std::pair<std::size_t, std::size_t> beginPositions;
+        std::pair<std::size_t, std::size_t> endPositions;
     };
 
     template <typename sequence_pair_t>

@@ -14,7 +14,6 @@
 #include "PreprocessFilter.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
-#include "seqan3/core/debug_stream.hpp"
 
 namespace pipelines::preprocess {
 
@@ -246,7 +245,7 @@ template <typename T>
         }
 
         if (filtFwd) {
-            pairedFwdOut.push_back(records.first);
+            snglFwdOut.push_back(records.first);
 
             result.incrementSingleFwdRecords();
         } else {
@@ -254,7 +253,7 @@ template <typename T>
         }
 
         if (filtRev) {
-            pairedRevOut.push_back(records.second);
+            snglRevOut.push_back(records.second);
 
             result.incrementSingleRevRecords();
         } else {

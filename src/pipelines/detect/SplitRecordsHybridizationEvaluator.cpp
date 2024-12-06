@@ -1,18 +1,29 @@
 #include "SplitRecordsHybridizationEvaluator.hpp"
 
-// seqan3
-#include <subopt.h>
-
+// Standard
 #include <cassert>
 #include <memory>
+#include <optional>
+#include <string>
+#include <vector>
+
+// viennaRNA
+#include <fold_compound.h>
+#include <mfe.h>
+#include <subopt.h>
+
+// seqan3
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/views/char_to.hpp>
 #include <seqan3/alphabet/views/to_char.hpp>
 #include <seqan3/utility/all.hpp>
-#include <vector>
+#include <seqan3/utility/range/to.hpp>
 
 // Internal
 #include "CrosslinkingSitesEvaluator.hpp"
 #include "Logger.hpp"
+#include "SplitRecords.hpp"
+#include "SplitRecordsEvaluationParameters.hpp"
 
 namespace pipelines::detect {
 
@@ -31,6 +42,7 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
 
     vrna_fold_compound_t *foldCompound = vrna_fold_compound(
         interactionSeq.c_str(), nullptr, VRNA_OPTION_DEFAULT | VRNA_OPTION_HYBRID);
+
     std::unique_ptr<char[]> structure(new char[interactionSeq.size() + 1]);  // NOLINT
 
     constexpr int DELTA_MFE = 0;

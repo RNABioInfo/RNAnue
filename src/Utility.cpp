@@ -2,15 +2,36 @@
 
 // Standard
 #include <execinfo.h>
+#include <unistd.h>
 
+#include <array>
+#include <chrono>
+#include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <filesystem>
 #include <fstream>
+#include <iomanip>
+#include <iostream>
+#include <iterator>
+#include <optional>
+#include <random>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_set>
 #include <vector>
 
 // seqan3
+#include <seqan3/io/record.hpp>
 #include <seqan3/io/sam_file/input.hpp>
+#include <seqan3/io/sam_file/output.hpp>
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/sequence_file/output.hpp>
+
+// boost
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 
 // Internal
 #include "Config.hpp"
@@ -67,7 +88,13 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
         if (!fs::exists(inputPath) || fs::file_size(inputPath) == 0) {
             continue;
         }
+
         seqan3::sam_file_input inputFile{inputPath};
+
+        if (inputFile.begin() == inputFile.end()) {
+            continue;
+        }
+
         inputFile | outputFile;
     }
 }

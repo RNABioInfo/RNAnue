@@ -159,10 +159,9 @@ auto calculateMedian(std::vector<T> values) -> T {
     std::sort(values.begin(), values.end());
     const auto size = values.size();
     if (size % 2 == 0) {
-        return (values[size / 2 - 1] + values[size / 2]) / 2;
-    } else {
-        return values[size / 2];
+        return (values[(size / 2) - 1] + values[size / 2]) / 2;
     }
+    return values[size / 2];
 }
 
 auto generateRandomHexColor() -> std::string;
@@ -203,50 +202,24 @@ concept binary_left_foldable =
 struct fold_left_fn {
     template <std::input_iterator I, std::sentinel_for<I> S, class T = std::iter_value_t<I>,
               binary_left_foldable<T, I> F>
-    constexpr auto operator()(I first, S last, T init, F f) const {
+    constexpr auto operator()(I first, S last, T init, F function) const {
         using U = std::decay_t<std::invoke_result_t<F &, T, std::iter_reference_t<I>>>;
-        if (first == last) return U(std::move(init));
-        U accum = std::invoke(f, std::move(init), *first);
+        if (first == last) {
+            return U(std::move(init));
+        }
+        U accum = std::invoke(function, std::move(init), *first);
         for (++first; first != last; ++first) {
-            accum = std::invoke(f, std::move(accum), *first);
+            accum = std::invoke(function, std::move(accum), *first);
         }
         return std::move(accum);
     }
 
     template <std::ranges::input_range R, class T = std::ranges::range_value_t<R>,
               binary_left_foldable<T, std::ranges::iterator_t<R>> F>
-    constexpr auto operator()(R &&r, T init, F f) const {
-        return (*this)(std::ranges::begin(r), std::ranges::end(r), std::move(init), std::ref(f));
+    constexpr auto operator()(R &&right, T init, F function) const {
+        return (*this)(std::ranges::begin(right), std::ranges::end(right), std::move(init),
+                       std::ref(function));
     }
 };
 
 inline constexpr fold_left_fn fold_left;
-
-// inline auto meanQualityScore(std::vector<seqan3::phred42> &qualities) {
-//     constexpr double PHRED_SCALE_BASE = 10;
-
-//     const double sumQualities =
-//         fold_left(qualities | std::views::transform([](seqan3::phred42 &qual) {
-//                       return std::pow(PHRED_SCALE_BASE,
-//                                       -static_cast<double>(qual.to_phred()) / PHRED_SCALE_BASE);
-//                   }),
-//                   0.0, std::plus<>());
-//     const double meanErrorProbability =
-//         static_cast<double>(sumQualities) / static_cast<double>(qualities.size());
-
-//     return (-PHRED_SCALE_BASE * std::log10(meanErrorProbability));
-// }
-
-// inline auto meanQualityScore(const std::span<seqan3::phred42> &qualities) {
-//     constexpr double PHRED_SCALE_BASE = 10;
-//     const double sumQualities =
-//         fold_left(qualities | std::views::transform([](seqan3::phred42 &qual) {
-//                       return std::pow(PHRED_SCALE_BASE,
-//                                       -static_cast<double>(qual.to_phred()) / PHRED_SCALE_BASE);
-//                   }),
-//                   0.0, std::plus<>());
-//     const double meanErrorProbability =
-//         static_cast<double>(sumQualities) / static_cast<double>(qualities.size());
-
-//     return (-PHRED_SCALE_BASE * std::log10(meanErrorProbability));
-// }

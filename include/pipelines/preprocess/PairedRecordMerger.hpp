@@ -16,7 +16,6 @@
 
 // Internal
 #include "FastqRecord.hpp"
-#include "Logger.hpp"
 
 namespace pipelines::preprocess {
 
@@ -125,7 +124,7 @@ struct PairedRecordMerger {
 
         for (const auto &[el1, el2] : seqan3::views::zip(alignmentSeq1, alignmentSeq2)) {
             const seqan3::phred42 qual1 = record1Qualities[posRecord1];
-            const seqan3::phred42 qual2 = record2RevCompQualities[posRecord2];
+            const seqan3::phred42 qual2 = record2RevCompQualities[static_cast<long>(posRecord2)];
 
             if (el1 == el2) {
                 const auto base1 = el1.template convert_to<seqan3::dna5>();

@@ -3,8 +3,13 @@
 // Standard
 #include <cstddef>
 
+// seqan3
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
+#include <vector>
+
 // Internal
 #include "DeduplicationOutput.hpp"
+#include "HashDNA5Vector.hpp"
 #include "Logger.hpp"
 #include "SequenceQualityAlgorithms.hpp"  // NOLINT
 
@@ -12,7 +17,8 @@ namespace pipelines::preprocess {
 
 auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
     -> DeduplicationOutputSingle {
-    std::unordered_map<std::string, DeduplicationRecordSingleEnd> recordsMap;
+    std::unordered_map<std::vector<seqan3::dna5>, DeduplicationRecordSingleEnd, HashDNA5Vector>
+        recordsMap;
 
     size_t duplicateRecords = 0;
 
@@ -22,25 +28,23 @@ auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
         const double meanQuality =
             SequenceQualityAlgorithms::meanQualityScore(record.base_qualities());
 
-        const auto charView = record.sequence() | std::views::transform([](seqan3::dna5& base) {
-                                  return base.to_char();
-                              });
-        std::string sequence(charView.begin(), charView.end());
-
-        if (recordsMap.find(sequence) == recordsMap.end()) {
-            recordsMap[sequence] = {.record = record, .meanQuality = meanQuality};
+        if (recordsMap.find(record.sequence()) == recordsMap.end()) {
+            recordsMap.emplace(
+                record.sequence(),
+                DeduplicationRecordSingleEnd{.record = record, .meanQuality = meanQuality});
             continue;
         }
 
         ++duplicateRecords;
 
-        if (meanQuality > recordsMap[sequence].meanQuality) {
-            recordsMap[sequence] = {.record = record, .meanQuality = meanQuality};
+        if (meanQuality > recordsMap[record.sequence()].meanQuality) {
+            recordsMap.insert_or_assign(
+                record.sequence(),
+                DeduplicationRecordSingleEnd{.record = record, .meanQuality = meanQuality});
         }
     }
 
-    Logger::log("Duplicate records: ", duplicateRecords);
-    Logger::log("Unique records: ", recordsMap.size());
+    Logger::log("Duplicate records: ", duplicateRecords, "; Unique records: ", recordsMap.size());
 
     auto recordView =
         recordsMap | std::views::values |

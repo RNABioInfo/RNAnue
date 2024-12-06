@@ -9,7 +9,7 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE RELEASE)
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -fopenmp -Wno-psabi -Wno-interference-size")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-psabi -Wno-interference-size")
 set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
@@ -71,6 +71,9 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureParser.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureWriter.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/Orientation.cpp
+
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/SamFileUtility.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/SequenceFileUtility.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters/ParameterOptions.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters/ParameterParser.cpp

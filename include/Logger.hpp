@@ -2,19 +2,16 @@
 
 // Standard
 #include <chrono>
-#include <concepts>
 #include <cstddef>
 #include <iomanip>
-#include <iostream>
 #include <map>
 #include <mutex>
 #include <source_location>
 #include <string>
+#include <utility>
 
 // seqan3
 #include <seqan3/core/debug_stream.hpp>
-#include <string_view>
-#include <utility>
 
 enum class LogLevel : std::uint8_t { DEBUG, INFO, WARNING, ERROR };
 
@@ -61,11 +58,10 @@ class Logger {
     }
 
     static void setLogLevel(const std::string &logLevelString) {
-        static const std::map<std::string, LogLevel> stringToLogLevelMap{
-            {"debug", LogLevel::DEBUG},
-            {"info", LogLevel::INFO},
-            {"warning", LogLevel::WARNING},
-            {"error", LogLevel::ERROR}};
+        const std::map<std::string, LogLevel> stringToLogLevelMap{{"debug", LogLevel::DEBUG},
+                                                                  {"info", LogLevel::INFO},
+                                                                  {"warning", LogLevel::WARNING},
+                                                                  {"error", LogLevel::ERROR}};
 
         auto iterator = stringToLogLevelMap.find(logLevelString);
         if (iterator != stringToLogLevelMap.end()) {
@@ -132,10 +128,8 @@ class Logger {
 
             if (level == LogLevel::ERROR) {
                 seqan3::debug_stream << "File: " << Source.fileName << "; Line: " << Source.line
-                                     << std::endl;
-            }
+                                     << "\n";
 
-            if (level == LogLevel::ERROR) {
                 exit(EXIT_FAILURE);
             }
         }

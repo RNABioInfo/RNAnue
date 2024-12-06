@@ -1,15 +1,19 @@
 #include "Align.hpp"
 
+// Standard
 #include <algorithm>
 #include <filesystem>
 #include <optional>
 #include <variant>
 #include <vector>
 
+// Internal
+#include "AlignData.hpp"
 #include "AlignParameters.hpp"
 #include "AlignSample.hpp"
 #include "Constants.hpp"
 #include "Logger.hpp"
+#include "SequenceFileUtility.hpp"
 #include "Utility.hpp"
 #include "VariantOverload.hpp"
 
@@ -74,6 +78,8 @@ void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
                                    sample.output.outputAlignmentsSingletonReverseReadsPath,
                                    sample.output.outputAlignmentsPairedReadsPath};
 
+    Logger::log("Merging alignment files");
+
     helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath);
 
     sortAlignmentsByQueryName(sample.output.outputAlignmentsPath,
@@ -105,7 +111,7 @@ void Align::buildIndex() {
 
     const auto indexFilePath = findIndex(referencePath);
 
-    if (indexFilePath.has_value() && !indexFilePath.value().empty()) {
+    if (indexFilePath.has_value() && !indexFilePath.value().has_filename()) {
         Logger::log("Existing index found: ", indexPath);
         indexPath = *indexFilePath;
         return;
@@ -128,13 +134,23 @@ void Align::buildIndex() {
     }
 }
 
-auto Align::getGeneralAlignmentArgs() const -> std::vector<std::string> {
+[[nodiscard]] auto Align::threadsAdaptedToEntries(const fs::path &inputPath) const -> size_t {
+    const bool hasSufficientEntries =
+        SequenceFileUtility::hasAtLeastEntries(inputPath, parameters.threadCount);
+
+    const size_t threads = hasSufficientEntries ? parameters.threadCount : 1;
+    return threads;
+}
+
+// TODO adapt for new thread counts
+[[nodiscard]] auto Align::getGeneralAlignmentArgs(size_t threadCount) const
+    -> std::vector<std::string> {
     return {"-b", "-S",
             "-A", std::to_string(parameters.accuracy),
             "-U", std::to_string(parameters.minimumFragmentScore),
             "-W", std::to_string(parameters.minimumSpliceCoverage),
             "-Z", std::to_string(parameters.minimumFragmentLength),
-            "-t", std::to_string(parameters.threadCount),
+            "-t", std::to_string(threadCount),
             "-m", std::to_string(parameters.minLengthThreshold),
             "-i", indexPath.string(),
             "-d", parameters.referenceGenome.string()};
@@ -142,7 +158,14 @@ auto Align::getGeneralAlignmentArgs() const -> std::vector<std::string> {
 
 void Align::alignSingleReads(const fs::path &queryFastqInPath,
                              const fs::path &alignmentsFastqOutPath) const {
-    auto args = getGeneralAlignmentArgs();
+    const size_t threads = threadsAdaptedToEntries(queryFastqInPath);
+
+    if (threads == 0) {
+        Logger::log("File has no entries: ", queryFastqInPath);
+        return;
+    }
+
+    auto args = getGeneralAlignmentArgs(threads);
 
     args.insert(args.end(),
                 {"-q", queryFastqInPath.string(), "-o", alignmentsFastqOutPath.string()});
@@ -159,7 +182,14 @@ void Align::alignSingleReads(const fs::path &queryFastqInPath,
 void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
                              const fs::path &queryReverseFastqInPath,
                              const fs::path &alignmentsFastqOutPath) const {
-    auto args = getGeneralAlignmentArgs();
+    const size_t threads = threadsAdaptedToEntries(queryForwardFastqInPath);
+
+    if (threads == 0) {
+        Logger::log("File has no entries: ", queryForwardFastqInPath);
+        return;
+    }
+
+    auto args = getGeneralAlignmentArgs(threads);
 
     args.insert(args.end(),
                 {"-q", queryForwardFastqInPath.string(), "-p", queryReverseFastqInPath.string(),

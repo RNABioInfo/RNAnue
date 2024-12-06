@@ -1,10 +1,8 @@
 #pragma once
 
 // Standard
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-
+#include <cstdlib>
+#include <cstring>
 #include <optional>
 #include <vector>
 
@@ -26,33 +24,33 @@ extern "C" {
 
 // Samtools derived elements
 extern "C" {
-typedef enum {
+using SamOrder = enum {
     Coordinate,
     QueryName,
     TagCoordinate,
     TagQueryName,
     MinHash,
     TemplateCoordinate
-} SamOrder;
+};
 int bam_sort_core_ext(SamOrder sam_order, char *sort_tag, int minimiser_kmer, bool try_rev,
                       bool no_squash, const char *fn, const char *prefix, const char *fnout,
                       const char *modeout, size_t _max_mem, int n_threads, const htsFormat *in_fmt,
                       const htsFormat *out_fmt, char *arg_list, int no_pg, int write_index);
 }
 
-namespace pipelines {
-namespace align {
+namespace pipelines::align {
 
 class Align {
    public:
     explicit Align(AlignParameters params) : parameters(params) {};
-    ~Align() = default;
 
     void process(const AlignData &data);
 
    private:
     AlignParameters parameters;
     fs::path indexPath;
+
+    [[nodiscard]] auto threadsAdaptedToEntries(const fs::path &inputPath) const -> size_t;
 
     void processSample(const AlignSampleType &sample);
 
@@ -63,7 +61,8 @@ class Align {
 
     void buildIndex();
 
-    std::vector<std::string> getGeneralAlignmentArgs() const;
+    [[nodiscard]] auto getGeneralAlignmentArgs(size_t threadCount) const
+        -> std::vector<std::string>;
     void alignReads(const std::string &query, const std::string &mate,
                     const std::string &matched) const;
     void alignSingleReads(const fs::path &queryFastqInPath,
@@ -78,5 +77,4 @@ class Align {
     static auto convertToCStrings(std::vector<std::string> &args) -> std::vector<char *>;
 };
 
-}  // namespace align
-}  // namespace pipelines
+}  // namespace pipelines::align

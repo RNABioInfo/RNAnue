@@ -25,7 +25,13 @@ class SplitRecordsEvaluator {
         auto operator>(const EvaluatedSplitRecords &other) const -> bool;
     };
 
-    enum class FilterReason { NO_SPLIT_READ, UNMAPPED, SPLICING, COMPLEMENTARITY, HYBRIDIZATION };
+    enum class FilterReason : std::uint8_t {
+        NO_SPLIT_READ,
+        UNMAPPED,
+        SPLICING,
+        COMPLEMENTARITY,
+        HYBRIDIZATION
+    };
 
     using Result = std::variant<EvaluatedSplitRecords, FilterReason>;
 

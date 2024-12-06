@@ -9,6 +9,7 @@
 
 // ViennaRNA
 extern "C" {
+#include <ViennaRNA/cofold.h>
 #include <ViennaRNA/subopt.h>
 #include <ViennaRNA/utils/basic.h>
 #include <ViennaRNA/utils/strings.h>

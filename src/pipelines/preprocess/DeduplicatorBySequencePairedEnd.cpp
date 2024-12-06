@@ -1,8 +1,5 @@
 #include "DeduplicatorBySequencePairedEnd.hpp"
 
-// standard
-#include <string>
-
 // Internal
 #include "DeduplicationOutput.hpp"
 #include "SequenceQualityAlgorithms.hpp"  // NOLINT
@@ -61,8 +58,7 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
 
     assert(std::ranges::distance(recordFwdView) == std::ranges::distance(recordRevView));
 
-    Logger::log("Duplicate records: ", duplicateRecords);
-    Logger::log("Unique records: ", recordsMap.size());
+    Logger::log("Duplicate records: ", duplicateRecords, "; Unique records: ", recordsMap.size());
 
     auto pairView =
         seqan3::views::zip(recordFwdView, recordRevView) |
