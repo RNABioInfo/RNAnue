@@ -14,6 +14,7 @@ ExternalProject_Add(
         --prefix=${VIENNA_BUILD_DIR}
         --includedir=${VIENNA_RNA_INSTALL}/include
         --libdir=${VIENNA_RNA_INSTALL}/lib
+        --disable-openmp
         --without-lto
         --without-gsl
         --without-perl
@@ -45,4 +46,3 @@ ExternalProject_Add(
 
 set(VIENNA_RNA_LIBRARY ${VIENNA_RNA_INSTALL}/lib/libRNA.a)
 set(VIENNA_RNA_INCLUDE_DIR ${VIENNA_RNA_INSTALL}/include)
-    
