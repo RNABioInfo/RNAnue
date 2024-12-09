@@ -2,8 +2,10 @@
 
 // Standard
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
 #include <optional>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -138,7 +140,12 @@ void Align::buildIndex() {
     const bool hasSufficientEntries =
         SequenceFileUtility::hasAtLeastEntries(inputPath, parameters.threadCount);
 
-    const size_t threads = hasSufficientEntries ? parameters.threadCount : 1;
+    size_t threads = parameters.threadCount;
+
+    if (not hasSufficientEntries) {
+        threads = SequenceFileUtility::countEntries(inputPath) > 0 ? 1 : 0;
+    }
+
     return threads;
 }
 
