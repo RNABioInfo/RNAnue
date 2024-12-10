@@ -1,7 +1,6 @@
 #pragma once
 
 // Standard
-#include <cmath>
 #include <concepts>
 
 // seqan3
@@ -30,7 +29,7 @@ consteval auto getPhredToProbabilityTable() -> PhredToProbabilityTable {
     PhredToProbabilityTable table{};
 
     for (unsigned char phred = 0; phred < seqan3::phred42::alphabet_size; ++phred) {
-        table[phred] = std::pow(PHRED_SCALE_BASE, -static_cast<double>(phred) / PHRED_SCALE_BASE);
+        table[phred] = pow(PHRED_SCALE_BASE, -static_cast<double>(phred) / PHRED_SCALE_BASE);
     }
     return table;
 };

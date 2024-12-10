@@ -18,11 +18,11 @@ find_library(
 )
 
 if(VIENNA_RNA_INCLUDE_DIR AND VIENNA_RNA_LIBRARY)
-  set(VIENNA_RNA_FOUND TRUE)
+    set(VIENNA_RNA_FOUND TRUE)
 else()
-  set(VIENNA_RNA_FOUND FALSE)
+    set(VIENNA_RNA_FOUND FALSE)
 endif()
 
 message(STATUS "   ViennaRNA include dirs: ${VIENNA_RNA_INCLUDE_DIR}")
 message(STATUS "   ViennaRNA libraries: ${VIENNA_RNA_LIBRARY}")
-message(STATUS " ViennaRNA FOUND: ${VIENNA_RNA_FOUND} ")
+message(STATUS "   ViennaRNA FOUND: ${VIENNA_RNA_FOUND} ")

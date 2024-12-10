@@ -26,15 +26,6 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/submodules/seqan3/build_system)
 find_package(seqan3 3.3.0 REQUIRED)
 
-# # # Boost
-set(Boost_USE_STATIC_LIBS ON)
-set(Boost_USE_MULTITHREADED ON)
-set(Boost_USE_STATIC_RUNTIME ON)
-set(Boost_DEBUG OFF)
-set(Boost_ROOT ${CMAKE_CURRENT_SOURCE_DIR}/submodules/boost)
-
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/submodules/boost EXCLUDE_FROM_ALL)
-
 # # # ViennaRNA
 find_package(ViennaRNA)
 
@@ -61,7 +52,7 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/pipelines/detect
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/pipelines/analyze
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/pipelines/dataTypes
-                    ${CMAKE_CURRENT_SOURCE_DIR}/submodules/bam_sort)
+                    ${BAM_SORT_DIR})
 
 add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 
@@ -147,15 +138,20 @@ else()
 endif()
 
 
-target_link_libraries (RNAnue PRIVATE ${VIENNA_RNA_LIBRARY})
-target_include_directories (RNAnue SYSTEM PRIVATE ${VIENNA_RNA_INCLUDE_DIR} ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA)
+# # # Boost
+include(boost)
+add_dependencies(RNAnue Boost)
+
+# # # Dependency Include Directories
+target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
+                                                    ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
+                                                    ${Boost_INCLUDE_DIR})
 
 # # # Link Libraries
 target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
-                                        Boost::program_options
-                                        Boost::math
-                                        Boost::uuid
-                                        segemehl)
+                                        segemehl
+                                        ${VIENNA_RNA_LIBRARY}
+                                        ${Boost_LIBRARIES})
 
 # ----------------------------------------------------------------------------
 # Testing
@@ -163,7 +159,11 @@ target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
 if (CMAKE_BUILD_TYPE STREQUAL DEBUG OR CMAKE_BUILD_TYPE STREQUAL Debug)
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
     set(BUILD_TESTS ON)
+
+    message(STATUS "--------------")
     message(STATUS "Enabling tests")
+    message(STATUS "--------------")
+
     add_subdirectory(tests)
 
     if (NOT VIENNA_RNA_FOUND)
@@ -175,6 +175,8 @@ if (CMAKE_BUILD_TYPE STREQUAL DEBUG OR CMAKE_BUILD_TYPE STREQUAL Debug)
         message(STATUS "Adding htslib as dependency for tests")
         add_dependencies(tests htslib)
     endif()
+
+    add_dependencies(tests Boost)
 endif()
 
 # ----------------------------------------------------------------------------

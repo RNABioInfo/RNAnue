@@ -1,7 +1,12 @@
 #include "SplitRecordsEvaluator.hpp"
 
+// Standard
 #include <cstddef>
 
+// seqan3
+#include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
+
+// Internal
 #include "CustomSamTags.hpp"
 #include "Logger.hpp"
 #include "SplitRecordsSplicingEvaluator.hpp"

@@ -9,9 +9,12 @@
 #include <variant>
 #include <vector>
 
+// segmehl
+#include "hts.h"
+#include "segemehl.h"
+
 // Internal
 #include "AlignData.hpp"
-#include "AlignParameters.hpp"
 #include "AlignSample.hpp"
 #include "Constants.hpp"
 #include "Logger.hpp"
@@ -240,8 +243,7 @@ void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
 
 auto Align::convertToCStrings(std::vector<std::string> &args) -> std::vector<char *> {
     std::vector<char *> c_args(args.size() + 1);
-    std::ranges::transform(args, c_args.begin(),
-                           [](std::string &arg) { return const_cast<char *>(arg.c_str()); });
+    std::ranges::transform(args, c_args.begin(), [](std::string &arg) { return arg.data(); });
 
     c_args.back() = nullptr;  // argv must be null terminated
 

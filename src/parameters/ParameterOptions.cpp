@@ -1,7 +1,9 @@
 #include "ParameterOptions.hpp"
 
 #include <boost/program_options/options_description.hpp>
+#include <boost/program_options/value_semantic.hpp>
 #include <cstddef>
+#include <string>
 
 #include "Constants.hpp"
 #include "Orientation.hpp"

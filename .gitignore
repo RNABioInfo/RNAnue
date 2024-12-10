@@ -10,6 +10,7 @@
 .clang-tidy
 .clangd
 .zed
+run_clang_tidy.sh
 pyrightconfig.json
 # Local History for Visual Studio Code
 .history/

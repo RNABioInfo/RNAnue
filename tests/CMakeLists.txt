@@ -12,7 +12,6 @@ FetchContent_MakeAvailable(googletest)
 
 enable_testing ()
 
-
 add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterGeneratorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/ParallelInteractionClusterGeneratorTests.cpp
@@ -72,15 +71,14 @@ target_include_directories (tests PRIVATE   ${CMAKE_CURRENT_SOURCE_DIR}/../inclu
                                             ${VIENNA_RNA_INCLUDE_DIR}
                                             ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
                                             ${HTSlib_INCLUDE_DIRS}
-                                            ${HTSlib_INCLUDE_DIRS}/htslib)
+                                            ${HTSlib_INCLUDE_DIRS}/htslib
+                                            ${Boost_INCLUDE_DIR})
 
 target_link_libraries(tests     PRIVATE
                                 GTest::gtest_main
                                 seqan3::seqan3
-                                Boost::program_options
-                                Boost::math
-                                Boost::uuid
-                                segemehl)
+                                segemehl
+                                ${Boost_LIBRARIES})
 
 
 include(GoogleTest)
