@@ -56,30 +56,12 @@ else()
     message(STATUS " dependencies: ${deps_LIB}")
     message(STATUS " htslib make command: ${MAKE_COMMAND} $")
 
-    ExternalProject_Add(
-    htslib
-    PREFIX ${htslib_PREFIX}
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
-    BUILD_IN_SOURCE 1
-    UPDATE_COMMAND ""
-    CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/
-    BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
-    INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
-  )
-
-    get_cmake_property(_variableNames VARIABLES)
-    list (SORT _variableNames)
-    foreach (_variableName ${_variableNames})
-        message(STATUS "${_variableName}=${${_variableName}}")
-    endforeach()
-
     message(STATUS "Configure command: ${CONFIGURE_COMMAND}")
 
     message(STATUS "ZLIB_BUILD: ${ZLIB_BUILD}")
     if(ZLIB_BUILD)
         include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
-        set(ENV{LOCAL_ZLIB_CONFIG} "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+        set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L${CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
         message(STATUS "Updated configure command: ${LOCAL_ZLIB_CONFIG}")
         add_dependencies(htslib zlib)
     else()
@@ -91,13 +73,25 @@ else()
             # build zlib from source
             message(STATUS "Building zlib from source")
             include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
-            set(ENV{LOCAL_ZLIB_CONFIG} "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+            set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L${CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
             message(STATUS "Updated configure command: ${LOCAL_ZLIB_CONFIG}")
             add_dependencies(htslib zlib)
             list(APPEND deps_LIB ${zlib_LIBRARIES})
         endif()
     endif()
     list(APPEND deps_LIB ${zlib_LIBRARIES})
+
+    ExternalProject_Add(
+    htslib
+    PREFIX ${htslib_PREFIX}
+    DOWNLOAD_EXTRACT_TIMESTAMP true
+    URL https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
+    BUILD_IN_SOURCE 1
+    UPDATE_COMMAND ""
+    CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} ${LOCAL_ZLIB_CONFIG}
+    BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
+    INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
+  )
 
     set(HTSlib_INCLUDE_DIRS ${htslib_INSTALL}/include)
     set(HTSlib_LIBRARIES ${htslib_INSTALL}/lib/libhts.a ${deps_LIB})
