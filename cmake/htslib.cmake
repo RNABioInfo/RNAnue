@@ -54,7 +54,7 @@ else()
     endif()
 
     message(STATUS " dependencies: ${deps_LIB}")
-    message(STATUS " htslib make command: ${MAKE_COMMAND}")
+    message(STATUS " htslib make command: ${MAKE_COMMAND} $")
 
     ExternalProject_Add(
     htslib
@@ -70,7 +70,7 @@ else()
 
     message(STATUS "ZLIB_BUILD: ${ZLIB_BUILD}")
     if(ZLIB_BUILD)
-        include(../cmake/zlib.cmake)
+        include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
         add_dependencies(htslib zlib)
     else()
         find_package(ZLIB)
@@ -80,7 +80,7 @@ else()
         else()
             # build zlib from source
             message(STATUS "Building zlib from source")
-            include(../cmake/zlib.cmake)
+            include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
             add_dependencies(htslib zlib)
             list(APPEND deps_LIB ${zlib_LIBRARIES})
         endif()
