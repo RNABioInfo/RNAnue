@@ -63,20 +63,18 @@ else()
     URL https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
     BUILD_IN_SOURCE 1
     UPDATE_COMMAND ""
-    CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC}
+    CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} ${LOCAL_ZLIB_CONFIG}
     BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
     INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
 
     message(STATUS "Configure command: ${CONFIGURE_COMMAND}")
 
-    set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
-
     message(STATUS "ZLIB_BUILD: ${ZLIB_BUILD}")
     if(ZLIB_BUILD)
         include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
-        set(CONFIGURE_COMMAND "${CONFIGURE_COMMAND} ${LOCAL_ZLIB_CONFIG}")
-        message(STATUS "Updated configure command: ${CONFIGURE_COMMAND}")
+        set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+        message(STATUS "Updated configure command: ${LOCAL_ZLIB_CONFIG}")
         add_dependencies(htslib zlib)
     else()
         find_package(ZLIB)
@@ -87,8 +85,8 @@ else()
             # build zlib from source
             message(STATUS "Building zlib from source")
             include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
-            set(CONFIGURE_COMMAND "${CONFIGURE_COMMAND} ${LOCAL_ZLIB_CONFIG}")
-            message(STATUS "Updated configure command: ${CONFIGURE_COMMAND}")
+            set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+            message(STATUS "Updated configure command: ${LOCAL_ZLIB_CONFIG}")
             add_dependencies(htslib zlib)
             list(APPEND deps_LIB ${zlib_LIBRARIES})
         endif()
