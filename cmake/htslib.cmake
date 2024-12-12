@@ -68,9 +68,15 @@ else()
     INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
 
+    message(STATUS "Configure command: ${CONFIGURE_COMMAND}")
+
+    set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/  LDFLAGS=-L{CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+
     message(STATUS "ZLIB_BUILD: ${ZLIB_BUILD}")
     if(ZLIB_BUILD)
         include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
+        set(CONFIGURE_COMMAND "${CONFIGURE_COMMAND} ${LOCAL_ZLIB_CONFIG}")
+        message(STATUS "Updated configure command: ${CONFIGURE_COMMAND}")
         add_dependencies(htslib zlib)
     else()
         find_package(ZLIB)
@@ -81,6 +87,8 @@ else()
             # build zlib from source
             message(STATUS "Building zlib from source")
             include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
+            set(CONFIGURE_COMMAND "${CONFIGURE_COMMAND} ${LOCAL_ZLIB_CONFIG}")
+            message(STATUS "Updated configure command: ${CONFIGURE_COMMAND}")
             add_dependencies(htslib zlib)
             list(APPEND deps_LIB ${zlib_LIBRARIES})
         endif()
