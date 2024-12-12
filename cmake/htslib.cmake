@@ -72,7 +72,7 @@ else()
             # build zlib from source
             message(STATUS "Building zlib from source")
             include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
-            set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/ LDFLAGS=-L${CMAKE_BINARY_DIR}/submodules/zlib-install/include/")
+            set(LOCAL_ZLIB_CONFIG "CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/ LDFLAGS=-L${CMAKE_BINARY_DIR}/submodules/zlib-install/lib/")
             message(STATUS "Updated configure command: ${LOCAL_ZLIB_CONFIG}")
             list(APPEND deps_LIB ${zlib_LIBRARIES})
         endif()
