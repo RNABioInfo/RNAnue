@@ -92,8 +92,9 @@ else()
     INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
 
-    set(HTSlib_INCLUDE_DIRS ${htslib_INSTALL}/include ${CMAKE_BINARY_DIR}/submodules/zlib-install/include/)
+    set(HTSlib_INCLUDE_DIRS ${htslib_INSTALL}/include ${htslib_INSTALL}/include/htslib ${CMAKE_BINARY_DIR}/submodules/zlib-install/include/)
     set(HTSlib_LIBRARIES ${htslib_INSTALL}/lib/libhts.a ${deps_LIB})
+
     message(STATUS "HTSlib_INCLUDE_DIRS: ${HTSlib_INCLUDE_DIRS}")
     message(STATUS "HTSlib_LIBRARIES: ${HTSlib_LIBRARIES}")
 
