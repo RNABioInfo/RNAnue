@@ -68,6 +68,12 @@ else()
     INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
 
+    get_cmake_property(_variableNames VARIABLES)
+    list (SORT _variableNames)
+    foreach (_variableName ${_variableNames})
+        message(STATUS "${_variableName}=${${_variableName}}")
+    endforeach()
+
     message(STATUS "Configure command: ${CONFIGURE_COMMAND}")
 
     message(STATUS "ZLIB_BUILD: ${ZLIB_BUILD}")
