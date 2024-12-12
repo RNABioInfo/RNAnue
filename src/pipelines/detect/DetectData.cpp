@@ -1,5 +1,9 @@
 #include "DetectData.hpp"
 
+// Standard
+#include <filesystem>
+
+// Internal
 #include "Logger.hpp"
 #include "Utility.hpp"
 
@@ -15,6 +19,10 @@ auto DetectData::retrieveSamples(const std::string& sampleGroup, const fs::path&
     samples.reserve(inputSamples.size());
 
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
+
+    if (fs::exists(outputDirPipeline)) {
+        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+    }
 
     for (const DetectInput& inputSample : inputSamples) {
         const fs::path outputDirSample = outputDirPipeline / inputSample.sampleName;
@@ -37,9 +45,13 @@ auto DetectData::retrieveSamples(const std::string& sampleGroup, const fs::path&
 
         samples.push_back(DetectSample(
             inputSample,
-            DetectOutput{outputSplitAlignmentsPath, outputMultisplitAlignmentsPath,
-                         outputUnassignedContiguousAlignmentsPath,
-                         outputContiguousAlignmentsTranscriptCountsPath, outputSharedStatsPath}));
+            DetectOutput{.outputSplitAlignmentsPath = outputSplitAlignmentsPath,
+                         .outputMultisplitAlignmentsPath = outputMultisplitAlignmentsPath,
+                         .outputUnassignedContiguousAlignmentsPath =
+                             outputUnassignedContiguousAlignmentsPath,
+                         .outputContiguousAlignmentsTranscriptCountsPath =
+                             outputContiguousAlignmentsTranscriptCountsPath,
+                         .outputSharedReadCountsPath = outputSharedStatsPath}));
     }
 
     return samples;

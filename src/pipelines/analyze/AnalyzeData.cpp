@@ -1,5 +1,10 @@
 #include "AnalyzeData.hpp"
 
+// Standard
+#include <filesystem>
+
+// Internal
+#include "Logger.hpp"
 #include "Utility.hpp"
 
 using namespace helper;
@@ -14,6 +19,10 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
     samples.reserve(inputSamples.size());
 
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
+
+    if (fs::exists(outputDirPipeline)) {
+        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+    }
 
     for (const AnalyzeInput& inputSample : inputSamples) {
         const fs::path outputDirSample = outputDirPipeline / inputSample.sampleName;
@@ -33,8 +42,11 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
 
         samples.push_back(AnalyzeSample(
             inputSample,
-            AnalyzeOutput{interactionsPath, interactionsTranscriptCountsPath, interactionsBEDPath,
-                          interactionsBEDARCPath, supplementaryFeaturesPath}));
+            AnalyzeOutput{.interactionsPath = interactionsPath,
+                          .interactionsTranscriptCountsPath = interactionsTranscriptCountsPath,
+                          .interactionsBEDPath = interactionsBEDPath,
+                          .interactionsBEDARCPath = interactionsBEDARCPath,
+                          .supplementaryFeaturesPath = supplementaryFeaturesPath}));
     }
 
     return samples;
@@ -94,9 +106,13 @@ auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector
         }
 
         samples.push_back(AnalyzeInput{
-            sampleName, splitAlignmentsPath.value(), multisplitAlignmentsPath.value(),
-            unassignedContiguousAlignmentsPath.value(),
-            contiguousAlignmentsTranscriptCountsPath.value(), sharedReadCountsPath.value()});
+            .sampleName = sampleName,
+            .splitAlignmentsPath = splitAlignmentsPath.value(),
+            .multisplitAlignmentsPath = multisplitAlignmentsPath.value(),
+            .unassignedContiguousAlignmentsPath = unassignedContiguousAlignmentsPath.value(),
+            .contiguousAlignmentsTranscriptCountsPath =
+                contiguousAlignmentsTranscriptCountsPath.value(),
+            .sampleFragmentCountsPath = sharedReadCountsPath.value()});
     }
 
     return samples;

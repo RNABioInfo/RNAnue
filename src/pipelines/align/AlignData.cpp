@@ -1,9 +1,11 @@
 #include "AlignData.hpp"
 
+#include <filesystem>
 #include <variant>
 #include <vector>
 
 #include "AlignSample.hpp"
+#include "Logger.hpp"
 #include "PreprocessData.hpp"
 #include "Utility.hpp"
 
@@ -18,6 +20,10 @@ auto AlignData::retrieveSamples(const std::string& sampleGroup, const fs::path& 
     samples.reserve(inputSamples.size());
 
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
+
+    if (fs::exists(outputDirPipeline)) {
+        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+    }
 
     for (const InputSampleType& inputSample : inputSamples) {
         if (const auto* inputSampleSingle = std::get_if<AlignInputSingle>(&inputSample)) {

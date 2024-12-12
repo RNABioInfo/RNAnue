@@ -20,6 +20,10 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
 
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
 
+    if (fs::exists(outputDirPipeline)) {
+        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+    }
+
     for (const InputSampleType& inputSample : inputSamples) {
         std::visit(
             overloaded{

@@ -38,4 +38,4 @@ set(Boost_LIBRARIES
 )
 
 message( STATUS "Boost static libs: " ${Boost_LIBRARIES} )
-message( STATUS "Boost include dir: "  ${Boost_INCLUDE_DIR})
+message( STATUS "Boost include dir: "  ${Boost_INCLUDE_DIR} )
