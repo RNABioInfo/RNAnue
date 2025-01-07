@@ -1,8 +1,8 @@
 #pragma once
 
 // Standard
-#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 
 // Boost
@@ -19,6 +19,7 @@ namespace pipelines::align {
 
 struct AlignParameters : public GeneralParameters {
     std::filesystem::path referenceGenome;
+    bool multimapAlignments;
     size_t minLengthThreshold;
     size_t accuracy;
     size_t minimumFragmentScore;
@@ -28,6 +29,7 @@ struct AlignParameters : public GeneralParameters {
     AlignParameters(const po::variables_map& params)
         : GeneralParameters(params),
           referenceGenome(ParameterValidator::validateFilePath(params, "dbref")),
+          multimapAlignments(ParameterValidator::validateBool(params, "multimap")),
           minLengthThreshold(
               ParameterValidator::validateArithmetic<size_t>(params, "minlen", 0, 1000)),
           accuracy(ParameterValidator::validateArithmetic<size_t>(params, "accuracy", 0, 100)),

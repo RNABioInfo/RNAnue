@@ -13,6 +13,7 @@ struct BaseParameters {
     double minComplementarity;
     double minComplementarityFraction;
     double mfeThreshold;
+    bool includeWobbleBasePairsInCrosslinkingSites;
 };
 
 struct SplicingParameters {

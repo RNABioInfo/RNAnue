@@ -16,7 +16,8 @@ namespace pipelines::detect {
 
 auto CrosslinkingSitesEvaluator::evaluate(std::span<const seqan3::dna5> sequence1,
                                           std::span<const seqan3::dna5> sequence2,
-                                          const std::vector<seqan3::dot_bracket3> &dotbracket)
+                                          const std::vector<seqan3::dot_bracket3> &dotbracket,
+                                          bool includeWobbleBasePairs)
     -> std::optional<CrosslinkingSitesEvaluator::Result> {
     if (sequence1.empty() || sequence2.empty() || dotbracket.empty()) [[unlikely]] {
         Logger::log<LogLevel::WARNING>("Empty input sequences or dot-bracket vector!");
@@ -58,10 +59,12 @@ auto CrosslinkingSitesEvaluator::evaluate(std::span<const seqan3::dna5> sequence
         const NucleotideWindowPair nucleotidePairs = {interactionWindow.forwardWindowNucleotides,
                                                       interactionWindow.reverseWindowNucleotides};
 
-        if (crosslinkingOrientationScheme.contains(nucleotidePairs)) {
+        const auto &scoringScheme = includeWobbleBasePairs ? crosslinkingOrientationSchemeWobble
+                                                           : crosslinkingOrientationSchemeNoWobble;
+
+        if (scoringScheme.contains(nucleotidePairs)) {
             NucleotidePairPositions crosslinkingPositions =
-                crosslinkingOrientationScheme.at(nucleotidePairs) ==
-                        CrosslinkingOrientation::FORWARD
+                scoringScheme.at(nucleotidePairs) == CrosslinkingOrientation::FORWARD
                     ? std::make_pair(interactionWindow.relativeForwardPositions.first,
                                      interactionWindow.relativeReversePositions.second)
                     : std::make_pair(interactionWindow.relativeForwardPositions.second,

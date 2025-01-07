@@ -4,6 +4,7 @@
 #include <map>
 
 // seqan3
+#include <ostream>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/structure/dot_bracket3.hpp>
 #include <seqan3/alphabet/views/char_to.hpp>
@@ -22,14 +23,16 @@ class CrosslinkingSitesEvaluator {
 
     static auto evaluate(std::span<const seqan3::dna5> sequence1,
                          std::span<const seqan3::dna5> sequence2,
-                         const std::vector<seqan3::dot_bracket3> &dotbracket)
-        -> std::optional<Result>;
+                         const std::vector<seqan3::dot_bracket3> &dotbracket,
+                         bool includeWobbleBasePairs) -> std::optional<Result>;
 
    private:
     using NucleotideWindowPair = std::pair<seqan3::dna5_vector, seqan3::dna5_vector>;
+
     enum class CrosslinkingOrientation : std::uint8_t { FORWARD, REVERSE };
+
     inline static const std::map<NucleotideWindowPair, CrosslinkingOrientation>
-        crosslinkingOrientationScheme{
+        crosslinkingOrientationSchemeWobble{
             {{"TA"_dna5, "AT"_dna5},
              CrosslinkingOrientation::FORWARD},  // Preferred pyrimidine cross-linking
             {{"AT"_dna5, "TA"_dna5}, CrosslinkingOrientation::REVERSE},
@@ -39,10 +42,13 @@ class CrosslinkingSitesEvaluator {
             {{"AT"_dna5, "TG"_dna5}, CrosslinkingOrientation::REVERSE},
             {{"TG"_dna5, "AT"_dna5}, CrosslinkingOrientation::FORWARD},
             {{"TG"_dna5, "GT"_dna5}, CrosslinkingOrientation::FORWARD},
-            {{"GT"_dna5, "TG"_dna5}, CrosslinkingOrientation::REVERSE},
-            {{"CG"_dna5, "GC"_dna5},
-             CrosslinkingOrientation::FORWARD},  // Non-preferred pyrimidine cross-linking
-            {{"GC"_dna5, "CG"_dna5}, CrosslinkingOrientation::REVERSE}};
+            {{"GT"_dna5, "TG"_dna5}, CrosslinkingOrientation::REVERSE}};
+
+    inline static const std::map<NucleotideWindowPair, CrosslinkingOrientation>
+        crosslinkingOrientationSchemeNoWobble{
+            {{"TA"_dna5, "AT"_dna5},
+             CrosslinkingOrientation::FORWARD},  // Preferred pyrimidine cross-linking
+            {{"AT"_dna5, "TA"_dna5}, CrosslinkingOrientation::REVERSE}};
 
     struct InteractionWindow {
         seqan3::dna5_vector forwardWindowNucleotides;

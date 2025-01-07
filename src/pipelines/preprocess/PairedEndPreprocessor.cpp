@@ -75,50 +75,36 @@ void PairedEndPreprocessor::process(const PreprocessSamplePaired& sample) const 
 
 [[nodiscard]] auto PairedEndPreprocessor::processWithDeduplication(
     const PreprocessSamplePaired& sample) const -> ChunkResult {
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
-
     const auto deduplicationConfig =
         DeduplicationBySequencePairedConfig{.recordsPathFwd = sample.input.inputForwardFastqPath,
                                             .recordsPathRev = sample.input.inputReverseFastqPath};
     auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
 
-    const size_t totalRecords = deduplicatedResults.recordPairs.size();
-    const size_t numThreads = parameters.threadCount;
-    const size_t chunkSize = (totalRecords + numThreads - 1) / numThreads;  // Ceiling division
+    auto isValidRecord = [&deduplicatedResults](const auto& records) {
+        assert(records.first.id() == records.second.id());
+        return deduplicatedResults.validRecordIDs.contains(records.first.id());
+    };
 
-    std::vector<std::vector<std::pair<FastqRecord, FastqRecord>>> chunks;
-    chunks.reserve(numThreads);
+    seqan3::sequence_file_input recForwardIn{sample.input.inputForwardFastqPath};
+    seqan3::sequence_file_input recReverseIn{sample.input.inputReverseFastqPath};
 
-    for (size_t i = 0; i < numThreads; ++i) {
-        size_t start = i * chunkSize;
-        size_t end = std::min(start + chunkSize, totalRecords);
-        if (start >= end) {
-            break;
-        }
+    auto pairedInputBuffer = seqan3::views::zip(recForwardIn, recReverseIn) |
+                             seqan3::views::async_input_buffer(parameters.chunkSize / 2) |
+                             std::ranges::views::filter(isValidRecord);
 
-        std::vector<std::pair<FastqRecord, FastqRecord>> chunk{
-            std::make_move_iterator(deduplicatedResults.recordPairs.begin() +
-                                    static_cast<long>(start)),
-            std::make_move_iterator(deduplicatedResults.recordPairs.begin() +
-                                    static_cast<long>(end))};
+    std::vector<std::future<ChunkResult>> processResults;
+    processResults.reserve(parameters.threadCount - 1);
 
-        chunks.push_back(std::move(chunk));
-    }
-
-    const size_t numChunks = chunks.size();
-
-    for (size_t i = 1; i < numChunks; ++i) {
+    for (size_t i = 1; i < parameters.threadCount; ++i) {
         processResults.emplace_back(std::async(
-            std::launch::async,
-            &PairedEndPreprocessor::processChunk<std::vector<std::pair<FastqRecord, FastqRecord>>>,
-            this, std::ref(chunks[i]), std::cref(sample.output)));
+            std::launch::async, &PairedEndPreprocessor::processChunk<decltype(pairedInputBuffer)>,
+            this, std::ref(pairedInputBuffer), std::cref(sample.output)));
     }
 
-    ChunkResult totalResult = processChunk(chunks[0], sample.output);
+    ChunkResult totalResult = {};
 
-    for (auto& resultFuture : processResults) {
-        totalResult += resultFuture.get();
+    for (auto& result : processResults) {
+        totalResult += result.get();
     }
 
     return totalResult;

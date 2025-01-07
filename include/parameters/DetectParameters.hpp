@@ -27,6 +27,7 @@ struct DetectParameters : public GeneralParameters {
     bool excludeSoftClipping;
     bool removeSplicingEvents;
     int splicingTolerance;
+    bool includeWobbleBasePairsInCrosslinkingSites;
 
     DetectParameters(const po::variables_map& params)
         : GeneralParameters(params),
@@ -40,19 +41,12 @@ struct DetectParameters : public GeneralParameters {
               ParameterValidator::validateArithmetic(params, "sitelenratio", 0.0, 1.0)),
           maxHybridizationEnergy(
               ParameterValidator::validateArithmetic(params, "nrgmax", DBL_MIN, DBL_MAX)),
-          excludeSoftClipping(validateExcludeSoftClipping(params)),
-          removeSplicingEvents(validateRemoveSplicingEvents(params)),
+          excludeSoftClipping(ParameterValidator::validateBool(params, "exclclipping")),
+          removeSplicingEvents(ParameterValidator::validateBool(params, "splicing")),
           splicingTolerance(ParameterValidator::validateArithmetic(params, "splicingtolerance",
-                                                                   INT_MIN, INT_MAX)) {};
-
-   private:
-    static auto validateExcludeSoftClipping(const po::variables_map& params) -> bool {
-        return params["exclclipping"].as<bool>();
-    }
-
-    static auto validateRemoveSplicingEvents(const po::variables_map& params) -> bool {
-        return params["splicing"].as<bool>();
-    }
+                                                                   INT_MIN, INT_MAX)),
+          includeWobbleBasePairsInCrosslinkingSites(
+              ParameterValidator::validateBool(params, "includewobble")) {};
 };
 
 }  // namespace pipelines::detect

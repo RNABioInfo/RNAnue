@@ -2,6 +2,7 @@
 
 // Standard
 #include <filesystem>
+#include <string>
 #include <vector>
 
 // seqan3
@@ -32,15 +33,15 @@ TEST_P(DeduplicatorSingleTests, DeduplicateBySequenceSingle) {
     const auto results =
         Deduplicator::deduplicate(DeduplicationBySequenceSingleConfig{params.recordsPath});
 
-    ASSERT_EQ(results.records.size(), params.expectedRecords.size());
+    ASSERT_EQ(results.validRecordIDs.size(), params.expectedRecords.size());
 
-    for (const auto& record : results.records) {
-        std::cout << record.id() << "\n";
+    for (const auto& recordID : results.validRecordIDs) {
+        std::cout << recordID << "\n";
 
         bool found = false;
 
         for (const auto& expectedRecord : params.expectedRecords) {
-            if (record.id() == expectedRecord.id()) {
+            if (recordID == expectedRecord.id()) {
                 found = true;
                 break;
             }
@@ -76,14 +77,13 @@ TEST_P(DeduplicatorPairedTests, DeduplicateBySequencePaired) {
     const auto results = Deduplicator::deduplicate(DeduplicationBySequencePairedConfig{
         .recordsPathFwd = params.recordsPathFwd, .recordsPathRev = params.recordsPathRev});
 
-    ASSERT_EQ(results.recordPairs.size(), params.expectedRecordPairs.size());
+    ASSERT_EQ(results.validRecordIDs.size(), params.expectedRecordPairs.size());
 
-    for (auto&& [record1, record2] : results.recordPairs) {
+    for (const std::string& recordID : results.validRecordIDs) {
         bool found = false;
 
         for (const auto& expectedRecord : params.expectedRecordPairs) {
-            if (record1.id() == expectedRecord.first.id() ||
-                record2.id() == expectedRecord.second.id()) {
+            if (recordID == expectedRecord.first.id() && recordID == expectedRecord.second.id()) {
                 found = true;
                 break;
             }

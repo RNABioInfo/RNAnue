@@ -178,7 +178,8 @@ void Align::alignSingleReads(const fs::path &queryFastqInPath,
     auto args = getGeneralAlignmentArgs(threads);
 
     args.insert(args.end(),
-                {"-q", queryFastqInPath.string(), "-o", alignmentsFastqOutPath.string()});
+                {"-q", queryFastqInPath.string(), "-o", alignmentsFastqOutPath.string(), "-H",
+                 std::to_string(static_cast<int>(!parameters.multimapAlignments))});
 
     auto c_args = convertToCStrings(args);
 
@@ -203,7 +204,8 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
 
     args.insert(args.end(),
                 {"-q", queryForwardFastqInPath.string(), "-p", queryReverseFastqInPath.string(),
-                 "-o", alignmentsFastqOutPath.string()});
+                 "-o", alignmentsFastqOutPath.string(), "-H",
+                 std::to_string(static_cast<int>(!parameters.multimapAlignments))});
 
     auto c_args = convertToCStrings(args);
 

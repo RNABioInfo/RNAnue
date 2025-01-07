@@ -85,7 +85,10 @@ TEST_P(EvaluatedSplitRecordsTests, IsSplicedSplitRecord) {
     const SplitRecordsEvaluationParameters::SplicingParameters splicingParameters = {
         .baseParameters =
             SplitRecordsEvaluationParameters::BaseParameters{
-                .minComplementarity = 0.9, .minComplementarityFraction = 0.9, .mfeThreshold = 10},
+                .minComplementarity = 0.9,
+                .minComplementarityFraction = 0.9,
+                .mfeThreshold = 10,
+                .includeWobbleBasePairsInCrosslinkingSites = true},
         .orientation = annotation::Orientation::BOTH,
         .splicingTolerance = 0,
         .featureAnnotator = &featureAnnotator};

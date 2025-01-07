@@ -1,7 +1,5 @@
 #include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
-
 // Standard
 #include <vector>
 
@@ -26,8 +24,8 @@ class CrosslinkingSitesEvaluatorTest
 
 TEST_P(CrosslinkingSitesEvaluatorTest, Base) {
     CrosslinkingSitesEvaluatorTestParams param = GetParam();
-    const auto result =
-        CrosslinkingSitesEvaluator::evaluate(param.sequence1, param.sequence2, param.dotbracket);
+    const auto result = CrosslinkingSitesEvaluator::evaluate(param.sequence1, param.sequence2,
+                                                             param.dotbracket, true);
     EXPECT_EQ(result, param.expected);
 }
 
@@ -48,22 +46,22 @@ const CrosslinkingSitesEvaluatorTestParams params3{
     .sequence1 = "ACCCGACAAGGAAUUUCGC"_dna5,
     .sequence2 = "UGCGCCCAUUGUGCAAU"_dna5,
     .dotbracket = {"..((.....))........&(((((.....))))).."_db3},
-    .expected = CrosslinkingSitesEvaluator::Result{
-        {{}, {{2, 13}}}, {}, "..((.....))........&(((((.....))))).."}};
+    .expected =
+        CrosslinkingSitesEvaluator::Result{{{}, {}}, {}, "..((.....))........&(((((.....))))).."}};
 
 const CrosslinkingSitesEvaluatorTestParams params4{
     .sequence1 = "CAGAGCCGCUGCUUUGA"_dna5,
-    .sequence2 = "AGCCAAUCCGCUAGACGCU"_dna5,
+    .sequence2 = "AGUCAAUCCGUUAGACGCU"_dna5,
     .dotbracket = {"((((((....)))))).&(((......)))......."_db3},
     .expected = CrosslinkingSitesEvaluator::Result{
-        {{{5, 11}}, {{2, 10}}}, {}, "((((((....)))))).&(((......)))......."}};
+        {{}, {{2, 10}}}, {}, "((((((....)))))).&(((......)))......."}};
 
 const CrosslinkingSitesEvaluatorTestParams params5{
-    .sequence1 = "UCUGAAGCAGACUGCAAAG"_dna5,
+    .sequence1 = "UCUGAAGUAGACUGCAAAG"_dna5,
     .sequence2 = "GUUAGAGCGUACGCCUG"_dna5,
     .dotbracket = {"(((((.(((...)))....&.)))))((....))..."_db3},
     .expected = CrosslinkingSitesEvaluator::Result{
-        {{{7, 14}}, {{7, 13}}}, {{2, 2}}, "(((((.(((...)))....&.)))))((....))..."}};
+        {{{7, 12}}, {}}, {{2, 2}}, "(((((.(((...)))....&.)))))((....))..."}};
 
 INSTANTIATE_TEST_SUITE_P(Default, CrosslinkingSitesEvaluatorTest,
                          testing::Values(params1, params2, params3, params4, params5));

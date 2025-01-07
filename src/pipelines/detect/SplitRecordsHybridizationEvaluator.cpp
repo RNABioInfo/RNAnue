@@ -66,7 +66,8 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
     }
 
     const auto crosslinkingResult =
-        CrosslinkingSitesEvaluator::evaluate(sequence1, sequence2, secondaryStructure);
+        CrosslinkingSitesEvaluator::evaluate(sequence1, sequence2, secondaryStructure,
+                                             parameters.includeWobbleBasePairsInCrosslinkingSites);
 
     vrna_fold_compound_free(foldCompound);
 

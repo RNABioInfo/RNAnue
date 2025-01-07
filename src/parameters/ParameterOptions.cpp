@@ -107,6 +107,8 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
 auto ParameterOptions::getAlignOptions() -> po::options_description {
     po::options_description align("Align Pipeline");
     align.add_options()("dbref", po::value<std::string>(), "reference genome (.fasta) (required)");
+    align.add_options()("multimap", po::bool_switch()->default_value(pi::defaultMultiMap),
+                        "search all hits for multimapper (default: false");
     align.add_options()("accuracy", po::value<size_t>()->default_value(pi::defaultAlignAccuracy),
                         "minimum percentage of read matches (default: 90, range: 0-100)");
     align.add_options()("minfragsco",
@@ -142,6 +144,9 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
     detect.add_options()("splicingtolerance",
                          po::value<int>()->default_value(pi::defaultSplicingTolerance),
                          "tolerance for splicing events (default: 5)");
+    detect.add_options()(
+        "includewobble", po::bool_switch()->default_value(false),
+        "wobble base pairs are allowed in crosslinking site evaluation (default: false)");
 
     return detect;
 }

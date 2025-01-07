@@ -82,4 +82,13 @@ struct ParameterValidator {
 
         return dirPath;
     }
+
+    static auto validateBool(const po::variables_map& params, const std::string& paramName) {
+        if (not params.contains(paramName)) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not find parameter named: ",
+                                                                paramName);
+        }
+
+        return params.at(paramName).as<bool>();
+    }
 };

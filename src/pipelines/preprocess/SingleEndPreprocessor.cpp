@@ -4,15 +4,19 @@
 #include <params/basic.h>
 
 #include <future>
+#include <string>
 
 // Internal
 #include "DeduplicationConfig.hpp"
 #include "Deduplicator.hpp"
+#include "FastqRecord.hpp"
 #include "PreprocessFilter.hpp"
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
 
 namespace pipelines::preprocess {
+
+using namespace dataTypes;
 
 void SingleEndPreprocessor::process(const PreprocessSampleSingle& sample) const {
     Logger::log("Processing sample (single-end): ", sample.input.sampleName);
@@ -32,43 +36,31 @@ void SingleEndPreprocessor::process(const PreprocessSampleSingle& sample) const 
 
 auto SingleEndPreprocessor::processWithDeduplication(const PreprocessSampleSingle& sample) const
     -> ChunkResult {
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
-
     const auto deduplicationConfig =
         DeduplicationBySequenceSingleConfig{sample.input.inputFastqPath};
     auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
 
-    const size_t totalRecords = deduplicatedResults.records.size();
-    const size_t numThreads = parameters.threadCount;
-    const size_t chunkSize = (totalRecords + numThreads - 1) / numThreads;  // Ceiling division
+    auto isValidRecord = [&deduplicatedResults](const FastqRecord& record) {
+        return deduplicatedResults.validRecordIDs.contains(record.id());
+    };
 
-    std::vector<std::vector<FastqRecord>> chunks;
-    chunks.reserve(numThreads);
+    std::vector<std::future<ChunkResult>> processResults;
+    processResults.reserve(parameters.threadCount - 1);
 
-    for (size_t i = 0; i < numThreads; ++i) {
-        size_t start = i * chunkSize;
-        size_t end = std::min(start + chunkSize, totalRecords);
-        if (start >= end) {
-            break;
-        }
+    seqan3::sequence_file_input recIn{sample.input.inputFastqPath};
+    auto asyncInputBuffer = recIn | seqan3::views::async_input_buffer(parameters.chunkSize) |
+                            std::ranges::views::filter(isValidRecord);
 
-        std::vector<FastqRecord> chunk{
-            std::make_move_iterator(deduplicatedResults.records.begin() + static_cast<long>(start)),
-            std::make_move_iterator(deduplicatedResults.records.begin() + static_cast<long>(end))};
-        chunks.push_back(std::move(chunk));
-    }
-
-    const size_t numChunks = chunks.size();
-
-    for (size_t i = 1; i < numChunks; ++i) {
+    for (size_t i = 1; i < parameters.threadCount; ++i) {
         processResults.emplace_back(std::async(
-            std::launch::async, &SingleEndPreprocessor::processChunk<std::vector<FastqRecord>>,
-            this, std::ref(chunks[i]), std::cref(sample.output.tmpFastqDir)));
+            std::launch::async, &SingleEndPreprocessor::processChunk<decltype(asyncInputBuffer)>,
+            this, std::ref(asyncInputBuffer), std::cref(sample.output.tmpFastqDir)));
     }
 
-    ChunkResult totalResult = processChunk(chunks[0], sample.output.tmpFastqDir);
+    // Process data in main thread
+    ChunkResult totalResult = processChunk(asyncInputBuffer, sample.output.tmpFastqDir);
 
+    // Collect results from other threads
     for (auto& resultFuture : processResults) {
         totalResult += resultFuture.get();
     }

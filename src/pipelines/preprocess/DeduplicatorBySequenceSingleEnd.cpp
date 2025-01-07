@@ -2,23 +2,29 @@
 
 // Standard
 #include <cstddef>
+#include <ranges>
+#include <unordered_map>
+#include <vector>
 
 // seqan3
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
-#include <vector>
+#include <seqan3/io/sequence_file/input.hpp>
 
 // Internal
 #include "DeduplicationOutput.hpp"
+#include "FastqRecord.hpp"
 #include "HashDNA5Vector.hpp"
 #include "Logger.hpp"
 #include "SequenceQualityAlgorithms.hpp"  // NOLINT
 
 namespace pipelines::preprocess {
 
+using namespace dataTypes;
+
 auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
     -> DeduplicationOutputSingle {
     std::unordered_map<std::vector<seqan3::dna5>, DeduplicationRecordSingleEnd, HashDNA5Vector>
-        recordsMap;
+        validRecordIDsBySequence;
 
     size_t duplicateRecords = 0;
 
@@ -28,29 +34,31 @@ auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
         const double meanQuality =
             SequenceQualityAlgorithms::meanQualityScore(record.base_qualities());
 
-        if (recordsMap.find(record.sequence()) == recordsMap.end()) {
-            recordsMap.emplace(
+        if (validRecordIDsBySequence.find(record.sequence()) == validRecordIDsBySequence.end()) {
+            validRecordIDsBySequence.emplace(
                 record.sequence(),
-                DeduplicationRecordSingleEnd{.record = record, .meanQuality = meanQuality});
+                DeduplicationRecordSingleEnd{.recordID = record.id(), .meanQuality = meanQuality});
             continue;
         }
 
         ++duplicateRecords;
 
-        if (meanQuality > recordsMap[record.sequence()].meanQuality) {
-            recordsMap.insert_or_assign(
+        if (meanQuality > validRecordIDsBySequence[record.sequence()].meanQuality) {
+            validRecordIDsBySequence.insert_or_assign(
                 record.sequence(),
-                DeduplicationRecordSingleEnd{.record = record, .meanQuality = meanQuality});
+                DeduplicationRecordSingleEnd{.recordID = record.id(), .meanQuality = meanQuality});
         }
     }
 
-    Logger::log("Duplicate records: ", duplicateRecords, "; Unique records: ", recordsMap.size());
+    Logger::log("Duplicate records: ", duplicateRecords,
+                "; Unique records: ", validRecordIDsBySequence.size());
 
-    auto recordView =
-        recordsMap | std::views::values |
-        std::views::transform([](DeduplicationRecordSingleEnd& record) { return record.record; });
+    auto validRecordIDsView =
+        validRecordIDsBySequence | std::views::values |
+        std::views::transform([](DeduplicationRecordSingleEnd& record) { return record.recordID; });
 
-    return DeduplicationOutputSingle{.records = {recordView.begin(), recordView.end()}};
-}
+    return DeduplicationOutputSingle{
+        .validRecordIDs = {validRecordIDsView.begin(), validRecordIDsView.end()}};
+}  // namespace DeduplicatorBySequenceSingleEnd::deduplicate(constfs::path&recordsPath)
 
 }  // namespace pipelines::preprocess

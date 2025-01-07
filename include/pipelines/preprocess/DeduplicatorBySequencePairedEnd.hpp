@@ -2,15 +2,14 @@
 
 // Standard
 #include <filesystem>
+#include <string>
 
 // Internal
 #include "DeduplicationOutput.hpp"
-#include "FastqRecord.hpp"
 
 namespace pipelines::preprocess {
 
 namespace fs = std::filesystem;
-using namespace dataTypes;
 
 class DeduplicatorBySequencePairedEnd {
    public:
@@ -31,8 +30,7 @@ class DeduplicatorBySequencePairedEnd {
 
    private:
     struct DeduplicationRecordPairedEnd {
-        FastqRecord recordFwd;
-        FastqRecord recordRev;
+        std::string recordID;
         double meanQuality;
     };
 };

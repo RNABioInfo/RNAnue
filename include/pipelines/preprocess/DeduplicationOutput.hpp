@@ -1,19 +1,17 @@
 #pragma once
 
 // Standard
+#include <set>
+#include <string>
+#include <variant>
 #include <vector>
 
-// Internal
-#include "FastqRecord.hpp"
-
-using namespace dataTypes;
-
 struct DeduplicationOutputSingle {
-    std::vector<FastqRecord> records;
+    std::set<std::string> validRecordIDs;
 };
 
 struct DeduplicationOutputPaired {
-    std::vector<std::pair<FastqRecord, FastqRecord>> recordPairs;
+    std::set<std::string> validRecordIDs;
 };
 
 using DeduplicationOutput = std::variant<DeduplicationOutputSingle, DeduplicationOutputPaired>;

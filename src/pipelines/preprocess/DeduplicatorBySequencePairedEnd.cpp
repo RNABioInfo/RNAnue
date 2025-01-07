@@ -2,6 +2,7 @@
 
 // Internal
 #include "DeduplicationOutput.hpp"
+#include "PreprocessData.hpp"
 #include "SequenceQualityAlgorithms.hpp"  // NOLINT
 #include "utility/PairHash.hpp"
 
@@ -12,7 +13,7 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
     -> DeduplicationOutputPaired {
     std::unordered_map<std::pair<seqan3::dna5_vector, seqan3::dna5_vector>,
                        DeduplicationRecordPairedEnd, PairHash>
-        recordsMap;
+        validRecordIDsBySequencePair;
 
     size_t duplicateRecords = 0;
 
@@ -29,42 +30,33 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
 
         auto key = std::make_pair(record1.sequence(), record2.sequence());
 
-        if (recordsMap.find(key) == recordsMap.end()) {
-            recordsMap.emplace(key, DeduplicationRecordPairedEnd{.recordFwd = std::move(record1),
-                                                                 .recordRev = std::move(record2),
-                                                                 .meanQuality = meanQuality});
+        if (validRecordIDsBySequencePair.find(key) == validRecordIDsBySequencePair.end()) {
+            validRecordIDsBySequencePair.emplace(
+                key,
+                DeduplicationRecordPairedEnd{.recordID = record1.id(), .meanQuality = meanQuality});
             continue;
         }
 
         ++duplicateRecords;
 
-        if (meanQuality > recordsMap[key].meanQuality) {
-            recordsMap.insert_or_assign(
-                key, DeduplicationRecordPairedEnd{.recordFwd = std::move(record1),
-                                                  .recordRev = std::move(record2),
-                                                  .meanQuality = meanQuality});
+        if (meanQuality > validRecordIDsBySequencePair[key].meanQuality) {
+            validRecordIDsBySequencePair.insert_or_assign(
+                key,
+                DeduplicationRecordPairedEnd{.recordID = record1.id(), .meanQuality = meanQuality});
         }
     }
 
-    auto recordFwdView = recordsMap | std::views::values |
-                         std::views::transform([](DeduplicationRecordPairedEnd& recordPaired) {
-                             return recordPaired.recordFwd;
-                         });
+    auto validRecordIDsView =
+        validRecordIDsBySequencePair | std::views::values |
+        std::views::transform([](DeduplicationRecordPairedEnd& deduplicatedRecord) {
+            return deduplicatedRecord.recordID;
+        });
 
-    auto recordRevView = recordsMap | std::views::values |
-                         std::views::transform([](DeduplicationRecordPairedEnd& recordPaired) {
-                             return recordPaired.recordRev;
-                         });
+    Logger::log("Duplicate records: ", duplicateRecords,
+                "; Unique records: ", validRecordIDsBySequencePair.size());
 
-    assert(std::ranges::distance(recordFwdView) == std::ranges::distance(recordRevView));
-
-    Logger::log("Duplicate records: ", duplicateRecords, "; Unique records: ", recordsMap.size());
-
-    auto pairView =
-        seqan3::views::zip(recordFwdView, recordRevView) |
-        std::views::transform([](auto&& pair) { return std::make_pair(pair.first, pair.second); });
-
-    return DeduplicationOutputPaired{.recordPairs = {pairView.begin(), pairView.end()}};
+    return DeduplicationOutputPaired{
+        .validRecordIDs = {validRecordIDsView.begin(), validRecordIDsView.end()}};
 }
 
 }  // namespace pipelines::preprocess

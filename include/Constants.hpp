@@ -39,6 +39,7 @@ constexpr size_t defaultMinOverlapMergeSize = 5;
 constexpr double defaultMinOverlapMergeMissmatchRate = 0.05;
 
 // Align defaults
+constexpr bool defaultMultiMap = false;
 constexpr size_t defaultAlignAccuracy = 90;
 constexpr size_t defaultMinFragmentScore = 18;
 constexpr size_t defaultMinFragmentLength = 20;

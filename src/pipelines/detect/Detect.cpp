@@ -209,7 +209,9 @@ auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) 
         return SplitRecordsEvaluationParameters::SplicingParameters{
             .baseParameters = {.minComplementarity = params.minimumComplementarity,
                                .minComplementarityFraction = params.minimumSiteLengthRatio,
-                               .mfeThreshold = params.maxHybridizationEnergy},
+                               .mfeThreshold = params.maxHybridizationEnergy,
+                               .includeWobbleBasePairsInCrosslinkingSites =
+                                   params.includeWobbleBasePairsInCrosslinkingSites},
             .orientation = params.featureOrientation,
             .splicingTolerance = params.splicingTolerance,
             .featureAnnotator = &featureAnnotator};
@@ -218,7 +220,9 @@ auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) 
     return SplitRecordsEvaluationParameters::BaseParameters{
         .minComplementarity = params.minimumComplementarity,
         .minComplementarityFraction = params.minimumSiteLengthRatio,
-        .mfeThreshold = params.maxHybridizationEnergy};
+        .mfeThreshold = params.maxHybridizationEnergy,
+        .includeWobbleBasePairsInCrosslinkingSites =
+            params.includeWobbleBasePairsInCrosslinkingSites};
 }
 
 auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::string> {
@@ -462,8 +466,7 @@ auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords,
                 std::get<SplitRecordsEvaluator::EvaluatedSplitRecords>(evaluationResult);
 
             if (!bestSplitRecords.has_value() || evaluatedSplitRecords > bestSplitRecords.value()) {
-                bestSplitRecords.emplace(
-                    std::get<SplitRecordsEvaluator::EvaluatedSplitRecords>(evaluationResult));
+                bestSplitRecords.emplace(evaluatedSplitRecords);
             }
         } else {
             Logger::log<LogLevel::DEBUG>(
