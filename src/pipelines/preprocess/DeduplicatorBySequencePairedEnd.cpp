@@ -4,6 +4,7 @@
 #include "DeduplicationOutput.hpp"
 #include "PreprocessData.hpp"
 #include "SequenceQualityAlgorithms.hpp"  // NOLINT
+#include "Utility.hpp"
 #include "utility/PairHash.hpp"
 
 namespace pipelines::preprocess {
@@ -21,6 +22,10 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
     seqan3::sequence_file_input recReverseIn{recordsRev};
 
     for (auto&& [record1, record2] : seqan3::views::zip(recForwardIn, recReverseIn)) {
+        assert(helper::splitString(record1.id(), ' ')[0] ==
+                   helper::splitString(record2.id(), ' ')[0] &&
+               "The record ids of the paired end files do not match.");
+
         const double meanQuality1 =
             SequenceQualityAlgorithms::meanQualityScore(record1.base_qualities());
         const double meanQuality2 =

@@ -5,6 +5,7 @@
 #include <chrono>
 #include <cmath>
 #include <filesystem>
+#include <sstream>
 #include <string>
 #include <vector>
 
@@ -55,6 +56,19 @@ namespace fs = std::filesystem;
 
 void createTmpDir(const fs::path &subpath);
 void deleteDir(const fs::path &path);
+
+inline std::vector<std::string> splitString(const std::string &input, char delimiter) {
+    std::vector<std::string> tokens;
+
+    std::stringstream inputStream{input};
+    std::string currentToken;
+
+    while (getline(inputStream, currentToken, delimiter)) {
+        tokens.push_back(currentToken);
+    }
+
+    return tokens;
+};
 
 inline auto hasSuffix(const std::string &fullString, const std::string &ending) -> bool {
     if (fullString.length() >= ending.length()) {

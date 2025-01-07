@@ -81,7 +81,9 @@ void PairedEndPreprocessor::process(const PreprocessSamplePaired& sample) const 
     auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
 
     auto isValidRecord = [&deduplicatedResults](const auto& records) {
-        assert(records.first.id() == records.second.id());
+        assert(helper::splitString(records.first.id(), ' ')[0] ==
+                   helper::splitString(records.second.id(), ' ')[0] &&
+               "The record ids of the paired end files do not match.");
         return deduplicatedResults.validRecordIDs.contains(records.first.id());
     };
 
