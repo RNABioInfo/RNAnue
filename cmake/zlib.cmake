@@ -10,8 +10,7 @@ ExternalProject_Add(
   GIT_REPOSITORY "https://github.com/madler/zlib.git"
   GIT_TAG "v1.3.1"
   UPDATE_COMMAND ""
-  # BUILD_IN_SOURCE 1 CONFIGURE_COMMAND ${zlib_PREFIX}/src/zlib/configure --prefix=${zlib_INSTALL}
-  # --static
+  BUILD_IN_SOURCE 1 CONFIGURE_COMMAND ${zlib_PREFIX}/src/zlib/configure --prefix=${zlib_INSTALL} --static
   INSTALL_DIR ${zlib_INSTALL}
   CMAKE_ARGS -DCMAKE_C_COMPILER=$ENV{CC} -DCMAKE_CXX_COMPILER=$ENV{CXX}
              -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE} -DCMAKE_INSTALL_PREFIX=${zlib_INSTALL}

@@ -165,7 +165,7 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
                              po::value<int>()->default_value(pi::defaultSplicingTolerance),
                              "tolerance for splicing events (default: 5)");
     detect.add_options()("includewobble", po::bool_switch()->default_value(false),
-                         "wobble base pairs are allowed in crosslinking site "
+                         "[EXPERIMENTAL] wobble base pairs are allowed in crosslinking site "
                          "evaluation (default: false)");
 
     return detect;

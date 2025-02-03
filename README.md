@@ -98,16 +98,17 @@ RNAnue provides different sub-calls for individual pipeline steps. These include
 > **IMPORTANT** In order to process paired-end files, files must end with "\_forward.fastq" and "\_reverse.fastq", "\_R1.fastq" and "\_R2.fastq" or "\_1.fastq" and "\_2.fastq".
 
 The root folders of the treatments (`--trtms`; required) and controls (`--ctrls`; optional) are specified accordingly. These folders contain sub-folders
-with arbitrary conditions (e.g., treatment, cell lines,...) that in turn contain the read files.
+with arbitrary samples that in turn contain the read files.
 
-### Single-End folder structure
+### Example folder structure
 
 ```text
 ./trtms/
     sample1
         *.fastq
     sample2
-        *.fastq
+        *_R1.fastq
+        *_R2.fastq
 ./ctrls/
     sample3
         *forward.fastq
