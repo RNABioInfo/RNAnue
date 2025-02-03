@@ -77,6 +77,7 @@ else()
             include_directories(SYSTEM ${ZLIB_INCLUDE_DIRS})
             list(APPEND deps_LIB ${ZLIB_LIBRARIES})
         else()
+            set(ZLIB_BUILD TRUE)
             # build zlib from source
             message(STATUS "Building zlib from source")
             include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/zlib.cmake)
@@ -98,6 +99,10 @@ else()
         BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
         INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
+
+    if (ZLIB_BUILD)
+        add_dependencies(htslib zlib)
+    endif()
 
     set(HTSlib_INCLUDE_DIRS ${htslib_INSTALL}/include ${htslib_INSTALL}/include/htslib ${CMAKE_BINARY_DIR}/submodules/zlib-install/include/)
     set(HTSlib_LIBRARIES ${htslib_INSTALL}/lib/libhts.a ${deps_LIB})
