@@ -1,6 +1,7 @@
 #pragma once
 
 // Internal
+#include <optional>
 #include <string>
 #include <utility>
 

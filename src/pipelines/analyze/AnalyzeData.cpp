@@ -2,8 +2,13 @@
 
 // Standard
 #include <filesystem>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // Internal
+#include "AnalyzeSample.hpp"
 #include "Logger.hpp"
 #include "Utility.hpp"
 
@@ -118,4 +123,20 @@ auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector
     return samples;
 }
 
+auto AnalyzeData::getInputFilePaths() const -> std::vector<fs::path> {
+    std::vector<fs::path> inputFilePaths;
+    inputFilePaths.reserve(treatmentSamples.size());
+
+    for (const auto& sample : treatmentSamples) {
+        inputFilePaths.push_back(sample.input.splitAlignmentsPath);
+    }
+
+    if (controlSamples) {
+        for (const auto& sample : controlSamples.value()) {
+            inputFilePaths.push_back(sample.input.splitAlignmentsPath);
+        }
+    }
+
+    return inputFilePaths;
+}
 }  // namespace pipelines::analyze

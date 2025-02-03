@@ -3,16 +3,28 @@
 // standard
 #include <params/basic.h>
 
+#include <cstddef>
+#include <filesystem>
+#include <functional>
 #include <future>
+#include <ranges>
 #include <string>
+#include <vector>
+
+// seqan3
+#include <seqan3/io/sequence_file/input.hpp>
+#include <seqan3/io/sequence_file/output.hpp>
+#include <seqan3/io/views/async_input_buffer.hpp>
 
 // Internal
 #include "DeduplicationConfig.hpp"
 #include "Deduplicator.hpp"
 #include "FastqRecord.hpp"
+#include "Logger.hpp"
 #include "PreprocessFilter.hpp"
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
+#include "Utility.hpp"
 
 namespace pipelines::preprocess {
 
@@ -106,7 +118,7 @@ auto SingleEndPreprocessor::processChunk(T& recordIterator, const fs::path& tmpO
 
     for (auto& record : recordIterator) {
         if (parameters.trimPolyG) {
-            RecordTrimmer::trim3PolyG(record);
+            RecordTrimmer::trim3PolyG(record, parameters.minPolyGCount);
         }
 
         if (parameters.windowTrimmingSize > 0) {

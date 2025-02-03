@@ -17,7 +17,7 @@ struct SplitRecords : public std::vector<SamRecord> {
 
     SplitRecords() = default;
 
-    inline auto operator<(const SplitRecords& rhs) const -> bool {
+    auto operator<(const SplitRecords& rhs) const -> bool {
         const auto& lhs_ref_id = this->back().reference_id();
         const auto& rhs_ref_id = rhs.back().reference_id();
 
@@ -31,7 +31,7 @@ struct SplitRecords : public std::vector<SamRecord> {
         return lhsEnd < rhsEnd;
     }
 
-    inline auto operator>(const SplitRecords& rhs) const -> bool { return rhs < *this; }
+    auto operator>(const SplitRecords& rhs) const -> bool { return rhs < *this; }
 };
 
 // Split records are sorted by the end position of the last split record

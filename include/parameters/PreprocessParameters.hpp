@@ -1,8 +1,8 @@
 #pragma once
 
 // Standard
-#include <climits>
 #include <cstddef>
+#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <variant>
@@ -39,6 +39,7 @@ class PreprocessParameters : public GeneralParameters {
     AdapterInput adapter5Reverse;
     AdapterInput adapter3Reverse;
 
+    size_t minPolyGCount;
     double maxMissMatchFractionTrimming;
     size_t minOverlapTrimming;
     size_t minQualityThreshold;
@@ -57,6 +58,8 @@ class PreprocessParameters : public GeneralParameters {
           adapter3Forward(validateAdapter(params, "adpt3f")),
           adapter5Reverse(validateAdapter(params, "adpt5r")),
           adapter3Reverse(validateAdapter(params, "adpt3r")),
+          minPolyGCount(
+              ParameterValidator::validateArithmetic(params, "minpolygcount", size_t{0}, SIZE_MAX)),
           maxMissMatchFractionTrimming(
               ParameterValidator::validateArithmetic(params, "mtrim", 0.0, 1.0)),
           minOverlapTrimming(

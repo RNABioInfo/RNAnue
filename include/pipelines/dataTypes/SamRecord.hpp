@@ -33,6 +33,12 @@ using SamFieldIDs =
 
 using SamRecord = seqan3::sam_record<SamFieldTypes, SamFieldIDs>;
 
+/**
+ * @brief Get the end position of a SAM record.(half-open)
+ * End position of the read exclusive the last postion.
+ * @param record The SAM record.
+ * @return The end position of the read (zero-based).
+ */
 inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t> {
     const auto start = record.reference_position();
 
@@ -40,13 +46,13 @@ inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t>
         return std::nullopt;
     }
 
-    int32_t end = start.value();
+    int32_t end = *start;
 
     for (const auto& cigar : record.cigar_sequence()) {
         if (cigar == 'M'_cigar_operation || cigar == '='_cigar_operation ||
             cigar == 'D'_cigar_operation || cigar == 'N'_cigar_operation ||
             cigar == 'X'_cigar_operation) {
-            end += get<0>(cigar);
+            end += static_cast<int32_t>(get<0>(cigar));
         }
     }
 

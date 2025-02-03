@@ -2,15 +2,22 @@
 
 // Standard
 #include <cassert>
+#include <utility>
+#include <variant>
 
 // seqan3
 #include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/sequence_file/output.hpp>
 
 // Internal
+#include "Constants.hpp"
 #include "Logger.hpp"
 #include "PairedEndPreprocessor.hpp"
+#include "PreprocessData.hpp"
+#include "PreprocessParameters.hpp"
+#include "PreprocessSample.hpp"
 #include "SingleEndPreprocessor.hpp"
+#include "VariantOverload.hpp"
 
 namespace pipelines::preprocess {
 Preprocess::Preprocess(PreprocessParameters params) : parameters(std::move(params)) {}

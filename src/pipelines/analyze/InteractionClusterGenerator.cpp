@@ -1,43 +1,145 @@
 #include "InteractionClusterGenerator.hpp"
 
+// Standard
+#include <cstddef>
+#include <iterator>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
-#include "GenomicRegion.hpp"
-#include "InteractionSegment.hpp"
+// Internal
+#include "AnnotatedInteractionCluster.hpp"
+#include "ClusteringParameters.hpp"
+#include "GenomicFeature.hpp"
+#include "InteractionCluster.hpp"
+#include "PartiallyAnnotatedInteractionCluster.hpp"
+#include "VariantOverload.hpp"
 
 namespace pipelines::analyze {
 
-/**
- * @brief Merges overlapping interaction clusters and returns these.
- *
- * This function takes a sorted list of interaction clusters,
- * and merges any overlapping clusters. This is done from back to front while closing clusters that
- * are further back than the current cluster.
- *
- * @param clusters A forwaring reference to the sorted list of interaction clusters to be merged.
- * @return A list of finalized interaction clusters.
- */
-auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster>&& clusters)
-    -> InteractionClusterGenerator::Result {
+auto InteractionClusterGenerator::clustersOverlap(const InteractionCluster &cluster1,
+                                                  const InteractionCluster &cluster2,
+                                                  const ClusteringParameters &parameters) noexcept
+    -> bool {
+    return std::visit(
+        overloaded{[&](const ClusterOverlapToleranceMergeParameter &tolerance) {
+                       return cluster1.overlapsWithTolerance(
+                           cluster2, parameters.clusterMergingStrandSpecificity,
+                           tolerance.tolerance);
+                   },
+                   [&](const ShortestClusterOverlapFractionMergeParameter &overlapFraction) {
+                       return cluster1.overlapsWithShortestSegmentFraction(
+                           cluster2, parameters.clusterMergingStrandSpecificity,
+                           overlapFraction.overlapFraction);
+                   }},
+        parameters.clusterMergeParameter);
+};
+
+auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) noexcept
+    -> std::variant<AnnotatedInteractionCluster, PartiallyAnnotatedInteractionCluster> {
+    const auto &firstSegment = cluster.getFirstSegment();
+    const auto &secondSegment = cluster.getSecondSegment();
+
+    const auto firstFeature =
+        featureAnnotator->getBestOverlappingFeature(firstSegment, parameters.featureOrientation);
+
+    const auto secondFeature =
+        featureAnnotator->getBestOverlappingFeature(secondSegment, parameters.featureOrientation);
+
+    auto extractFeatureID =
+        [](const std::optional<GenomicFeature> &feature) -> std::optional<std::string> {
+        if (!feature) {
+            return std::nullopt;
+        }
+        // Prefer groupID if it exists; otherwise fallback to featureID
+        return feature->groupID.value_or(feature->featureID);
+    };
+
+    auto firstFeatureID = extractFeatureID(firstFeature);
+    auto secondFeatureID = extractFeatureID(secondFeature);
+
+    // If fully annotated, return the annotated cluster
+    if (firstFeatureID && secondFeatureID) {
+        return AnnotatedInteractionCluster{std::move(cluster), *firstFeatureID, *secondFeatureID};
+    }
+
+    // Otherwise, populate supplementary features if the cluster passes filters
+    if (clusterPassesFilters(cluster)) {
+        if (!firstFeatureID) {
+            // Create a new supplementary feature from the first segment
+            supplementaryFeatureRegions[firstSegment.getReferenceIDIndex()].emplace_back(
+                asGenomicFeature(firstSegment));
+        }
+
+        if (!secondFeatureID) {
+            // Create a new supplementary feature from the second segment
+            supplementaryFeatureRegions[secondSegment.getReferenceIDIndex()].emplace_back(
+                asGenomicFeature(secondSegment));
+        }
+    }
+
+    // Return partially annotated cluster
+    return PartiallyAnnotatedInteractionCluster{std::move(cluster), std::move(firstFeatureID),
+                                                std::move(secondFeatureID)};
+};
+
+auto InteractionClusterGenerator::clusterPassesFilters(
+    const InteractionCluster &cluster) const noexcept -> bool {
+    return cluster.fragmentCount() >= parameters.minimumClusterReadCount &&
+           cluster.segmentsMaxSelfOverlapFraction() <= parameters.maxClusterSelfOverlapFraction;
+};
+
+void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &&cluster) noexcept {
+    // Update counts
+    featureCountsByFeatureID[cluster.getFirstFeatureID()] += cluster.fragmentCount();
+    featureCountsByFeatureID[cluster.getSecondFeatureID()] += cluster.fragmentCount();
+
+    if (clusterPassesFilters(cluster)) {
+        finishedClusters.emplace_back(std::move(cluster));
+        ++includedClusterCount;
+    } else {
+        ++excludedClusterCount;
+    }
+}
+void InteractionClusterGenerator::attributeCluster(
+    PartiallyAnnotatedInteractionCluster &&cluster) noexcept {
+    if (clusterPassesFilters(cluster)) {
+        partiallyAnnotatedClusters.emplace_back(std::move(cluster));
+        ++includedClusterCount;
+    } else {
+        ++excludedClusterCount;
+    }
+}
+void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) noexcept {
+    // Perform annotation and attribution in one place
+    std::visit(
+        [&](auto &&resultingCluster) {
+            attributeCluster(std::forward<decltype(resultingCluster)>(resultingCluster));
+        },
+        annotateCluster(std::forward<InteractionCluster>(cluster)));
+};
+auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> &&clusters)
+    -> Result {
     std::vector<InteractionCluster> localClusters = std::move(clusters);
 
-    for (auto& cluster : localClusters | std::views::reverse) {
+    // Process from the end to the beginning
+    for (auto &cluster : localClusters | std::views::reverse) {
         if (openClusterQueue.empty()) {
             openClusterQueue.emplace_front(std::move(cluster));
             continue;
         }
 
-        bool clusterWasMerged = false;
-
+        bool clusterMerged = false;
         auto prevIter = openClusterQueue.before_begin();
 
+        // Try merging with clusters in the open queue
         for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
-            if (iter->overlaps(cluster, parameters.graceDistance)) {
-                iter->merge(cluster);
-                clusterWasMerged = true;
+            if (clustersOverlap(*iter, cluster, parameters) &&
+                iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
+                clusterMerged = true;
                 break;
             }
 
@@ -51,94 +153,58 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster>&
             ++iter;
         }
 
-        if (!clusterWasMerged) {
+        // If not merged, insert new cluster into the queue
+        if (!clusterMerged) {
             openClusterQueue.emplace_after(prevIter, std::move(cluster));
         }
     }
 
-    for (auto& cluster : openClusterQueue) {
+    // Finalize remaining clusters
+    for (auto &cluster : openClusterQueue) {
         finalizeCluster(std::move(cluster));
     }
 
+    openClusterQueue.clear();
+
     return {.finishedClusters = std::move(finishedClusters),
             .partiallyAnnotatedClusters = std::move(partiallyAnnotatedClusters),
-            .supplementaryFeatureRegions = std::move(supplementaryFeatureRegions),
-            .featureCounts = std::move(featureCounts),
+            .supplementaryFeatureMap = std::move(supplementaryFeatureRegions),
+            .featureCounts = std::move(featureCountsByFeatureID),
             .includedClusterCount = includedClusterCount,
             .excludedClusterCount = excludedClusterCount};
-}
+};
 
-void InteractionClusterGenerator::finalizeCluster(InteractionCluster&& cluster) noexcept {
-    auto annotatedCluster = annotateCluster(std::move(cluster));
+void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {
+    // Merge finished clusters
+    finishedClusters.reserve(finishedClusters.size() + other.finishedClusters.size());
+    finishedClusters.insert(finishedClusters.end(),
+                            std::make_move_iterator(other.finishedClusters.begin()),
+                            std::make_move_iterator(other.finishedClusters.end()));
 
-    std::visit(
-        [this](auto&& cluster) {
-            using T = std::decay_t<decltype(cluster)>;
-            if constexpr (std::is_same_v<T, AnnotatedInteractionCluster>) {
-                featureCounts[cluster.getFirstFeatureID()] += cluster.fragmentCount();
-                featureCounts[cluster.getSecondFeatureID()] += cluster.fragmentCount();
+    // Merge partially annotated clusters
+    partiallyAnnotatedClusters.reserve(partiallyAnnotatedClusters.size() +
+                                       other.partiallyAnnotatedClusters.size());
+    partiallyAnnotatedClusters.insert(
+        partiallyAnnotatedClusters.end(),
+        std::make_move_iterator(other.partiallyAnnotatedClusters.begin()),
+        std::make_move_iterator(other.partiallyAnnotatedClusters.end()));
 
-                if (cluster.fragmentCount() >= parameters.minReadCount &&
-                    cluster.segmentsMaxOverlapFraction() <= parameters.maxOverlapFraction) {
-                    finishedClusters.emplace_back(std::forward<decltype(cluster)>(cluster));
-                    ++includedClusterCount;
-                } else {
-                    ++excludedClusterCount;
-                }
-            } else if constexpr (std::is_same_v<T, PartiallyAnnotatedInteractionCluster>) {
-                if (cluster.fragmentCount() >= parameters.minReadCount &&
-                    cluster.segmentsMaxOverlapFraction() <= parameters.maxOverlapFraction) {
-                    ++includedClusterCount;
-                } else {
-                    ++excludedClusterCount;
-                }
-                partiallyAnnotatedClusters.emplace_back(std::forward<decltype(cluster)>(cluster));
-            }
-        },
-        std::move(annotatedCluster));
-}
-
-auto InteractionClusterGenerator::annotateCluster(InteractionCluster&& cluster) noexcept
-    -> std::variant<AnnotatedInteractionCluster, PartiallyAnnotatedInteractionCluster> {
-    const auto& firstSegment = cluster.getFirstSegment();
-    const auto& secondSegment = cluster.getSecondSegment();
-
-    const auto firstReferenceID = referenceIDs[firstSegment.getReferenceIDIndex()];
-    const auto secondReferenceID = referenceIDs[secondSegment.getReferenceIDIndex()];
-
-    const auto firstFeature = featureAnnotator->getBestOverlappingFeature(
-        {firstReferenceID, firstSegment.getStart(), firstSegment.getEnd(),
-         firstSegment.getStrand()},
-        parameters.featureOrientation);
-
-    const auto secondFeature = featureAnnotator->getBestOverlappingFeature(
-        {secondReferenceID, secondSegment.getStart(), secondSegment.getEnd(),
-         secondSegment.getStrand()},
-        parameters.featureOrientation);
-
-    auto getFeatureID = [](const auto& feature) -> std::optional<std::string> {
-        return feature ? std::make_optional(feature->groupID.value_or(feature->id)) : std::nullopt;
-    };
-
-    auto firstFeatureID = getFeatureID(firstFeature);
-    auto secondFeatureID = getFeatureID(secondFeature);
-
-    if (firstFeatureID && secondFeatureID) {
-        return AnnotatedInteractionCluster{std::move(cluster), *firstFeatureID, *secondFeatureID};
+    // Merge supplementary feature maps
+    for (auto &[key, features] : other.supplementaryFeatureMap) {
+        auto &thisFeatures = supplementaryFeatureMap[key];
+        thisFeatures.reserve(thisFeatures.size() + features.size());
+        thisFeatures.insert(thisFeatures.end(), std::make_move_iterator(features.begin()),
+                            std::make_move_iterator(features.end()));
     }
 
-    if (!firstFeatureID) {
-        supplementaryFeatureRegions.emplace_back(firstReferenceID, firstSegment.getStart(),
-                                                 firstSegment.getEnd(), firstSegment.getStrand());
+    // Merge feature counts
+    for (const auto &[featureID, count] : other.featureCounts) {
+        featureCounts[featureID] += count;
     }
 
-    if (!secondFeatureID) {
-        supplementaryFeatureRegions.emplace_back(secondReferenceID, secondSegment.getStart(),
-                                                 secondSegment.getEnd(), secondSegment.getStrand());
-    }
-
-    return PartiallyAnnotatedInteractionCluster{std::move(cluster), std::move(firstFeatureID),
-                                                std::move(secondFeatureID)};
+    // Finally update counters
+    includedClusterCount += other.includedClusterCount;
+    excludedClusterCount += other.excludedClusterCount;
 }
 
 }  // namespace pipelines::analyze

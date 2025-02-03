@@ -12,10 +12,12 @@
 
 // seqan3
 #include <seqan3/io/sam_file/all.hpp>
+#include <seqan3/io/sam_file/input.hpp>
 #include <seqan3/io/views/async_input_buffer.hpp>
 
 // Internal
 #include "AsyncSplitRecordGroupBuffer.hpp"
+#include "SamRecord.hpp"
 #include "TestFilePath.hpp"
 
 using namespace seqan3::literals;
@@ -23,22 +25,22 @@ using namespace seqan3::literals;
 TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
     seqan3::sam_file_input fin{getTestFilePath("splitRecords.bam"), dataTypes::SamFieldIDs{}};
 
-    auto v = fin | AsyncSplitRecordGroupBuffer(2);
+    auto inputBuffer = fin | AsyncSplitRecordGroupBuffer(2);
 
     size_t groupCount = 0;
 
-    for (auto& group : v) {
-        ASSERT_NE(group.size(), 0ul);
+    for (auto& group : inputBuffer) {
+        ASSERT_NE(group.size(), 0UL);
 
         std::set<std::string> doubleIDs = {"SRR18331301.2", "SRR18331301.6", "SRR18331301.7"};
         std::set<std::string> tripleIDs = {"SRR18331301.16", "SRR18331301.26"};
 
         if (group.front().id() == "SRR18331301.1") {
-            EXPECT_EQ(group.size(), 1ul);
+            EXPECT_EQ(group.size(), 1UL);
         } else if (doubleIDs.contains(group.front().id())) {
-            EXPECT_EQ(group.size(), 2ul);
+            EXPECT_EQ(group.size(), 2UL);
         } else if (tripleIDs.contains(group.front().id())) {
-            EXPECT_EQ(group.size(), 3ul);
+            EXPECT_EQ(group.size(), 3UL);
         } else {
             throw std::logic_error("File should not contain groups of size: " +
                                    std::to_string(group.size()));
@@ -47,7 +49,7 @@ TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
         groupCount++;
     }
 
-    EXPECT_EQ(groupCount, 6ul);
+    EXPECT_EQ(groupCount, 6UL);
 };
 
 TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
@@ -60,18 +62,18 @@ TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
 
         for (auto& group : asyncInputBuffer) {
             std::cout << "Thread ID: " << std::this_thread::get_id() << "\n";
-            std::cout << "GROUP ID: " << group.front().id() << std::endl;
+            std::cout << "GROUP ID: " << group.front().id() << "\n";
             count++;
 
             std::set<std::string> doubleIDs = {"SRR18331301.2", "SRR18331301.6", "SRR18331301.7"};
             std::set<std::string> tripleIDs = {"SRR18331301.16", "SRR18331301.26"};
 
             if (group.front().id() == "SRR18331301.1") {
-                EXPECT_EQ(group.size(), 1ul);
+                EXPECT_EQ(group.size(), 1UL);
             } else if (doubleIDs.contains(group.front().id())) {
-                EXPECT_EQ(group.size(), 2ul);
+                EXPECT_EQ(group.size(), 2UL);
             } else if (tripleIDs.contains(group.front().id())) {
-                EXPECT_EQ(group.size(), 3ul);
+                EXPECT_EQ(group.size(), 3UL);
             } else {
                 throw std::logic_error("File should not contain groups of size: " +
                                        std::to_string(group.size()));
@@ -81,8 +83,8 @@ TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
         return count;
     };
 
-    auto f0 = std::async(std::launch::async, worker);
-    auto f1 = std::async(std::launch::async, worker);
+    auto workerOne = std::async(std::launch::async, worker);
+    auto workerTwo = std::async(std::launch::async, worker);
 
-    EXPECT_EQ(f0.get() + f1.get(), 6ul);
+    EXPECT_EQ(workerOne.get() + workerTwo.get(), 6UL);
 }

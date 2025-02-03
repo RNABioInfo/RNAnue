@@ -14,6 +14,7 @@
 #include <seqan3/io/sam_file/input.hpp>
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 #include <seqan3/utility/views/chunk.hpp>
+#include <utility>
 
 // Internal
 #include "AnalyzeData.hpp"
@@ -21,26 +22,23 @@
 #include "AnalyzeSample.hpp"
 #include "FeatureAnnotator.hpp"
 
-namespace math = boost::math;  // NOLINT
-
-using seqan3::operator""_tag;
-
 namespace pipelines::analyze {
+
+namespace math = boost::math;
+using seqan3::operator""_tag;
+using namespace annotation;
 
 class Analyze {
    public:
-    explicit Analyze(AnalyzeParameters params)
-        : parameters(params),
-          featureAnnotator(std::make_shared<annotation::FeatureAnnotator>(params.featuresInPath,
-                                                                          params.featureTypes)) {};
+    explicit Analyze(AnalyzeParameters params) : parameters(std::move(params)) {};
 
     void process(const AnalyzeData &data);
 
    private:
     AnalyzeParameters parameters;
-    std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator;
 
-    void processSample(AnalyzeSample sample);
+    void processSample(const AnalyzeSample &sample,
+                       std::shared_ptr<const FeatureAnnotator> featureAnnotator);
 
     static void assignAnnotatedContiguousFragmentCountsToTranscripts(
         const fs::path &contiguousTranscriptCountsInPath,

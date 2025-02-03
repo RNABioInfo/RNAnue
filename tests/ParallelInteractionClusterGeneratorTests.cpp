@@ -2,22 +2,28 @@
 
 // Standard
 #include <algorithm>
+#include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <memory>
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // Internal
 #include "AnnotatedInteractionCluster.hpp"
+#include "ClusteringParameters.hpp"
 #include "FeatureAnnotator.hpp"
 #include "GenomicFeature.hpp"
+#include "GenomicOrientation.hpp"
+#include "GenomicRegion.hpp"
 #include "GenomicStrand.hpp"
+#include "GenomicStrandSpecificity.hpp"
 #include "InteractionCluster.hpp"
-#include "Orientation.hpp"
 #include "ParallelInteractionClusterGenerator.hpp"
-#include "RecordFragment.hpp"
+#include "SortedGenomicRegionPair.hpp"
 #include "SplitRecordsParser.hpp"
 #include "TestFilePath.hpp"
 
@@ -26,72 +32,59 @@ using namespace annotation;
 
 // Expected Clusters Definitions (Same as in InteractionClusterGeneratorTests)
 const AnnotatedInteractionCluster expectedCluster1(
-    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.3",
-                                     .referenceIDIndex = 0,
-                                     .strand = dataTypes::GenomicStrand::FORWARD,
-                                     .start = 19,
-                                     .end = 27,
-                                     .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7,
-                                     .crosslinkingSiteCount = 1},
-      .secondSegment = RecordFragment{.recordID = "SRR18331301.3",
-                                      .referenceIDIndex = 1,
-                                      .strand = dataTypes::GenomicStrand::FORWARD,
-                                      .start = 49,
-                                      .end = 64,
-                                      .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7,
-                                      .crosslinkingSiteCount = 1}},
-     {"SRR18331301.3", "SRR18331301.1", "SRR18331301.6"},
-     {1.0, 1.0, 1.0},
-     {-1.7, -1.7, -1.7},
-     {1, 1, 1}},
+    InteractionCluster{
+        SortedGenomicRegionPair{GenomicRegion{0, Region{.startPosition = 19, .endPosition = 27},
+                                              GenomicStrand::FORWARD},
+                                GenomicRegion{1, Region{.startPosition = 49, .endPosition = 64},
+                                              GenomicStrand::FORWARD}},
+        {"SRR18331301.3", "SRR18331301.1", "SRR18331301.6"},
+        {1.0, 1.0, 1.0},
+        {-1.7, -1.7, -1.7},
+        {1, 1, 1}
+
+    },
     "gene1", "gene2");
 
 const AnnotatedInteractionCluster expectedCluster2(
-    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.2",
-                                     .referenceIDIndex = 1,
-                                     .strand = dataTypes::GenomicStrand::FORWARD,
-                                     .start = 4,
-                                     .end = 10,
-                                     .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7,
-                                     .crosslinkingSiteCount = 1},
-      .secondSegment = RecordFragment{.recordID = "SRR18331301.2",
-                                      .referenceIDIndex = 1,
-                                      .strand = dataTypes::GenomicStrand::FORWARD,
-                                      .start = 51,
-                                      .end = 57,
-                                      .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7,
-                                      .crosslinkingSiteCount = 1}},
-     {"SRR18331301.2", "SRR18331301.7"},
-     {1.0, 1.0},
-     {-1.7, -1.7},
-     {1, 1}},
+    InteractionCluster{
+        SortedGenomicRegionPair{
+            GenomicRegion{1, Region{.startPosition = 4, .endPosition = 10}, GenomicStrand::FORWARD},
+            GenomicRegion{1, Region{.startPosition = 51, .endPosition = 57},
+                          GenomicStrand::FORWARD}},
+        {"SRR18331301.2", "SRR18331301.7"},
+        {
+            1.0,
+            1.0,
+        },
+        {
+            -1.7,
+            -1.7,
+        },
+        {
+            1,
+            1,
+        }},
     "random", "gene3");
 
 const AnnotatedInteractionCluster expectedCluster3(
-    {{.firstSegment = RecordFragment{.recordID = "SRR18331301.4",
-                                     .referenceIDIndex = 0,
-                                     .strand = dataTypes::GenomicStrand::FORWARD,
-                                     .start = 4,
-                                     .end = 14,
-                                     .complementarityScore = 1.0,
-                                     .hybridizationEnergy = -1.7,
-                                     .crosslinkingSiteCount = 1},
-      .secondSegment = RecordFragment{.recordID = "SRR18331301.4",
-                                      .referenceIDIndex = 0,
-                                      .strand = dataTypes::GenomicStrand::FORWARD,
-                                      .start = 39,
-                                      .end = 46,
-                                      .complementarityScore = 1.0,
-                                      .hybridizationEnergy = -1.7,
-                                      .crosslinkingSiteCount = 1}},
-     {"SRR18331301.5", "SRR18331301.4"},
-     {1.0, 1.0},
-     {-1.7, -1.7},
-     {1, 1}},
+    InteractionCluster{
+        SortedGenomicRegionPair{
+            GenomicRegion{0, Region{.startPosition = 4, .endPosition = 14}, GenomicStrand::FORWARD},
+            GenomicRegion{0, Region{.startPosition = 39, .endPosition = 46},
+                          GenomicStrand::FORWARD}},
+        {"SRR18331301.5", "SRR18331301.4"},
+        {
+            1.0,
+            1.0,
+        },
+        {
+            -1.7,
+            -1.7,
+        },
+        {
+            1,
+            1,
+        }},
     "random", "random");
 
 // Test Parameters Structure
@@ -103,32 +96,27 @@ struct ParallelInteractionClusterGeneratorTestParam {
 };
 
 // Feature Map Setup (Same as in InteractionClusterGeneratorTests)
-static const FeatureMap featureMap = {{"chr1",
-                                       {GenomicFeature{.referenceID = "chr1",
-                                                       .type = "gene",
-                                                       .startPosition = 20,
-                                                       .endPosition = 30,
-                                                       .strand = dataTypes::GenomicStrand::FORWARD,
-                                                       .id = "gene1",
-                                                       .groupID = std::nullopt,
-                                                       .geneName = std::nullopt},
-                                        GenomicFeature{.referenceID = "chr1",
-                                                       .type = "gene",
-                                                       .startPosition = 50,
-                                                       .endPosition = 60,
-                                                       .strand = dataTypes::GenomicStrand::FORWARD,
-                                                       .id = "gene2",
-                                                       .groupID = std::nullopt,
-                                                       .geneName = std::nullopt}}},
-                                      {"chr2",
-                                       {GenomicFeature{.referenceID = "chr2",
-                                                       .type = "gene",
-                                                       .startPosition = 50,
-                                                       .endPosition = 60,
-                                                       .strand = dataTypes::GenomicStrand::FORWARD,
-                                                       .id = "gene3",
-                                                       .groupID = std::nullopt,
-                                                       .geneName = std::nullopt}}}};
+static const FeatureMap featureMap = {
+    {1,
+     {GenomicFeature{
+          .type = "gene",
+          .genomicRegion = {1, {.startPosition = 20, .endPosition = 30}, GenomicStrand::FORWARD},
+          .featureID = "gene1",
+          .groupID = std::nullopt,
+          .geneName = std::nullopt},
+      GenomicFeature{
+          .type = "gene",
+          .genomicRegion = {1, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
+          .featureID = "gene2",
+          .groupID = std::nullopt,
+          .geneName = std::nullopt}}},
+    {2,
+     {GenomicFeature{
+         .type = "gene",
+         .genomicRegion = {2, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
+         .featureID = "gene3",
+         .groupID = std::nullopt,
+         .geneName = std::nullopt}}}};
 
 static const std::shared_ptr<FeatureAnnotator> featureAnnotator =
     std::make_shared<FeatureAnnotator>(featureMap);
@@ -138,11 +126,14 @@ class ParallelInteractionClusterGeneratorTests
     : public testing::TestWithParam<ParallelInteractionClusterGeneratorTestParam> {
    protected:
     ParallelInteractionClusterGeneratorTests()
-        : parallelClusterGenerator(featureAnnotator, {"chr1", "chr2"},
-                                   {.featureOrientation = Orientation::BOTH,
-                                    .maxOverlapFraction = 0.5,
-                                    .minReadCount = 1,
-                                    .graceDistance = 1}) {}
+        : parallelClusterGenerator(
+              featureAnnotator,
+              ClusteringParameters{
+                  .clusterMergeParameter = ClusterOverlapToleranceMergeParameter{1},
+                  .clusterMergingStrandSpecificity = GenomicStrandSpecificity::UNSPECIFIC,
+                  .maxClusterSelfOverlapFraction = 0.5,  // NOLINT
+                  .minimumClusterReadCount = 1,
+                  .featureOrientation = dataTypes::GenomicOrientation::BOTH}) {}
 
     ParallelInteractionClusterGenerator parallelClusterGenerator;
 };
@@ -158,11 +149,14 @@ TEST_P(ParallelInteractionClusterGeneratorTests, MergeClustersCorrectly) {
     std::ranges::sort(interactionClusters, std::less<>());
 
     // Instantiate ParallelInteractionClusterGenerator with specific thread and batch size
-    ParallelInteractionClusterGenerator generator(featureAnnotator, {"chr1", "chr2"},
-                                                  {.featureOrientation = Orientation::BOTH,
-                                                   .maxOverlapFraction = 0.5,
-                                                   .minReadCount = 1,
-                                                   .graceDistance = 1});
+    ParallelInteractionClusterGenerator generator(
+        featureAnnotator,
+        ClusteringParameters{
+            .clusterMergeParameter = ClusterOverlapToleranceMergeParameter{1},
+            .clusterMergingStrandSpecificity = GenomicStrandSpecificity::UNSPECIFIC,
+            .maxClusterSelfOverlapFraction = 0.5,  // NOLINT
+            .minimumClusterReadCount = 1,
+            .featureOrientation = dataTypes::GenomicOrientation::BOTH});
     // Merge clusters in parallel
     auto result =
         generator.mergeClusters(std::move(interactionClusters), param.threadCount, param.batchSize);
@@ -186,11 +180,14 @@ TEST_P(ParallelInteractionClusterGeneratorTests, HandleEmptyInput) {
     std::vector<InteractionCluster> interactionClusters;
 
     // Instantiate ParallelInteractionClusterGenerator
-    ParallelInteractionClusterGenerator generator(featureAnnotator, {"chr1", "chr2"},
-                                                  {.featureOrientation = Orientation::BOTH,
-                                                   .maxOverlapFraction = 0.5,
-                                                   .minReadCount = 1,
-                                                   .graceDistance = 1});
+    ParallelInteractionClusterGenerator generator(
+        featureAnnotator,
+        ClusteringParameters{
+            .clusterMergeParameter = ClusterOverlapToleranceMergeParameter{1},
+            .clusterMergingStrandSpecificity = GenomicStrandSpecificity::UNSPECIFIC,
+            .maxClusterSelfOverlapFraction = 0.5,  // NOLINT
+            .minimumClusterReadCount = 1,
+            .featureOrientation = dataTypes::GenomicOrientation::BOTH});
 
     // Merge clusters in parallel
     auto result =

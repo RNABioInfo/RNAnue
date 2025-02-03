@@ -1,11 +1,12 @@
 #pragma once
 
 // Standard
-#include <deque>
+#include <cstdint>
 #include <iostream>
 #include <variant>
 
 // Internal
+#include "SplitRecords.hpp"
 #include "SplitRecordsComplementarityEvaluator.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
 #include "SplitRecordsHybridizationEvaluator.hpp"
@@ -39,8 +40,7 @@ class SplitRecordsEvaluator {
         const std::variant<SplitRecordsEvaluationParameters::BaseParameters,
                            SplitRecordsEvaluationParameters::SplicingParameters> &parameters);
 
-    auto evaluate(SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs) const
-        -> Result;
+    auto evaluate(SplitRecords &splitRecords) const -> Result;
 
    private:
     std::variant<SplitRecordsEvaluationParameters::BaseParameters,
@@ -52,7 +52,7 @@ class SplitRecordsEvaluator {
         -> Result;
 
     static auto evaluateSplicing(
-        SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs,
+        SplitRecords &splitRecords,
         const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> Result;
 
     static void addTagsToRecords(

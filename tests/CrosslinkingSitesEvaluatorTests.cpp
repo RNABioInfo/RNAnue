@@ -8,6 +8,7 @@
 
 // Internal
 #include "CrosslinkingSitesEvaluator.hpp"
+#include "seqan3/alphabet/nucleotide/dna5.hpp"
 
 using namespace pipelines::detect;
 

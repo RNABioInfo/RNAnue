@@ -1,17 +1,22 @@
 #pragma once
 
 // Standard
+#include <cstdint>
 #include <optional>
 
 // seqan3
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
+#include <vector>
 
 // Internal
-#include "CooptimalPairwiseAligner.hpp"
+#include "CoOptimalPairwiseAligner.hpp"
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
+#include "seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp"
 
 namespace pipelines::detect {
+
+using namespace dataTypes;
 
 class SplitRecordsComplementarityEvaluator {
    public:

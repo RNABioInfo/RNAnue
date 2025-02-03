@@ -1,12 +1,17 @@
 #include "ParameterOptions.hpp"
 
-#include <boost/program_options/options_description.hpp>
-#include <boost/program_options/value_semantic.hpp>
+// Standard
 #include <cstddef>
 #include <string>
 
+// Boost
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/value_semantic.hpp>
+
+// Internal
 #include "Constants.hpp"
-#include "Orientation.hpp"
+#include "GenomicOrientation.hpp"
+#include "GenomicStrandSpecificity.hpp"
 
 namespace pi = constants::pipelines;
 
@@ -33,15 +38,16 @@ auto ParameterOptions::getGeneralOptions() -> po::options_description {
                           "max number of threads to be used (default: 1)");
     general.add_options()("features,f", po::value<std::string>(),
                           "annotation/features in GFF/GTF format (required)");
-    general.add_options()(
-        "featuretypes", po::value<std::string>()->default_value(std::string{"transcript"}),
-        "feature types to be considered for the analysis, can be specified "
-        "as --featuretypes 'gene,rRNA' comma seperated values (default: transcript)");
-    general.add_options()(
-        "orientation",
-        po::value<annotation::Orientation>()->default_value(annotation::Orientation::BOTH),
-        "orientation of the features to consider in relation to reads [same, "
-        "opposite, both] (default: both)");
+    general.add_options()("featuretypes",
+                          po::value<std::string>()->default_value(std::string{"transcript"}),
+                          "feature types to be considered for the analysis, can be specified "
+                          "as --featuretypes 'gene,rRNA' comma seperated values (default: "
+                          "transcript)");
+    general.add_options()("orientation",
+                          po::value<dataTypes::GenomicOrientation>()->default_value(
+                              dataTypes::GenomicOrientation::BOTH),
+                          "orientation of the features to consider in relation to reads [same, "
+                          "opposite, both] (default: both)");
     general.add_options()("chunksize", po::value<int>()->default_value(pi::defaultChunkSize),
                           "number of reads processed per chunk in parallel (default: 100000)");
 
@@ -53,12 +59,17 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
     preprocess.add_options()(pi::PREPROCESS.c_str(), po::bool_switch()->default_value(true),
                              "whether to include preprocessing of the raw reads in the "
                              "workflow of RNAnue (default: true)");
-    preprocess.add_options()("deduplicate", po::bool_switch()->default_value(pi::deduplicate),
+    preprocess.add_options()("deduplicate",
+                             po::bool_switch()->default_value(pi::defaultDeduplicate),
                              "remove duplicate reads based on the sequence (default: true)");
     preprocess.add_options()(
-        "trimpolyg", po::bool_switch()->default_value(pi::trimpolyG),
+        "trimpolyg", po::bool_switch()->default_value(pi::defaultTrimpolyG),
         "trim high quality polyG tails from the reads. Applicable for Illumina "
         "NextSeq reads. (default: false)");
+    preprocess.add_options()(
+        "minpolygcount", po::value<size_t>()->default_value(pi::dfaultPolyGCutoff),
+        "minimum count of consecutive G's to be cut off by trimpolyg (default: "
+        "5)");
     preprocess.add_options()(
         "adpt5f", po::value<std::string>()->default_value(""),
         "single sequence or file [.fasta] of the adapter sequences to be removed "
@@ -77,19 +88,22 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
         "from the 3' end of the reverse read (PE only)");
     preprocess.add_options()(
         "mtrim", po::value<double>()->default_value(pi::defaultAdapterTrimMissmatchRate, "0.05"),
-        "rate of mismatches allowed when aligning adapters to sequences (default: 0.05)");
+        "rate of mismatches allowed when aligning adapters "
+        "to sequences (default: 0.05)");
     preprocess.add_options()("minovltrim",
                              po::value<size_t>()->default_value(pi::defaultAdapterTrimMinOverlap),
                              "minimum length of overlap between adapter and read (default: 5)");
-    preprocess.add_options()(
-        "minqual,q", po::value<size_t>()->default_value(pi::defaultMinMeanPhreadQuality),
-        "lower limit for the mean quality (Phred Quality Score) of the reads (default: 20)");
+    preprocess.add_options()("minqual,q",
+                             po::value<size_t>()->default_value(pi::defaultMinMeanPhreadQuality),
+                             "lower limit for the mean quality (Phred Quality Score) of the reads "
+                             "(default: 20)");
     preprocess.add_options()("minlen,l",
                              po::value<size_t>()->default_value(pi::defaultMinReadLength),
                              "minimum length of the reads (default: 15)");
-    preprocess.add_options()(
-        "wqual", po::value<size_t>()->default_value(pi::defaultMinWindowPhredQuality),
-        "minimum mean quality for each window (Phred Quality Score) (default: 20)");
+    preprocess.add_options()("wqual",
+                             po::value<size_t>()->default_value(pi::defaultMinWindowPhredQuality),
+                             "minimum mean quality for each window (Phred Quality Score) (default: "
+                             "20)");
     preprocess.add_options()("wtrim", po::value<size_t>()->default_value(pi::defaultWindowTrimSize),
                              "window size for quality trimming from 3' end. Selecting '0' will not "
                              "apply quality trimming (default: 0)");
@@ -99,7 +113,8 @@ auto ParameterOptions::getPreprocessOptions() -> po::options_description {
     preprocess.add_options()(
         "mmerge",
         po::value<double>()->default_value(pi::defaultMinOverlapMergeMissmatchRate, "0.05"),
-        "rate of mismatches allowed when merging paired end reads (default: 0.05)");
+        "rate of mismatches allowed when merging paired end "
+        "reads (default: 0.05)");
 
     return preprocess;
 }
@@ -134,36 +149,53 @@ auto ParameterOptions::getDetectOptions() -> po::options_description {
     detect.add_options()("sitelenratio",
                          po::value<double>()->default_value(pi::defaultMinSitelenRatio, "0.01"),
                          "aligned portion of the read (default: 0.1, range: 0.0-1.0)");
-    detect.add_options()(
-        "nrgmax", po::value<double>()->default_value(pi::defaultHybridizationEnergyCutoff),
-        "hybridization energy cutoff for split reads (default: 0.0, range: >=0.0)");
+    detect.add_options()("nrgmax",
+                         po::value<double>()->default_value(pi::defaultHybridizationEnergyCutoff),
+                         "hybridization energy cutoff for split reads (default: 0.0, range: "
+                         ">=0.0)");
     detect.add_options()("exclclipping", po::bool_switch()->default_value(false),
                          "exclude soft clipping from the alignments (default: false)");
     detect.add_options()("splicing", po::bool_switch()->default_value(false),
-                         "splicing events are removed in the detection of split reads");
-    detect.add_options()("splicingtolerance",
-                         po::value<int>()->default_value(pi::defaultSplicingTolerance),
-                         "tolerance for splicing events (default: 5)");
-    detect.add_options()(
-        "includewobble", po::bool_switch()->default_value(false),
-        "wobble base pairs are allowed in crosslinking site evaluation (default: false)");
+                         "splicing events are removed in the detection of split "
+                         "reads (default: false)");
+    detect.add_options()("altsplice", po::bool_switch()->default_value(false),
+                         "allow for alternative splicing events that span exons of same groupID "
+                         "(default: false)"),
+        detect.add_options()("splicingtolerance",
+                             po::value<int>()->default_value(pi::defaultSplicingTolerance),
+                             "tolerance for splicing events (default: 5)");
+    detect.add_options()("includewobble", po::bool_switch()->default_value(false),
+                         "wobble base pairs are allowed in crosslinking site "
+                         "evaluation (default: false)");
 
     return detect;
 }
 
 auto ParameterOptions::getAnalyzeOptions() -> po::options_description {
     po::options_description analysis("Analyze Pipeline");
-    analysis.add_options()("maxoverlap",
-                           po::value<double>()->default_value(pi::defaultMaxOverlap, "0.05"),
-                           "maximum fractional overlap between two clusters (default: 0.5)");
+    analysis.add_options()(
+        "maxselfoverlap", po::value<double>()->default_value(pi::defaultMaxOverlap, "0.1"),
+        "maximum fractional overlap between two regions of a cluster (default: 0.1)");
+    analysis.add_options()(
+        "clustmethod",
+        po::value<dataTypes::GenomicStrandSpecificity>()->default_value(
+            dataTypes::GenomicStrandSpecificity::UNSPECIFIC),
+        "whether to cluster strand specific or unspecific [specific, unspecific] "
+        "(default: unspecific)");
     analysis.add_options()("clustdist",
                            po::value<int>()->default_value(pi::defaultClusterTolerance),
                            "threshold distance at which two clusters are merged into a single "
-                           "combined cluster, default is to only merge overlapping or blunt "
-                           "ended clusters (default: 0)");
-    analysis.add_options()(
-        "padj", po::value<double>()->default_value(pi::defaultPAdjCutOff),
-        "adjusted p-value threshold for outputting an interaction (default: 1.0)");
+                           "combined cluster, default is to only merge overlapping and blunt "
+                           "ended clusters (default: 0, mutually exclusive with --clustfrac)");
+    analysis.add_options()("clustfrac", po::value<float>(),
+                           "minimal fractional overlap of the smaller cluster at "
+                           "which two clusters are "
+                           "merged into a single combined cluster, this option "
+                           "overwrites clustdist (mutually "
+                           "exclusive with --clustdist)");
+    analysis.add_options()("padj", po::value<double>()->default_value(pi::defaultPAdjCutOff),
+                           "adjusted p-value threshold for outputting an interaction (default: "
+                           "1.0)");
     analysis.add_options()("mincount",
                            po::value<size_t>()->default_value(pi::defaultMinClusterCount),
                            "minimum number of reads assigned to an interaction (default: 1)");

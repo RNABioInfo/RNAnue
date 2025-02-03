@@ -1,7 +1,20 @@
 #include "StatisticEvaluator.hpp"
 
+// Standard
+#include <algorithm>
+#include <cstddef>
+#include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+// Boost
+#include <boost/math/distributions/binomial.hpp>
+#include <boost/math/distributions/detail/derived_accessors.hpp>
+
+// Internal
+#include "AnnotatedInteractionCluster.hpp"
+#include "EvaluatedInteractionCluster.hpp"
 #include "Logger.hpp"
 
 namespace pipelines::analyze {

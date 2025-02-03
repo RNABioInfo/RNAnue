@@ -37,6 +37,8 @@ struct DetectData : public PipelineData {
                                                                     controlDir.value(), outputDir))
                                     : std::nullopt) {};
 
+    [[nodiscard]] auto getInputFilePaths() const -> std::vector<fs::path>;
+
    private:
     static auto retrieveSamples(const std::string& sampleGroup, const fs::path& parentDir,
                                 const fs::path& outputDir) -> std::vector<DetectSample>;

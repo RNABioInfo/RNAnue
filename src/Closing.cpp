@@ -2,7 +2,9 @@
 
 // Standard
 #include <algorithm>
+#include <iterator>
 #include <random>
+#include <string>
 #include <vector>
 
 // Internal

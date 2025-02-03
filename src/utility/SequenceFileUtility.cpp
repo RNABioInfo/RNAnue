@@ -1,5 +1,14 @@
 #include "SequenceFileUtility.hpp"
 
+// Standard
+#include <cstddef>
+#include <filesystem>
+#include <iterator>
+
+// seqan3
+#include <seqan3/io/record.hpp>
+#include <seqan3/io/sequence_file/input.hpp>
+
 namespace SequenceFileUtility {
 
 auto countEntries(const fs::path& path) -> std::size_t {

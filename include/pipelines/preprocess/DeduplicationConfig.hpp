@@ -2,10 +2,10 @@
 
 // Standard
 #include <filesystem>
-
-#include "DeduplicationOutput.hpp"
+#include <variant>
 
 // Internal
+#include "DeduplicationOutput.hpp"
 
 namespace fs = std::filesystem;
 

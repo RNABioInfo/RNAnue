@@ -2,6 +2,7 @@
 
 // Standard
 #include <filesystem>
+#include <string>
 #include <utility>
 #include <variant>
 

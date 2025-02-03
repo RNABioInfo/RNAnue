@@ -1,8 +1,7 @@
 #pragma once
 
 // Standard
-#include <numeric>
-#include <ranges>
+#include <cstddef>
 
 // seqan3
 #include <seqan3/alignment/configuration/align_config_gap_cost_affine.hpp>
@@ -10,12 +9,16 @@
 #include <seqan3/alignment/configuration/align_config_scoring_scheme.hpp>
 #include <seqan3/alignment/pairwise/align_pairwise.hpp>
 #include <seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp>
+#include <seqan3/alignment/scoring/scoring_scheme_base.hpp>
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/quality/concept.hpp>
+#include <seqan3/alphabet/quality/phred42.hpp>
 #include <seqan3/utility/views/slice.hpp>
 
 // Internal
 #include "Adapter.hpp"
-#include "SequenceQualityAlgorithms.hpp"  // NOLINT
+#include "SequenceQualityAlgorithms.hpp"
+#include "TrimConfig.hpp"
 
 using seqan3::operator""_dna5;
 
@@ -90,44 +93,37 @@ struct RecordTrimmer {
      * @param record The sequence record to trim.
      */
     template <typename record_type>
-    static void trim3PolyG(record_type &record) {
-        // TODO Optimize this function
-
+    static void trim3PolyG(record_type &record, const size_t minPolyGCount) {
         auto &seq = record.sequence();
         auto &qual = record.base_qualities();
 
-        std::vector<seqan3::phred42> qualitiesPhread;
-        qualitiesPhread.reserve(qual.size());
-
-        seqan3::phred42 qualityThreshold;
-
         constexpr int qualityThresholdRank = 20;
-        qualityThreshold.assign_rank(qualityThresholdRank);
 
         auto seqIt = seq.rbegin();
         auto qualIt = qual.rbegin();
 
-        auto sufficientMeanQuality = [&]() {
-            const auto qualities = qualitiesPhread | std::views::transform([](auto quality) {
-                                       return seqan3::to_phred(quality);
-                                   });
+        std::size_t sumPhred = 0;
+        std::size_t count = 0;
 
-            const auto sum = std::accumulate(qualities.begin(), qualities.end(), 0);
-            return std::ranges::size(qualities) == 0 ||
-                   sum / std::ranges::size(qualities) >= qualityThresholdRank;
-        };
+        while (seqIt != seq.rend() && *seqIt == 'G'_dna5) {
+            const auto currentPhred = seqan3::to_phred(*qualIt);
+            const auto newCount = count + 1;
+            const auto average =
+                static_cast<double>(sumPhred + currentPhred) / static_cast<double>(newCount);
 
-        while (seqIt != seq.rend() && (*seqIt == 'G'_dna5 && sufficientMeanQuality())) {
-            qualitiesPhread.push_back(*qualIt);
-            ++seqIt;
-            ++qualIt;
+            if (average >= qualityThresholdRank) {
+                sumPhred += currentPhred;
+                ++count;
+                ++seqIt;
+                ++qualIt;
+            } else {
+                break;
+            }
         }
 
-        const std::size_t polyGCount = qualitiesPhread.size();
-
-        if (polyGCount >= 5) {
-            seq.erase(seq.end() - polyGCount, seq.end());
-            qual.erase(qual.end() - polyGCount, qual.end());
+        if (count >= minPolyGCount) {
+            seq.erase(seq.end() - count, seq.end());
+            qual.erase(qual.end() - count, qual.end());
         }
     }
 

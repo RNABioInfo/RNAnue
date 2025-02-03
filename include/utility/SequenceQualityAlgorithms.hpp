@@ -1,6 +1,8 @@
 #pragma once
 
 // Standard
+#include <array>
+#include <cmath>
 #include <concepts>
 
 // seqan3

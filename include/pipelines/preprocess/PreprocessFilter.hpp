@@ -5,7 +5,7 @@
 
 // Internal
 #include "FastqRecord.hpp"
-#include "SequenceQualityAlgorithms.hpp"  // NOLINT
+#include "SequenceQualityAlgorithms.hpp"
 
 namespace pipelines::preprocess::PreprocessFilter {
 

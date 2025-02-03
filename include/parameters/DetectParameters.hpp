@@ -26,6 +26,7 @@ struct DetectParameters : public GeneralParameters {
     double maxHybridizationEnergy;
     bool excludeSoftClipping;
     bool removeSplicingEvents;
+    bool allowAlternativeSplicing;
     int splicingTolerance;
     bool includeWobbleBasePairsInCrosslinkingSites;
 
@@ -43,6 +44,7 @@ struct DetectParameters : public GeneralParameters {
               ParameterValidator::validateArithmetic(params, "nrgmax", DBL_MIN, DBL_MAX)),
           excludeSoftClipping(ParameterValidator::validateBool(params, "exclclipping")),
           removeSplicingEvents(ParameterValidator::validateBool(params, "splicing")),
+          allowAlternativeSplicing(ParameterValidator::validateBool(params, "altsplice")),
           splicingTolerance(ParameterValidator::validateArithmetic(params, "splicingtolerance",
                                                                    INT_MIN, INT_MAX)),
           includeWobbleBasePairsInCrosslinkingSites(

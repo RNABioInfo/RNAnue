@@ -1,10 +1,14 @@
 #include "InteractionsWriter.hpp"
 
 // Standard
+#include <cstddef>
+#include <deque>
 #include <fstream>
 #include <string>
+#include <vector>
 
 // Internal
+#include "EvaluatedInteractionCluster.hpp"
 #include "Logger.hpp"
 #include "Utility.hpp"
 

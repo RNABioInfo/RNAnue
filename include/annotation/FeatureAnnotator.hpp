@@ -6,39 +6,83 @@
 #include <boost/uuid/uuid_io.hpp>
 
 // Standard
+#include <cstddef>
 #include <deque>
 #include <filesystem>
+#include <iostream>
+#include <iterator>
 #include <optional>
 #include <string>
 #include <unordered_map>
 #include <unordered_set>
+#include <utility>
 #include <vector>
 
 // Internal
 #include "GenomicFeature.hpp"
+#include "GenomicFeatureTreeMerger.hpp"
+#include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
+#include "GenomicStrand.hpp"
 #include "IITree.hpp"
-#include "Orientation.hpp"
+#include "Logger.hpp"
 #include "SamRecord.hpp"
-
-using namespace dataTypes;
+#include "seqan3/io/sam_file/input.hpp"
 
 namespace annotation {
 
-using FeatureTreeMap = std::unordered_map<std::string, IITree<int, dataTypes::GenomicFeature>>;
+using namespace dataTypes;
+
+using ReferenceIDIndex = int;
+using ReferenceIDToIndexMap = std::unordered_map<std::string, int>;
+using FeatureTreeMap = std::unordered_map<ReferenceIDIndex, IITree<int, GenomicFeature>>;
+
 namespace fs = std::filesystem;
+
+[[nodiscard]] inline auto loadReferenceIDToIndexMap(const std::vector<fs::path>& samFilePaths)
+    -> ReferenceIDToIndexMap {
+    ReferenceIDToIndexMap referenceToIndex;
+
+    bool isFirst = true;
+
+    for (const fs::path& inputPath : samFilePaths) {
+        seqan3::sam_file_input splitsIn{inputPath, SamFieldIDs{}};
+
+        auto& header = splitsIn.header();
+        const std::deque<std::string>& referenceIDs = header.ref_ids();
+
+        ReferenceIDToIndexMap sampleReferenceToIndex;
+        sampleReferenceToIndex.reserve(referenceIDs.size());
+
+        for (int index = 0; const auto& referenceID : referenceIDs) {
+            sampleReferenceToIndex.emplace(referenceID, index++);
+        }
+
+        if (isFirst) {
+            referenceToIndex = std::move(sampleReferenceToIndex);
+            isFirst = false;
+        } else if (referenceToIndex != sampleReferenceToIndex) {
+            Logger::log<SourceLocation{}, LogLevel::ERROR>(
+                "Samples seem to be mapped against different reference genomes, which is not "
+                "supported.");
+        }
+    }
+
+    return referenceToIndex;
+}
 
 class FeatureAnnotator {
    public:
-    FeatureAnnotator(fs::path& featureFilePath,
+    FeatureAnnotator(fs::path& featureFilePath, const ReferenceIDToIndexMap& referenceIDToIndex,
                      const std::unordered_set<std::string>& includedFeatures,
                      const std::string& featureIDFlag);
-    FeatureAnnotator(fs::path& featureFilePath,
+    FeatureAnnotator(fs::path& featureFilePath, const ReferenceIDToIndexMap& referenceIDToIndex,
                      const std::unordered_set<std::string>& includedFeatures);
 
-    explicit FeatureAnnotator(const dataTypes::FeatureMap& featureMap);
+    explicit FeatureAnnotator(const FeatureMap& featureMap);
 
     explicit FeatureAnnotator() = default;
+
     FeatureAnnotator(const FeatureAnnotator&) = default;
     FeatureAnnotator(FeatureAnnotator&&) = default;
     auto operator=(const FeatureAnnotator&) -> FeatureAnnotator& = default;
@@ -50,34 +94,32 @@ class FeatureAnnotator {
 
     [[nodiscard]] auto featureCount() const -> size_t;
 
-    auto insertIndex(const dataTypes::GenomicRegion& region) -> std::string;
-    auto insert(const dataTypes::GenomicRegion& region) -> std::string;
+    auto insertIndex(const GenomicRegion& region) -> std::string;
+    auto insert(const GenomicRegion& region) -> std::string;
 
-    auto mergeInsertIndex(const dataTypes::GenomicRegion& region, int graceDistance)
-        -> MergeInsertResult;
-
-    auto getOverlappingFeatures(const dataTypes::GenomicRegion& region, Orientation orientation)
-        -> std::vector<dataTypes::GenomicFeature>;
-    [[nodiscard]] auto overlappingFeatureIterator(const dataTypes::GenomicRegion& region,
-                                                  Orientation orientation) const -> Results;
-    [[nodiscard]] auto getBestOverlappingFeature(const dataTypes::GenomicRegion& region,
-                                                 Orientation orientation) const
-        -> std::optional<dataTypes::GenomicFeature>;
+    [[nodiscard]] auto getOverlappingFeatures(const GenomicRegion& region,
+                                              GenomicOrientation orientation) const
+        -> std::vector<GenomicFeature>;
+    [[nodiscard]] auto overlappingFeatureIterator(const GenomicRegion& region,
+                                                  GenomicOrientation orientation) const -> Results;
+    [[nodiscard]] auto getBestOverlappingFeature(const GenomicRegion& region,
+                                                 GenomicOrientation orientation) const
+        -> std::optional<GenomicFeature>;
     [[nodiscard]] auto getBestOverlappingFeature(const SamRecord& record,
-                                                 const std::deque<std::string>& referenceIDs,
-                                                 Orientation orientation) const
-        -> std::optional<dataTypes::GenomicFeature>;
+                                                 GenomicOrientation orientation) const
+        -> std::optional<GenomicFeature>;
 
     [[nodiscard]] auto getFeatureTreeMap() const -> const FeatureTreeMap&;
 
-    void mergeIndexAllOverlappingFeatures(int minOverlap);
+    void mergeIndexAllOverlappingFeatures(FeatureMergingParameters mergingParameters);
 
     void printAllFeatures() const {
         for (const auto& [featureID, tree] : featureTreeMap) {
-            std::cout << "Chromosome ID: " << featureID << std::endl;
+            std::cout << "Chromosome ID: " << featureID << "\n";
             for (const auto& feature : tree.intervals()) {
-                std::cout << feature.data.id << feature.data.referenceID << ":"
-                          << feature.data.startPosition << "-" << feature.data.endPosition << "\n";
+                std::cout << "Start: " << feature.start << ", End: " << feature.end
+                          << "; Max:" << feature.max << "; ";
+                std::cout << feature.data << "\n";
             }
         }
     };
@@ -86,23 +128,25 @@ class FeatureAnnotator {
     FeatureTreeMap featureTreeMap;
 
     static auto buildFeatureTreeMap(const fs::path& featureFilePath,
+                                    const ReferenceIDToIndexMap& referenceIDToIndex,
                                     const std::vector<std::string>& includedFeatures,
                                     const std::optional<std::string>& featureIDFlag)
         -> FeatureTreeMap;
     static auto buildFeatureTreeMap(const fs::path& featureFilePath,
+                                    const ReferenceIDToIndexMap& referenceIDToIndex,
                                     const std::unordered_set<std::string>& includedFeatures,
                                     const std::optional<std::string>& featureIDFlag)
         -> FeatureTreeMap;
-    static auto buildFeatureTreeMap(const dataTypes::FeatureMap& featureMap) -> FeatureTreeMap;
+    static auto buildFeatureTreeMap(const FeatureMap& featureMap) -> FeatureTreeMap;
 
-    [[nodiscard]] auto mergeFeatures(const dataTypes::GenomicRegion& region, int minOverlap)
+    [[nodiscard]] auto mergeFeatures(const GenomicRegion& region, int tolerance)
         -> std::unordered_set<size_t>;
 };
 
 class FeatureAnnotator::Results {
    public:
-    Results(const IITree<int, dataTypes::GenomicFeature>* tree, const std::vector<size_t>& indices,
-            std::optional<dataTypes::GenomicStrand> strand);
+    Results(const IITree<int, GenomicFeature>* tree, const std::vector<size_t>& indices,
+            std::optional<GenomicStrand> strand);
 
     Results() = delete;
 
@@ -112,21 +156,20 @@ class FeatureAnnotator::Results {
     [[nodiscard]] auto end() const -> Iterator;
 
    private:
-    const IITree<int, dataTypes::GenomicFeature>* tree;
+    const IITree<int, GenomicFeature>* tree;
     std::vector<size_t> indices;
-    std::optional<dataTypes::GenomicStrand> strand;
+    std::optional<GenomicStrand> strand;
 };
 
 struct FeatureAnnotator::Results::Iterator {
-    using value_type = dataTypes::GenomicFeature;
+    using value_type = GenomicFeature;
     using difference_type = std::ptrdiff_t;
-    using reference = const dataTypes::GenomicFeature&;
-    using pointer = const dataTypes::GenomicFeature*;
+    using reference = const GenomicFeature&;
+    using pointer = const GenomicFeature*;
     using iterator_category = std::forward_iterator_tag;
 
-    explicit Iterator(const IITree<int, dataTypes::GenomicFeature>* tree,
-                      const std::vector<size_t>& indices, size_t index,
-                      const std::optional<dataTypes::GenomicStrand>& strand);
+    explicit Iterator(const IITree<int, GenomicFeature>* tree, const std::vector<size_t>& indices,
+                      size_t index, const std::optional<GenomicStrand>& strand);
 
     [[nodiscard]] auto operator*() const -> reference;
     [[nodiscard]] auto operator->() const -> pointer;
@@ -143,10 +186,10 @@ struct FeatureAnnotator::Results::Iterator {
     }
 
    private:
-    const IITree<int, dataTypes::GenomicFeature>* tree;
+    const IITree<int, GenomicFeature>* tree;
     std::vector<size_t> indices;
     size_t current_index;
-    std::optional<dataTypes::GenomicStrand> strand;
+    std::optional<GenomicStrand> strand;
 };
 
 struct FeatureAnnotator::MergeInsertResult {

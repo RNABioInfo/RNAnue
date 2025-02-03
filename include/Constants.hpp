@@ -27,8 +27,9 @@ const std::string PROCESSING_CONTROL_MESSAGE = "Processing control data";
 
 // Preprocess defaults
 constexpr size_t defaultChunkSize = 1000000;
-constexpr bool trimpolyG = false;
-constexpr bool deduplicate = true;
+constexpr bool defaultTrimpolyG = false;
+constexpr size_t dfaultPolyGCutoff = 5;
+constexpr bool defaultDeduplicate = true;
 constexpr double defaultAdapterTrimMissmatchRate = 0.05;
 constexpr size_t defaultAdapterTrimMinOverlap = 5;
 constexpr size_t defaultMinMeanPhreadQuality = 20;
@@ -53,7 +54,8 @@ constexpr double defaultHybridizationEnergyCutoff = 0;
 constexpr int defaultSplicingTolerance = 5;
 
 // Analyze defaults
-constexpr double defaultMaxOverlap = 0.5;
+constexpr float clusterOverlapFractionMin = 1e-9;
+constexpr double defaultMaxOverlap = 0.1;
 constexpr int defaultClusterTolerance = 0;
 constexpr double defaultPAdjCutOff = 1.0;
 constexpr size_t defaultMinClusterCount = 1;

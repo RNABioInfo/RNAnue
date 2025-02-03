@@ -1,15 +1,30 @@
 #include "ParameterParser.hpp"
 
+// Standard
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <string>
 
+// Boost
+#include <boost/program_options/options_description.hpp>
+#include <boost/program_options/parsers.hpp>
+#include <boost/program_options/positional_options.hpp>
+#include <boost/program_options/variables_map.hpp>
+
+// Internal
+#include "AlignParameters.hpp"
+#include "AnalyzeParameters.hpp"
 #include "Closing.hpp"
+#include "CompleteParameters.hpp"
 #include "Constants.hpp"
+#include "DetectParameters.hpp"
 #include "Logger.hpp"
 #include "ParameterOptions.hpp"
+#include "PreprocessParameters.hpp"
 
 namespace pipelines {
+
 auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLINT
     -> ParameterParser::ParametersVariant {
     const auto params = parseParameters(argc, argv);
@@ -59,7 +74,7 @@ auto ParameterParser::parseParameters(int argc,
     }
 
     if (params.count("help") != 0U) {
-        std::cout << commandLineOptions << std::endl;
+        std::cout << commandLineOptions << "\n";
         Closing::printQuote();
         exit(EXIT_SUCCESS);
     }

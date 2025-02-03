@@ -1,8 +1,8 @@
 #include <gtest/gtest.h>
 
-#include "gtest/gtest.h"
-
 // Standard
+#include <cstddef>
+#include <iostream>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -10,8 +10,11 @@
 // Internal
 #include "AnnotatedInteractionCluster.hpp"
 #include "EvaluatedInteractionCluster.hpp"
+#include "GenomicRegion.hpp"
 #include "GenomicStrand.hpp"
-#include "Orientation.hpp"
+#include "InteractionCluster.hpp"
+#include "Region.hpp"
+#include "SortedGenomicRegionPair.hpp"
 #include "StatisticEvaluator.hpp"
 
 using namespace pipelines::analyze;
@@ -51,15 +54,17 @@ const std::unordered_map<std::string, size_t> transcriptFrequencies1{
     {"A", 15UL}, {"B", 15UL}, {"C", 25UL}};
 
 const InteractionCluster intraMolecularCluster(
-    {.firstSegment = InteractionSegment(0, GenomicStrand::FORWARD, 0, 10),
-     .secondSegment = InteractionSegment(0, GenomicStrand::FORWARD, 20, 30)},
+    SortedGenomicRegionPair{
+        GenomicRegion{0, Region{.startPosition = 0, .endPosition = 10}, GenomicStrand::FORWARD},
+        GenomicRegion{0, Region{.startPosition = 20, .endPosition = 30}, GenomicStrand::FORWARD}},
     {"1", "2", "3", "4", "5", "6", "7", "8", "9", "10"},
     {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
     {-200, -200, -200, -200, -200, -200, -200, -200, -200, -200}, {1, 2, 1, 2, 1, 2, 1, 2, 1, 2});
 
 const InteractionCluster interMolecularCluster(
-    {.firstSegment = InteractionSegment(0, GenomicStrand::FORWARD, 30, 40),
-     .secondSegment = InteractionSegment(0, GenomicStrand::FORWARD, 45, 55)},
+    SortedGenomicRegionPair{
+        GenomicRegion{0, Region{.startPosition = 30, .endPosition = 40}, GenomicStrand::FORWARD},
+        GenomicRegion{0, Region{.startPosition = 45, .endPosition = 55}, GenomicStrand::FORWARD}},
     {"21", "22", "23", "24", "25", "26", "27", "28", "29", "30"},
     {0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5},
     {-200, -200, -200, -200, -200, -200, -200, -200, -200, -200}, {1, 2, 1, 2, 1, 2, 1, 2, 1, 2});

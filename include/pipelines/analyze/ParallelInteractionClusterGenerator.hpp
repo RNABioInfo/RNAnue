@@ -1,56 +1,56 @@
 #pragma once
 
 // Standard
-#include <string>
+#include <cstddef>
+#include <memory>
+#include <utility>
+#include <vector>
 
 // Internal
-#include "AnnotatedInteractionCluster.hpp"
 #include "ClusteringParameters.hpp"
 #include "FeatureAnnotator.hpp"
+#include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
+#include "PartiallyAnnotatedInteractionCluster.hpp"
 
 namespace pipelines::analyze {
 
+using namespace annotation;
+
 class ParallelInteractionClusterGenerator {
    public:
-    using AnnotatedInteractionClusters = std::vector<AnnotatedInteractionCluster>;
-    using FeatureCounts = std::unordered_map<std::string, size_t>;
+    ParallelInteractionClusterGenerator(std::shared_ptr<const FeatureAnnotator> featureAnnotator,
+                                        ClusteringParameters parameters) noexcept
+        : parameters(parameters), featureAnnotator(std::move(featureAnnotator)) {}
 
     struct Result {
         AnnotatedInteractionClusters annotatedClusters;
-        FeatureCounts featureCounts;
+        FeatureCountsByFeatureID featureCounts;
         annotation::FeatureAnnotator supplementaryFeatureAnnotator;
     };
 
-    ParallelInteractionClusterGenerator(
-        std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator,
-        std::deque<std::string> referenceIDs, ClusteringParameters parameters) noexcept
-        : parameters(parameters),
-          featureAnnotator(std::move(featureAnnotator)),
-          referenceIDs(std::move(referenceIDs)) {}
-
+    /**
+     * @brief Merges overlapping interaction clusters and returns these.
+     *
+     * This function takes a list of interaction clusters, sorts them from back to front,
+     * and merges any overlapping clusters. This is done from back to front while closing clusters
+     * that are further back than the current cluster.
+     *
+     * @param clusters A reference to the list of interaction clusters to be merged.
+     * @return A list of finalized interaction clusters.
+     */
     auto mergeClusters(std::vector<InteractionCluster>&& clusters, size_t threadCount,
                        size_t batchSize) -> Result;
 
    private:
     ClusteringParameters parameters;
 
-    AnnotatedInteractionClusters finishedClusters;
-    std::vector<PartiallyAnnotatedInteractionCluster> partiallyAnnotatedClusters;
+    InteractionClusterGenerator::Result clusteringResults{};
 
-    std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator;
-    std::deque<std::string> referenceIDs;
+    std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 
-    annotation::FeatureAnnotator supplementaryFeatureAnnotator;
-
-    FeatureCounts featureCounts;
-
-    size_t includedClusterCount = 0;
-    size_t excludedClusterCount = 0;
-
-    void annotateSupplementaryFeatures() noexcept;
-
-    void mergeClusteringResults(InteractionClusterGenerator::Result&& result) noexcept;
+    void annotatePartiallyAnnotatedClusters(
+        const FeatureAnnotator& supplementaryFeatureAnnotator) noexcept;
 
     void logClusteringStatus() const noexcept;
 };

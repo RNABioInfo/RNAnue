@@ -1,10 +1,12 @@
 #pragma once
 
-// Internal
+// Standard
+#include <cassert>
 #include <optional>
 #include <string>
 #include <utility>
 
+// Internal
 #include "InteractionCluster.hpp"
 #include "PartiallyAnnotatedInteractionCluster.hpp"
 

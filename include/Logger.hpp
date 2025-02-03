@@ -3,10 +3,14 @@
 // Standard
 #include <chrono>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <ctime>
 #include <iomanip>
 #include <map>
 #include <mutex>
 #include <source_location>
+#include <sstream>
 #include <string>
 #include <utility>
 

@@ -2,69 +2,76 @@
 
 // Standard
 #include <algorithm>
+#include <boost/uuid/random_generator.hpp>
+#include <boost/uuid/uuid_io.hpp>
 #include <cstddef>
+#include <cstdio>
+#include <cstdlib>
+#include <filesystem>
+#include <functional>
+#include <iterator>
+#include <optional>
 #include <ranges>
+#include <stdexcept>
+#include <string>
 #include <unordered_set>
+#include <utility>
+#include <vector>
 
 // Internal
 #include "FeatureParser.hpp"
 #include "GenomicFeature.hpp"
+#include "GenomicFeatureTreeMerger.hpp"
+#include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
 #include "GenomicStrand.hpp"
+#include "IITree.hpp"
+#include "SamRecord.hpp"
 
 namespace annotation {
 using std::unordered_set;
 
 FeatureAnnotator::FeatureAnnotator(fs::path &featureFilePath,
+                                   const ReferenceIDToIndexMap &referenceIDToIndex,
                                    const std::unordered_set<std::string> &includedFeatures,
                                    const std::string &featureIDFlag)
-    : featureTreeMap(buildFeatureTreeMap(featureFilePath, includedFeatures, featureIDFlag)) {}
+    : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
+                                         featureIDFlag)) {}
 
 FeatureAnnotator::FeatureAnnotator(fs::path &featureFilePath,
+                                   const ReferenceIDToIndexMap &referenceIDToIndex,
                                    const std::unordered_set<std::string> &includedFeatures)
-    : featureTreeMap(buildFeatureTreeMap(featureFilePath, includedFeatures, std::nullopt)) {}
+    : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
+                                         std::nullopt)) {}
 
-FeatureAnnotator::FeatureAnnotator(const dataTypes::FeatureMap &featureMap)
+FeatureAnnotator::FeatureAnnotator(const FeatureMap &featureMap)
     : featureTreeMap(buildFeatureTreeMap(featureMap)) {}
 
-auto FeatureAnnotator::buildFeatureTreeMap(const dataTypes::FeatureMap &featureMap)
-    -> FeatureTreeMap {
+auto FeatureAnnotator::buildFeatureTreeMap(const FeatureMap &featureMap) -> FeatureTreeMap {
     FeatureTreeMap newFeatureTreeMap;
     newFeatureTreeMap.reserve(featureMap.size());
 
-    for (const auto &[referenceID, features] : featureMap) {
+    for (const auto &[referenceIDIndex, features] : featureMap) {
         IITree<int, dataTypes::GenomicFeature> tree;
         for (const auto &feature : features) {
-            tree.add(feature.startPosition, feature.endPosition, feature);
+            tree.add(feature.genomicRegion.getStart(), feature.genomicRegion.getEnd(), feature);
         }
+
         tree.index();
-        newFeatureTreeMap.emplace(referenceID, std::move(tree));
+
+        newFeatureTreeMap.emplace(referenceIDIndex, std::move(tree));
     }
 
     return newFeatureTreeMap;
 }
 
 auto FeatureAnnotator::buildFeatureTreeMap(const fs::path &featureFilePath,
+                                           const ReferenceIDToIndexMap &referenceIDToIndex,
                                            const std::unordered_set<std::string> &includedFeatures,
                                            const std::optional<std::string> &featureIDFlag)
     -> FeatureTreeMap {
-    FeatureTreeMap newFeatureTreeMap;
-
-    dataTypes::FeatureMap featureMap =
-        FeatureParser(includedFeatures, featureIDFlag).parse(featureFilePath);
-
-    newFeatureTreeMap.reserve(featureMap.size());
-
-    for (const auto &[seqid, features] : featureMap) {
-        IITree<int, dataTypes::GenomicFeature> tree;
-        for (const auto &feature : features) {
-            tree.add(feature.startPosition, feature.endPosition, feature);
-        }
-        tree.index();
-        newFeatureTreeMap.emplace(seqid, std::move(tree));
-    }
-
-    return newFeatureTreeMap;
+    return buildFeatureTreeMap(
+        FeatureParser(includedFeatures, featureIDFlag).parse(featureFilePath, referenceIDToIndex));
 }
 
 auto FeatureAnnotator::featureCount() const -> size_t {
@@ -75,110 +82,62 @@ auto FeatureAnnotator::featureCount() const -> size_t {
     return count;
 }
 
-auto FeatureAnnotator::insert(const dataTypes::GenomicRegion &region) -> std::string {
-    assert(region.strand.has_value() && "Strand must be specified for insertion");
+auto FeatureAnnotator::insert(const GenomicRegion &region) -> std::string {
     namespace uuids = boost::uuids;
-
-    auto &tree = featureTreeMap[region.referenceID];
     const std::string uuid = uuids::to_string(uuids::random_generator()());
-    tree.add(region.startPosition, region.endPosition,
-             dataTypes::GenomicFeature{.referenceID = region.referenceID,
-                                       .type = "supplementary_feature",
-                                       .startPosition = region.startPosition,
-                                       .endPosition = region.endPosition,
-                                       .strand = *region.strand,
-                                       .id = uuid,
-                                       .groupID = std::nullopt,
-                                       .geneName = std::nullopt});
+
+    auto &tree = featureTreeMap[region.getReferenceIDIndex()];
+
+    GenomicFeature feature{.type = "supplementary_feature",
+                           .genomicRegion = region,
+                           .featureID = uuid,
+                           .groupID = std::nullopt,
+                           .geneName = std::nullopt};
+
+    tree.add(region.getStart(), region.getEnd(), feature);
 
     return uuid;
 }
 
-auto FeatureAnnotator::insertIndex(const dataTypes::GenomicRegion &region) -> std::string {
-    assert(region.strand.has_value() && "Strand must be specified for insertion");
+auto FeatureAnnotator::insertIndex(const GenomicRegion &region) -> std::string {
     namespace uuids = boost::uuids;
-
-    auto &tree = featureTreeMap[region.referenceID];
     const std::string uuid = uuids::to_string(uuids::random_generator()());
-    tree.add(region.startPosition, region.endPosition,
-             dataTypes::GenomicFeature{.referenceID = region.referenceID,
-                                       .type = "supplementary_feature",
-                                       .startPosition = region.startPosition,
-                                       .endPosition = region.endPosition,
-                                       .strand = *region.strand,
-                                       .id = uuid,
-                                       .groupID = std::nullopt,
-                                       .geneName = std::nullopt});
+
+    auto &tree = featureTreeMap[region.getReferenceIDIndex()];
+
+    GenomicFeature feature{.type = "supplementary_feature",
+                           .genomicRegion = region,
+                           .featureID = uuid,
+                           .groupID = std::nullopt,
+                           .geneName = std::nullopt};
+
+    tree.add(region.getStart(), region.getEnd(), feature);
+
     tree.index();
 
     return uuid;
 }
 
-auto FeatureAnnotator::mergeInsertIndex(const dataTypes::GenomicRegion &region,
-                                        const int graceDistance)
-    -> FeatureAnnotator::MergeInsertResult {
-    assert(region.strand.has_value() && "Strand must be specified for insertion");
+auto FeatureAnnotator::getOverlappingFeatures(const GenomicRegion &region,
+                                              const GenomicOrientation orientation) const
+    -> std::vector<GenomicFeature> {
+    std::vector<GenomicFeature> features;
+    auto iterator = featureTreeMap.find(region.getReferenceIDIndex());
 
-    auto &tree = featureTreeMap[region.referenceID];
-
-    std::vector<size_t> indices;
-    // Overlap with grace distance and blunt ends (+/- 1)
-    tree.overlap(region.startPosition - graceDistance - 1, region.endPosition + graceDistance + 1,
-                 indices);
-
-    std::erase_if(indices, [&region, &tree](size_t index) {
-        return tree.data(index).strand != *region.strand;
-    });
-
-    if (indices.empty()) {
-        return {.featureID = insertIndex(region), .mergedFeatureIDs = {}};
-    }
-
-    auto minStartIndex = *std::ranges::min_element(indices, [&tree](size_t lhs, size_t rhs) {
-        return tree.data(lhs).startPosition < tree.data(rhs).startPosition;
-    });
-
-    auto maxEndIndex = *std::ranges::max_element(indices, [&tree](size_t lhs, size_t rhs) {
-        return tree.data(lhs).endPosition < tree.data(rhs).endPosition;
-    });
-
-    dataTypes::GenomicFeature &minStartFeature = tree.data(minStartIndex);
-    minStartFeature.startPosition = std::min(minStartFeature.startPosition, region.startPosition);
-    minStartFeature.endPosition = std::max(tree.data(maxEndIndex).endPosition, region.endPosition);
-    tree.setStart(minStartIndex, minStartFeature.startPosition);
-    tree.setEnd(minStartIndex, minStartFeature.endPosition);
-
-    std::vector<std::string> mergedFeatureIDs;
-    mergedFeatureIDs.reserve(indices.size() - 1);
-
-    for (unsigned long &indice : std::ranges::reverse_view(indices)) {
-        if (indice != minStartIndex) {
-            mergedFeatureIDs.push_back(std::move(tree.data(indice).id));
-            tree.remove(indice);
-        }
-    }
-
-    tree.index();
-    return {.featureID = minStartFeature.id, .mergedFeatureIDs = std::move(mergedFeatureIDs)};
-}
-
-auto FeatureAnnotator::getOverlappingFeatures(const dataTypes::GenomicRegion &region,
-                                              const Orientation orientation)
-    -> std::vector<dataTypes::GenomicFeature> {
-    std::vector<dataTypes::GenomicFeature> features;
-    auto iterator = featureTreeMap.find(region.referenceID);
     if (iterator != featureTreeMap.end()) {
         std::vector<size_t> indices;
-        iterator->second.overlap(region.startPosition, region.endPosition, indices);
+        iterator->second.overlap(region.getStart(), region.getEnd(), indices);
 
         features.reserve(indices.size());
 
         for (const auto &index : indices) {
-            const auto &feature = iterator->second.data(index);
-            if ((orientation == Orientation::BOTH) ||
-                (orientation == Orientation::OPPOSITE && feature.strand != *region.strand) ||
-                (orientation == Orientation::SAME && feature.strand == *region.strand) ||
-                (region.strand == std::nullopt)) {
+            const auto &feature = iterator->second.getData(index);
+
+            if ((orientation == GenomicOrientation::BOTH) ||
+                (orientation == GenomicOrientation::OPPOSITE &&
+                 feature.genomicRegion.getStrand() == !region.getStrand()) ||
+                (orientation == GenomicOrientation::SAME &&
+                 feature.genomicRegion.getStrand() == region.getStrand())) {
                 features.push_back(feature);
             }
         }
@@ -187,36 +146,36 @@ auto FeatureAnnotator::getOverlappingFeatures(const dataTypes::GenomicRegion &re
     return features;
 }
 
-auto FeatureAnnotator::overlappingFeatureIterator(const dataTypes::GenomicRegion &region,
-                                                  const Orientation orientation) const
+auto FeatureAnnotator::overlappingFeatureIterator(const GenomicRegion &region,
+                                                  const GenomicOrientation orientation) const
     -> FeatureAnnotator::Results {
     std::vector<size_t> indices;
 
-    auto iterator = featureTreeMap.find(region.referenceID);
+    auto iterator = featureTreeMap.find(region.getReferenceIDIndex());
 
     if (iterator == featureTreeMap.end()) [[unlikely]] {
         return {&iterator->second, indices, std::nullopt};
     }
 
-    iterator->second.overlap(region.startPosition, region.endPosition, indices);
+    iterator->second.overlap(region.getStart(), region.getEnd(), indices);
 
     std::optional<dataTypes::GenomicStrand> strand = std::nullopt;
 
-    if (orientation == Orientation::SAME) {
-        strand = region.strand;
-    } else if (orientation == Orientation::OPPOSITE && region.strand.has_value()) {
-        strand = !*region.strand;
+    if (orientation == GenomicOrientation::SAME) {
+        strand = region.getStrand();
+    } else if (orientation == GenomicOrientation::OPPOSITE) {
+        strand = !region.getStrand();
     }
 
     return {&iterator->second, indices, strand};
 }
 
 auto FeatureAnnotator::getBestOverlappingFeature(const dataTypes::GenomicRegion &region,
-                                                 const Orientation orientation) const
+                                                 const GenomicOrientation orientation) const
     -> std::optional<dataTypes::GenomicFeature> {
     auto overlapSizeWithRegion = [region](const dataTypes::GenomicFeature &feature) -> size_t {
-        return std::min(region.endPosition, feature.endPosition) -
-               std::max(region.startPosition, feature.startPosition);
+        return std::min(region.getEnd(), feature.genomicRegion.getEnd()) -
+               std::max(region.getStart(), feature.genomicRegion.getStart());
     };
 
     auto featureIterator = overlappingFeatureIterator(region, orientation);
@@ -239,9 +198,9 @@ auto FeatureAnnotator::getFeatureTreeMap() const -> const FeatureTreeMap & {
     return featureTreeMap;
 }
 
-auto FeatureAnnotator::mergeFeatures(const dataTypes::GenomicRegion &region, int minOverlap)
+auto FeatureAnnotator::mergeFeatures(const GenomicRegion &region, const int mergingTolerance)
     -> std::unordered_set<size_t> {
-    auto featureTreeIterator = featureTreeMap.find(region.referenceID);
+    auto featureTreeIterator = featureTreeMap.find(region.getReferenceIDIndex());
 
     if (featureTreeIterator == featureTreeMap.end()) [[unlikely]] {
         return {};
@@ -249,16 +208,15 @@ auto FeatureAnnotator::mergeFeatures(const dataTypes::GenomicRegion &region, int
 
     auto &featureTree = featureTreeIterator->second;
 
-    constexpr int includeLowerRange = 1;
-    constexpr int includeUpperRange = 2;
-    const int startPosition = region.startPosition + minOverlap - includeLowerRange;
-    const int endPosition = region.endPosition - minOverlap + includeUpperRange;
+    // Merge blunt ended regions (no overlap)
+    const int startSearchPosition = region.getStart() + mergingTolerance;
+    const int endSearchPosition = region.getEnd() - mergingTolerance;
 
     std::vector<size_t> indices;
-    featureTree.overlap(startPosition, endPosition, indices);
+    featureTree.overlap(startSearchPosition, endSearchPosition, indices);
 
     std::erase_if(indices, [&region, &featureTree](size_t index) {
-        return featureTree.data(index).strand != *region.strand;
+        return featureTree.getData(index).genomicRegion.getStrand() != region.getStrand();
     });
 
     if (indices.size() < 2) {
@@ -268,48 +226,45 @@ auto FeatureAnnotator::mergeFeatures(const dataTypes::GenomicRegion &region, int
     // Find max end position.
     // Min position is already set to the start position of the first feature.
     auto maxEndIndex = std::ranges::max_element(indices, [&featureTree](size_t lhs, size_t rhs) {
-        return featureTree.data(lhs).endPosition < featureTree.data(rhs).endPosition;
+        return featureTree.getData(lhs).genomicRegion.getEnd() <
+               featureTree.getData(rhs).genomicRegion.getEnd();
     });
 
-    int mergedStartPosition = featureTree.data(indices[0]).startPosition;
-    int mergedEndPosition = featureTree.data(*maxEndIndex).endPosition;
+    int mergedStartPosition = featureTree.getData(indices[0]).genomicRegion.getStart();
+    int mergedEndPosition = featureTree.getData(*maxEndIndex).genomicRegion.getEnd();
 
-    if (mergedEndPosition > endPosition) {
-        return mergeFeatures(dataTypes::GenomicRegion{region.referenceID, mergedStartPosition,
-                                                      mergedEndPosition, region.strand},
-                             minOverlap);
+    if (mergedEndPosition > endSearchPosition) {
+        auto newSearchRegion = GenomicRegion{region.getReferenceIDIndex(),
+                                             {
+                                                 .startPosition = mergedStartPosition,
+                                                 .endPosition = mergedEndPosition,
+                                             },
+                                             region.getStrand()};
+
+        return mergeFeatures(newSearchRegion, mergingTolerance);
     }
 
-    featureTree.setEnd(indices[0], mergedEndPosition);
-    featureTree.data(indices[0]).endPosition = mergedEndPosition;
+    featureTree.setIntervalEnd(indices[0], mergedEndPosition);
+    featureTree.getData(indices[0]).genomicRegion.setEnd(mergedEndPosition);
 
     return {indices.begin() + 1, indices.end()};
 }
 
-void FeatureAnnotator::mergeIndexAllOverlappingFeatures(int minOverlap) {
+void FeatureAnnotator::mergeIndexAllOverlappingFeatures(
+    FeatureMergingParameters mergingParameters) {
+    GenomicFeatureTreeMerger merger{mergingParameters};
+
     for (auto &tree : featureTreeMap) {
         tree.second.index();
 
-        std::unordered_set<size_t> invalidIndices;
-        for (size_t index = 0; index < tree.second.size(); ++index) {
-            if (invalidIndices.contains(index)) {
-                continue;
-            }
-
-            auto region = dataTypes::GenomicRegion::fromGenomicFeature(tree.second.data(index));
-            invalidIndices.merge(mergeFeatures(region, minOverlap));
-        }
-
-        tree.second.remove(invalidIndices);
-        tree.second.indexNoSort();
+        merger.merge(tree.second);
     }
 }
 
 auto FeatureAnnotator::getBestOverlappingFeature(const SamRecord &record,
-                                                 const std::deque<std::string> &referenceIDs,
-                                                 const Orientation orientation) const
+                                                 const GenomicOrientation orientation) const
     -> std::optional<dataTypes::GenomicFeature> {
-    auto region = dataTypes::GenomicRegion::fromSamRecord(record, referenceIDs);
+    auto region = GenomicRegion::fromSamRecord(record);
 
     if (!region.has_value()) {
         return std::nullopt;
@@ -328,8 +283,9 @@ FeatureAnnotator::Results::Results(const IITree<int, dataTypes::GenomicFeature> 
     size_t startIndex = 0;
     if (strand.has_value()) {
         // Find the first index with the specified strand
-        auto iterator = std::ranges::find_if(
-            indices, [&](size_t index) { return tree->data(index).strand == *strand; });
+        auto iterator = std::ranges::find_if(indices, [&](size_t index) {
+            return tree->getData(index).genomicRegion.getStrand() == *strand;
+        });
         startIndex =
             iterator != indices.end() ? std::distance(indices.begin(), iterator) : indices.size();
     }
@@ -350,7 +306,7 @@ FeatureAnnotator::Results::Iterator::Iterator(const IITree<int, dataTypes::Genom
     if (current_index >= indices.size()) {
         throw std::out_of_range("Iterator out of range");
     }
-    return tree->data(indices[current_index]);
+    return tree->getData(indices[current_index]);
 }
 
 [[nodiscard]] auto FeatureAnnotator::Results::Iterator::operator->() const
@@ -358,13 +314,13 @@ FeatureAnnotator::Results::Iterator::Iterator(const IITree<int, dataTypes::Genom
     if (current_index >= indices.size()) {
         throw std::out_of_range("Iterator out of range");
     }
-    return &tree->data(indices[current_index]);
+    return &tree->getData(indices[current_index]);
 }
 
 auto FeatureAnnotator::Results::Iterator::operator++() -> FeatureAnnotator::Results::Iterator & {
     auto matchStrand = [&](size_t index) {
         if (strand.has_value()) {
-            return tree->data(indices[index]).strand == *strand;
+            return tree->getData(indices[index]).genomicRegion.getStrand() == *strand;
         }
         return true;
     };

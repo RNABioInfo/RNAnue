@@ -1,16 +1,26 @@
 #include "CrosslinkingSitesEvaluator.hpp"
 
 // Standard
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <cstdint>
 #include <optional>
+#include <ostream>
+#include <span>
+#include <string>
+#include <utility>
+#include <vector>
 
 // seqan3
 #include <seqan3/alphabet/views/char_to.hpp>
 #include <seqan3/alphabet/views/to_char.hpp>
 #include <seqan3/utility/all.hpp>
-#include <utility>
 
 // Internal
 #include "Logger.hpp"
+#include "seqan3/alphabet/nucleotide/dna5.hpp"
+#include "seqan3/alphabet/structure/dot_bracket3.hpp"
 
 namespace pipelines::detect {
 

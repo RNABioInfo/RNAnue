@@ -3,15 +3,16 @@
 // Standard
 #include <filesystem>
 #include <optional>
+#include <string>
 
 // Internal
 #include "AlignParameters.hpp"
 #include "AnalyzeParameters.hpp"
 #include "CompleteParameters.hpp"
 #include "DetectParameters.hpp"
+#include "PipelineData.hpp"
 #include "PreprocessParameters.hpp"
 #include "Utility.hpp"
-#include "pipelines/PipelineData.hpp"
 
 using namespace pipelines;
 

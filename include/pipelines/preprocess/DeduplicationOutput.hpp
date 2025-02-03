@@ -4,7 +4,6 @@
 #include <set>
 #include <string>
 #include <variant>
-#include <vector>
 
 struct DeduplicationOutputSingle {
     std::set<std::string> validRecordIDs;

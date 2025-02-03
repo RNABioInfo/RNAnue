@@ -1,12 +1,25 @@
 #include "Runner.hpp"
 
+// Standard
+#include <variant>
+
+// Internal
 #include "Align.hpp"
+#include "AlignData.hpp"
+#include "AlignParameters.hpp"
 #include "Analyze.hpp"
 #include "AnalyzeData.hpp"
+#include "AnalyzeParameters.hpp"
 #include "Closing.hpp"
+#include "CompleteParameters.hpp"
 #include "Detect.hpp"
+#include "DetectData.hpp"
+#include "DetectParameters.hpp"
+#include "Logger.hpp"
 #include "ParameterParser.hpp"
 #include "Preprocess.hpp"
+#include "PreprocessData.hpp"
+#include "PreprocessParameters.hpp"
 
 void Runner::runPipeline(int argc, const char *const argv[]) {  // NOLINT
     const auto parameters = ParameterParser::getParameters(argc, argv);

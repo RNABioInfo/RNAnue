@@ -2,14 +2,17 @@
 
 // Standard
 #include <filesystem>
+#include <optional>
 #include <vector>
 
 // seqan3
 #include <seqan3/io/sam_file/input.hpp>
 #include <seqan3/utility/views/chunk.hpp>
-// Internal
 
+// Internal
 #include "InteractionCluster.hpp"
+#include "RecordFragment.hpp"
+#include "SamRecord.hpp"
 
 namespace pipelines::analyze {
 

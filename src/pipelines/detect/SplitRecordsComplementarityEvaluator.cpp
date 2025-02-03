@@ -1,5 +1,22 @@
 #include "SplitRecordsComplementarityEvaluator.hpp"
 
+// Standard
+#include <cstdint>
+#include <optional>
+#include <ranges>
+#include <tuple>
+#include <vector>
+
+// seqan3
+#include <seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp>
+#include <seqan3/alignment/scoring/scoring_scheme_base.hpp>
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
+
+// Internal
+#include "CoOptimalPairwiseAligner.hpp"
+#include "SplitRecords.hpp"
+#include "SplitRecordsEvaluationParameters.hpp"
+
 namespace pipelines::detect {
 
 auto SplitRecordsComplementarityEvaluator::evaluate(

@@ -1,7 +1,14 @@
 #pragma once
 
 // Standard
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
 #include <optional>
+#include <ranges>
+#include <tuple>
+#include <utility>
+#include <vector>
 
 // seqan3
 #include <seqan3/alignment/configuration/align_config_gap_cost_affine.hpp>
@@ -9,7 +16,10 @@
 #include <seqan3/alignment/configuration/align_config_output.hpp>
 #include <seqan3/alignment/configuration/align_config_scoring_scheme.hpp>
 #include <seqan3/alignment/pairwise/align_pairwise.hpp>
+#include <seqan3/alignment/pairwise/alignment_result.hpp>
 #include <seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp>
+#include <seqan3/alignment/scoring/scoring_scheme_base.hpp>
+#include <seqan3/alphabet/gap/gap.hpp>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/quality/phred42.hpp>
 #include <seqan3/alphabet/views/complement.hpp>

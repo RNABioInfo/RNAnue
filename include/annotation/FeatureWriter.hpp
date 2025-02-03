@@ -1,5 +1,8 @@
 #pragma once
 
+// Standard
+#include <string>
+
 // Internal
 #include "FeatureAnnotator.hpp"
 #include "FileType.hpp"

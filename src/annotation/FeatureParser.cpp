@@ -1,15 +1,27 @@
 #include "FeatureParser.hpp"
 
 // Standard
-#include <execution>
+#include <algorithm>
+#include <array>
+#include <cstddef>
+#include <filesystem>
 #include <fstream>
+#include <iostream>
 #include <numeric>
+#include <optional>
+#include <sstream>
+#include <stdexcept>
+#include <string>
+#include <unordered_map>
 #include <unordered_set>
+#include <vector>
 
 // Internal
 #include "Constants.hpp"
 #include "FileType.hpp"
 #include "GenomicFeature.hpp"
+#include "GenomicRegion.hpp"
+#include "GenomicStrand.hpp"
 #include "Logger.hpp"
 
 using namespace constants::annotation;
@@ -30,10 +42,11 @@ FeatureParser::FeatureParser(const std::unordered_set<std::string> &includedFeat
                              const std::optional<std::string> &featureIDFlag)
     : includedFeatures(includedFeatures), featureIDFlag(featureIDFlag) {}
 
-auto FeatureParser::parse(const fs::path &featureFilePath) const -> dataTypes::FeatureMap {
+auto FeatureParser::parse(const fs::path &featureFilePath,
+                          const ReferenceIDToIndexMap &referenceToIndex) const -> FeatureMap {
     FileType fileType = getFileType(featureFilePath);
 
-    return iterateFeatureFile(featureFilePath, fileType);
+    return iterateFeatureFile(featureFilePath, fileType, referenceToIndex);
 }
 
 auto FeatureParser::getFileType(const fs::path &featureFilePath) -> FileType {
@@ -58,9 +71,10 @@ auto FeatureParser::getFileType(const fs::path &featureFilePath) -> FileType {
         "##gff-version or ##gtf-version");
 }
 
-auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
-                                       const FileType fileType) const -> dataTypes::FeatureMap {
-    dataTypes::FeatureMap featureMap;
+auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath, const FileType fileType,
+                                       const ReferenceIDToIndexMap &referenceToIndex) const
+    -> FeatureMap {
+    FeatureMap featureMap;
 
     std::ifstream file(featureFilePath.string());
 
@@ -84,6 +98,24 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
         }
 
         const auto &tokens_v = tokens.value();
+
+        const std::string &referenceID = tokens_v[0];
+
+        if (!referenceToIndex.contains(referenceID)) {
+            Logger::log<LogLevel::WARNING>(
+                "Feature reference id not found: ", referenceID,
+                ", ensure the annotion and reference genome use the same reference IDs.");
+
+            continue;
+        }
+
+        const int referenceIDIndex = referenceToIndex.at(referenceID);
+        const std::string &featureType = tokens_v[2];
+
+        // Convert to zero-based half-open index
+        int startPosition = std::stoi(tokens_v[3]) - 1;
+        int endPosition = std::stoi(tokens_v[4]);
+
         const auto attributes = getAttributes(fileType, tokens_v[8]);
 
         auto getAttribute = [&attributes](const std::string &key) -> std::optional<std::string> {
@@ -102,30 +134,21 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
             continue;
         }
 
-        const std::string &referenceID = tokens_v[0];
-        const std::string &featureType = tokens_v[2];
-
-        int startPosition = std::stoi(tokens_v[3]);
-        int endPosition = std::stoi(tokens_v[4]);
-
         const std::optional<std::string> geneName =
             getAttribute(annotation::FileType::defaultGeneNameKey());
 
-        featureMap[referenceID].emplace_back(dataTypes::GenomicFeature{
-            .referenceID = referenceID,
-            .type = featureType,
-            .startPosition = startPosition,
-            .endPosition = endPosition,
-            .strand = tokens_v[strandTokenColumn][0] == '+' ? dataTypes::GenomicStrand::FORWARD
-                                                            : dataTypes::GenomicStrand::REVERSE,
-            .id = identifier.value(),
-            .groupID = getAttribute(fileType.defaultGroupKey()),
-            .geneName = geneName});
+        GenomicRegion genomicRegion{referenceIDIndex,
+                                    {.startPosition = startPosition, .endPosition = endPosition},
+                                    getGenomicStrand(tokens_v[strandTokenColumn][0])};
+
+        featureMap[referenceIDIndex].emplace_back(featureType, genomicRegion, identifier.value(),
+                                                  getAttribute(fileType.defaultGroupKey()),
+                                                  geneName);
 
         ++parsedFeatures;
 
-        if (featureMap[referenceID].back().groupID.has_value()) {
-            featureGroups.insert(featureMap[referenceID].back().groupID.value());
+        if (featureMap[referenceIDIndex].back().groupID.has_value()) {
+            featureGroups.insert(featureMap[referenceIDIndex].back().groupID.value());
         }
     }
 
@@ -135,13 +158,18 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath,
                             return lhs.empty() ? rhs : lhs + ", " + rhs;
                         });
 
-    const std::string featureGroupLog =
-        featureGroups.empty()
-            ? ""
-            : " Found " + std::to_string(featureGroups.size()) + " feature groups.";
+    if (parsedFeatures != 0) {
+        const std::string featureGroupLog =
+            featureGroups.empty()
+                ? ""
+                : " Found " + std::to_string(featureGroups.size()) + " feature groups.";
 
-    Logger::log("Parsed ", std::to_string(parsedFeatures),
-                " features of type: ", includedFeatureTypes, ".", featureGroupLog);
+        Logger::log("Parsed ", std::to_string(parsedFeatures),
+                    " features of type: ", includedFeatureTypes, ".", featureGroupLog);
+    } else {
+        Logger::log<LogLevel::WARNING>(
+            "No features parsed. Check your feature file and included features flag.");
+    }
 
     return featureMap;
 }
@@ -151,6 +179,7 @@ auto FeatureParser::getTokens(const std::string &line,
     -> std::optional<std::vector<std::string>> {
     std::vector<std::string> tokens;
     std::istringstream issLine(line);
+
     for (std::string token; std::getline(issLine, token, '\t');) {
         // Checks at the third token if the feature is included
         if (tokens.size() == 2 && !includedFeatures.contains(token)) {
@@ -159,6 +188,7 @@ auto FeatureParser::getTokens(const std::string &line,
 
         tokens.push_back(token);
     }
+
     return tokens;
 }
 

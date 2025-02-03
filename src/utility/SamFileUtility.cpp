@@ -1,7 +1,14 @@
 #include "SamFileUtility.hpp"
 
+// Standard
+#include <cstddef>
+#include <filesystem>
+#include <iterator>
+
 // seqan3
+#include <seqan3/io/record.hpp>
 #include <seqan3/io/sam_file/all.hpp>
+#include <seqan3/io/sam_file/input.hpp>
 
 namespace SamFileUtility {
 

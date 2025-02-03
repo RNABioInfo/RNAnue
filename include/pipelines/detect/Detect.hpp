@@ -1,17 +1,22 @@
 #pragma once
 
 // Standard
+#include <cstddef>
 #include <deque>
 #include <filesystem>
+#include <memory>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <unordered_map>
+#include <utility>
 #include <vector>
 
 // seqan3
 #include <seqan3/alignment/scoring/nucleotide_scoring_scheme.hpp>
 #include <seqan3/alphabet/cigar/cigar.hpp>
 #include <seqan3/io/sam_file/all.hpp>
+#include <seqan3/io/sam_file/input.hpp>
 
 // Internal
 #include "AsyncSplitRecordGroupBuffer.hpp"
@@ -27,19 +32,18 @@
 using namespace dataTypes;
 
 namespace pipelines::detect {
+
+using namespace annotation;
 namespace fs = std::filesystem;
 
 class Detect {
    public:
+    explicit Detect(DetectParameters params) : params(std::move(params)) {};
+
     Detect(const Detect &) = default;
     Detect(Detect &&) = delete;
     auto operator=(const Detect &) -> Detect & = delete;
     auto operator=(Detect &&) -> Detect & = delete;
-    explicit Detect(DetectParameters params)
-        : params(params),
-          featureAnnotator(params.featuresInPath, params.featureTypes),
-          splitRecordsEvaluator(SplitRecordsEvaluator(getSplitRecordsEvaluatorParameters(params))) {
-          };
     ~Detect() = default;
 
     void process(const DetectData &data);
@@ -79,30 +83,30 @@ class Detect {
 
     DetectParameters params;
 
-    annotation::FeatureAnnotator featureAnnotator;
-    SplitRecordsEvaluator splitRecordsEvaluator;
+    std::optional<SplitRecordsEvaluator> splitRecordsEvaluator;
 
-    [[nodiscard]] auto getSplitRecordsEvaluatorParameters(const DetectParameters &params) const
+    [[nodiscard]] static auto getSplitRecordsEvaluatorParameters(
+        const DetectParameters &params, std::shared_ptr<const FeatureAnnotator> featureAnnotator)
         -> SplitRecordsEvaluationParameters::ParameterVariant;
 
     static auto getReferenceIDs(const fs::path &mappingsInPath) -> std::deque<std::string>;
 
-    void processSample(const DetectSample &sample) const;
+    void processSample(const DetectSample &sample, std::shared_ptr<const FeatureAnnotator>) const;
 
     auto processRecordChunk(const ChunkedOutTmpDirs &outTmpDirs,
                             AsyncGroupBufferType &recordInputBuffer,
                             const std::deque<std::string> &refIDs,
-                            const std::vector<size_t> &refLengths) const -> Result;
-    auto processReadRecords(const std::vector<SamRecord> &readRecords,
-                            const std::deque<std::string> &referenceIDs, auto &splitsOut,
+                            const std::vector<size_t> &refLengths,
+                            std::shared_ptr<const FeatureAnnotator> featureAnnotator) const
+        -> Result;
+    auto processReadRecords(const std::vector<SamRecord> &readRecords, auto &splitsOut,
                             [[maybe_unused]] auto &multiSplitsOut) const -> size_t;
 
     [[nodiscard]] auto constructSplitRecords(const SamRecord &readRecord) const
         -> std::optional<SplitRecords>;
     [[nodiscard]] auto constructSplitRecords(const std::vector<SamRecord> &readRecords) const
         -> std::optional<SplitRecords>;
-    [[nodiscard]] auto getSplitRecords(const std::vector<SamRecord> &readRecords,
-                                       const std::deque<std::string> &referenceIDs) const
+    [[nodiscard]] auto getSplitRecords(const std::vector<SamRecord> &readRecords) const
         -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords>;
 
     static void mergeOutputFiles(const ChunkedOutTmpDirs &tmpDirs, const DetectOutput &output);

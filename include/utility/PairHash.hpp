@@ -2,7 +2,11 @@
 
 // Standard
 #include <cstddef>
+#include <functional>
 #include <utility>
+
+// seqan3
+#include "seqan3/alphabet/nucleotide/dna5.hpp"
 
 // Internal
 #include "HashDNA5Vector.hpp"

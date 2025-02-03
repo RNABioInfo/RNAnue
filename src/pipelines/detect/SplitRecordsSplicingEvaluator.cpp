@@ -1,99 +1,116 @@
 #include "SplitRecordsSplicingEvaluator.hpp"
 
+// Standard
+#include <cctype>
+#include <cstddef>
+#include <optional>
+#include <string>
+#include <unordered_map>
+#include <utility>
+#include <vector>
+
+// Internal
 #include "GenomicFeature.hpp"
-#include "Utility.hpp"
+#include "GenomicRegion.hpp"
+#include "SortedGenomicRegionPair.hpp"
+#include "SplitRecords.hpp"
+#include "SplitRecordsEvaluationParameters.hpp"
 
 auto SplitRecordsSplicingEvaluator::isSplicedSplitRecord(
-    const SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs,
+    const SplitRecords &splitRecords,
     const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> bool {
-    if (splitRecords[0].reference_id() != splitRecords[1].reference_id()) {
+    const std::optional<GenomicRegion> regionOne = GenomicRegion::fromSamRecord(splitRecords[0]);
+    const std::optional<GenomicRegion> regionTwo = GenomicRegion::fromSamRecord(splitRecords[1]);
+
+    if (!regionOne.has_value() || !regionTwo.has_value()) {
         return false;
     }
 
-    const auto &record1 =
-        splitRecords[0].reference_position().value() < splitRecords[1].reference_position().value()
-            ? splitRecords[0]
-            : splitRecords[1];
-    const auto &record2 =
-        splitRecords[0].reference_position().value() < splitRecords[1].reference_position().value()
-            ? splitRecords[1]
-            : splitRecords[0];
+    const auto boundingRegions =
+        getBoundingRegionsForRecords({*regionOne, *regionTwo}, parameters.splicingTolerance);
 
-    const auto features = getGroupedFeatures(record1, record2, referenceIDs, parameters);
+    const auto featurePairs = getGroupedFeaturesAtBoundingRegions(boundingRegions, parameters);
 
-    if (!features.has_value()) {
-        return false;
+    if (parameters.allowAlternativeSplicing || featurePairs.empty()) {
+        return !featurePairs.empty();
     }
 
-    const auto &featureRecord1 = features.value().first;
-    const auto &featureRecord2 = features.value().second;
-
-    const auto spliceJunctionBoundingRegion = getSpliceJunctionBoundingRegion(
-        record1, record2, featureRecord1, featureRecord2, parameters);
-
-    if (!spliceJunctionBoundingRegion.has_value()) {
-        return false;
-    }
-
-    auto iterator = parameters.featureAnnotator->overlappingFeatureIterator(
-        spliceJunctionBoundingRegion.value(), parameters.orientation);
-
-    const bool hasInBetweenExon =
-        std::any_of(iterator.begin(), iterator.end(), [&featureRecord1](const auto &feature) {
-            return feature.groupID.has_value() && feature.groupID.value() == featureRecord1.groupID;
-        });
-
-    return !hasInBetweenExon;
+    return !groupedFeaturePairsEncloseAdditonalFeatureFromGroup(featurePairs, parameters);
 }
 
-auto SplitRecordsSplicingEvaluator::getGroupedFeatures(
-    const SamRecord &record1, const SamRecord &record2, const std::deque<std::string> &referenceIDs,
-    const SplitRecordsEvaluationParameters::SplicingParameters &parameters)
-    -> std::optional<std::pair<dataTypes::GenomicFeature, dataTypes::GenomicFeature>> {
-    const auto featureRecord1 = parameters.featureAnnotator->getBestOverlappingFeature(
-        record1, referenceIDs, parameters.orientation);
+auto SplitRecordsSplicingEvaluator::getGroupedFeaturesAtBoundingRegions(
+    const BoundingRegions &boundingRegions,
+    const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> FeaturePairs {
+    std::unordered_map<std::string, GenomicFeature> featuresFirstRegionByGroupID;
 
-    if (!featureRecord1.has_value() || !featureRecord1.value().groupID.has_value()) {
-        return std::nullopt;
+    // Iterate all features that overlap the upstream bounding region and check whether their end is
+    // within upstream bounding region.
+    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIterator(
+             boundingRegions.first, parameters.orientation)) {
+        if (not feature.groupID ||
+            !boundingRegions.first.contains(feature.genomicRegion.getEnd() - 1)) {
+            continue;
+        }
+
+        featuresFirstRegionByGroupID.emplace(*feature.groupID, feature);
     }
 
-    const auto featureRecord2 = parameters.featureAnnotator->getBestOverlappingFeature(
-        record2, referenceIDs, parameters.orientation);
-
-    if (!featureRecord2.has_value() || !featureRecord2.value().groupID.has_value()) {
-        return std::nullopt;
+    if (featuresFirstRegionByGroupID.empty()) {
+        return {};
     }
 
-    if (featureRecord1.value().groupID != featureRecord2.value().groupID) {
-        return std::nullopt;
+    FeaturePairs groupedFeaturePairs;
+
+    // Iterate all features that overlap the second bounding regions and check whether their start
+    // is within the second bounding region.
+    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIterator(
+             boundingRegions.second, parameters.orientation)) {
+        if (!feature.groupID || !featuresFirstRegionByGroupID.contains(*feature.groupID) ||
+            !boundingRegions.second.contains(feature.genomicRegion.getStart())) {
+            continue;
+        }
+
+        auto partnerFeature = featuresFirstRegionByGroupID.at(*feature.groupID);
+
+        if (feature.genomicRegion.getStrand() != partnerFeature.genomicRegion.getStrand()) {
+            continue;
+        }
+
+        groupedFeaturePairs.emplace_back(partnerFeature, feature);
     }
 
-    return std::make_pair(featureRecord1.value(), featureRecord2.value());
+    return groupedFeaturePairs;
 }
 
-auto SplitRecordsSplicingEvaluator::getSpliceJunctionBoundingRegion(
-    const SamRecord &record1, const SamRecord &record2,
-    const dataTypes::GenomicFeature &featureRecord1,
-    const dataTypes::GenomicFeature &featureRecord2,
-    const SplitRecordsEvaluationParameters::SplicingParameters &parameters)
-    -> std::optional<dataTypes::GenomicRegion> {
-    const auto record1EndPosition = dataTypes::recordEndPosition(record1).value();
+auto SplitRecordsSplicingEvaluator::getBoundingRegionsForRecords(
+    const SortedGenomicRegionPair &regionPair, const size_t &tolerance) -> BoundingRegions {
+    auto firstBoundingRegion = regionPair.firstRegion;
+    firstBoundingRegion.setStart(firstBoundingRegion.getEnd() - 1);
+    auto secondBoundingRegion = regionPair.secondRegion;
+    secondBoundingRegion.setEnd(secondBoundingRegion.getStart() + 1);
 
-    bool record1AtSpliceJunctionStart = helper::isContained(
-        record1EndPosition, featureRecord1.endPosition - 1, parameters.splicingTolerance);
-
-    if (!record1AtSpliceJunctionStart) {
-        return std::nullopt;
-    }
-
-    const auto record2StartPosition = record2.reference_position().value();
-    bool record2AtSpliceJunctionEnd = helper::isContained(
-        record2StartPosition, featureRecord2.startPosition - 1, parameters.splicingTolerance);
-
-    if (!record2AtSpliceJunctionEnd) {
-        return std::nullopt;
-    }
-
-    return dataTypes::GenomicRegion{featureRecord1.referenceID, record1EndPosition + 1,
-                                    record2StartPosition};
+    return std::make_pair(firstBoundingRegion.expanded(tolerance),
+                          secondBoundingRegion.expanded(tolerance));
 }
+
+auto SplitRecordsSplicingEvaluator::groupedFeaturePairsEncloseAdditonalFeatureFromGroup(
+    const FeaturePairs &featurePairs,
+    const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> bool {
+    for (const FeaturePair &featurePair : featurePairs) {
+        const GenomicRegion enclosingRegion{
+            featurePair.first.genomicRegion.getReferenceIDIndex(),
+            {.startPosition = featurePair.first.genomicRegion.getEnd(),
+             .endPosition = featurePair.second.genomicRegion.getStart()},
+            featurePair.first.genomicRegion.getStrand()};
+
+        for (const GenomicFeature &enclosedFeature :
+             parameters.featureAnnotator->overlappingFeatureIterator(enclosingRegion,
+                                                                     parameters.orientation)) {
+            if (enclosedFeature.groupID == featurePair.first.groupID) {
+                return true;
+            }
+        }
+    }
+
+    return false;
+};

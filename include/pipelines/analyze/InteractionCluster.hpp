@@ -1,43 +1,33 @@
 #pragma once
 
 // Standard
-#include <algorithm>
-#include <cmath>
 #include <cstddef>
-#include <numeric>
+#include <cstdint>
 #include <ostream>
 #include <string>
-#include <utility>
 #include <vector>
 
 // Internal
-#include "InteractionSegment.hpp"
+#include "GenomicOrientation.hpp"
+#include "GenomicRegion.hpp"
+#include "GenomicStrandSpecificity.hpp"
 #include "RecordFragment.hpp"
+#include "SortedGenomicRegionPair.hpp"
 
 namespace pipelines::analyze {
 
+using namespace dataTypes;
+
 class InteractionCluster {
    public:
-    InteractionCluster(InteractionSegmentPair interactionSegments,
-                       std::vector<std::string> recordIDs,
+    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::vector<std::string> recordIDs,
                        std::vector<double> complementarityScores,
                        std::vector<double> hybridizationEnergies,
-                       std::vector<int32_t> crosslinkingSiteCounts)
-        : firstSegment(interactionSegments.firstSegment),
-          secondSegment(interactionSegments.secondSegment),
-          recordIDs(std::move(recordIDs)),
-          complementarityScores(std::move(complementarityScores)),
-          maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
-          hybridizationEnergies(std::move(hybridizationEnergies)),
-          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
-          crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {}
+                       std::vector<int32_t> crosslinkingSiteCounts);
 
-    InteractionCluster(InteractionSegment firstSegment, InteractionSegment secondSegment,
-                       std::string recordID, double complementarityScore,
-                       double hybridizationEnergie, int32_t crosslinkingSiteCount)
-        : InteractionCluster({.firstSegment = firstSegment, .secondSegment = secondSegment},
-                             {std::move(recordID)}, {complementarityScore}, {hybridizationEnergie},
-                             {crosslinkingSiteCount}) {}
+    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
+                       double complementarityScore, double hybridizationEnergy,
+                       int crosslinkingSiteCount);
 
     InteractionCluster() = delete;
 
@@ -45,12 +35,12 @@ class InteractionCluster {
                                     const RecordFragment &secondFragment) -> InteractionCluster;
 
     // Getters
-    [[nodiscard]] auto getFirstSegment() const -> const InteractionSegment & {
-        return firstSegment;
+    [[nodiscard]] auto getFirstSegment() const -> const GenomicRegion & {
+        return sortedSegments.firstRegion;
     }
 
-    [[nodiscard]] auto getSecondSegment() const -> const InteractionSegment & {
-        return secondSegment;
+    [[nodiscard]] auto getSecondSegment() const -> const GenomicRegion & {
+        return sortedSegments.secondRegion;
     }
 
     [[nodiscard]] auto getRecordIDs() const -> const std::vector<std::string> & {
@@ -84,34 +74,67 @@ class InteractionCluster {
     [[nodiscard]] auto fragmentCount() const -> size_t { return recordIDs.size(); }
 
     // Comparisons
-    auto operator<(const InteractionCluster &other) const -> bool;
-    auto operator>(const InteractionCluster &other) const -> bool;
-    auto operator==(const InteractionCluster &other) const -> bool;
+    /**
+     * @brief Less-than comparison operator for InteractionCluster.
+     *
+     * This operator compares two InteractionCluster objects based on the end position
+     * of the second segment and the referenceIndexID. It returns true if the referenceIndexID is
+     * less in the current object or the end position of the segment in the current object are
+     * lexicographically less than those in the provided object.
+     *
+     * @param a The InteractionCluster object to compare with.
+     * @return true if the current object is less than the provided object, false otherwise.
+     */
+    auto operator<(const InteractionCluster &other) const noexcept -> bool;
+    auto operator>(const InteractionCluster &other) const noexcept -> bool;
+    auto operator==(const InteractionCluster &other) const noexcept -> bool;
 
+    /**
+     * @brief Determines if this InteractionCluster is strictly located before another
+     * InteractionCluster.
+     *
+     * This method compares the second segment of the current InteractionCluster with the second
+     * segment of the provided one based on their reference index and positions to check if it
+     * appears entirely before, with no overlap and no blunt end.
+     *
+     * @param other The InteractionCluster to compare against.
+     * @return true if this InteractionCluster is entirely before the other, false otherwise.
+     */
     [[nodiscard]] auto isBefore(const InteractionCluster &other) const noexcept -> bool;
 
-    [[nodiscard]] auto overlaps(const InteractionCluster &other, int graceDistance) const noexcept
-        -> bool;
+    [[nodiscard]] auto overlapsWithTolerance(const InteractionCluster &other,
+                                             GenomicStrandSpecificity strandSpecificity,
+                                             int tolerance) const noexcept -> bool;
+
+    [[nodiscard]] auto overlapsWithShortestSegmentFraction(
+        const InteractionCluster &other, GenomicStrandSpecificity strandSpecificity,
+        float shortestOverlapFraction) const noexcept -> bool;
 
     // Returns the fraction of the overlap between the two segments relative to the length
     // of the shorter segment
-    [[nodiscard]] auto segmentsMaxOverlapFraction() const noexcept -> double;
+    [[nodiscard]] auto segmentsMaxSelfOverlapFraction() const noexcept -> double;
 
-    void merge(const InteractionCluster &other);
+    [[nodiscard]] auto merge(const InteractionCluster &other,
+                             const GenomicStrandSpecificity &) noexcept -> bool;
 
     [[nodiscard]] auto complementarityStatistics() const -> double;
 
     [[nodiscard]] auto hybridizationEnergyStatistics() const -> double;
 
    private:
-    InteractionSegment firstSegment;
-    InteractionSegment secondSegment;
+    SortedGenomicRegionPair sortedSegments;
     std::vector<std::string> recordIDs;
     std::vector<double> complementarityScores;
     double maxComplementarityScore;
     std::vector<double> hybridizationEnergies;
     double minHybridizationEnergy;
     std::vector<int32_t> crosslinkingSiteCounts;
+
+    [[nodiscard]] static constexpr auto overlapOrientation(
+        const GenomicStrandSpecificity strandSpecificity) -> GenomicOrientation {
+        return (strandSpecificity == GenomicStrandSpecificity::SPECIFIC) ? GenomicOrientation::SAME
+                                                                         : GenomicOrientation::BOTH;
+    };
 };
 
 auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)

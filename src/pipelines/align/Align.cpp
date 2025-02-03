@@ -152,7 +152,6 @@ void Align::buildIndex() {
     return threads;
 }
 
-// TODO adapt for new thread counts
 [[nodiscard]] auto Align::getGeneralAlignmentArgs(size_t threadCount) const
     -> std::vector<std::string> {
     return {"-b", "-S",
@@ -220,7 +219,6 @@ void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
                                       const fs::path &sortedAlignmentsPath) const {
     Logger::log("Sorting alignments");
 
-    // TODO Adapt output format to selection from config
     const size_t SORT_DEFAULT_MEGS_PER_THREAD = 768;
     const size_t maxMem = SORT_DEFAULT_MEGS_PER_THREAD << 20;
     const htsFormat inFmt = {sequence_data, bam, {.major = 1, .minor = 6}, no_compression, 0, 0};

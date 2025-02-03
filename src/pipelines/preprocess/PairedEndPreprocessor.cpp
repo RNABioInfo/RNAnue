@@ -3,15 +3,29 @@
 // Standard
 #include <params/basic.h>
 
+#include <algorithm>
+#include <cassert>
+#include <cstddef>
+#include <filesystem>
 #include <future>
+#include <ranges>
+#include <string>
 #include <utility>
+#include <vector>
+
+// seqan3
+#include <seqan3/io/sequence_file/input.hpp>
+#include <seqan3/io/sequence_file/output.hpp>
+#include <seqan3/io/views/async_input_buffer.hpp>
 
 // Internal
 #include "DeduplicationConfig.hpp"
 #include "Deduplicator.hpp"
 #include "FastqRecord.hpp"
+#include "Logger.hpp"
 #include "PairedRecordMerger.hpp"
 #include "PreprocessFilter.hpp"
+#include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
 
@@ -194,8 +208,8 @@ template <typename T>
         PairedFastqRecords records{std::make_pair(std::move(record1), std::move(record2))};
 
         if (parameters.trimPolyG) {
-            RecordTrimmer::trim3PolyG(records.first);
-            RecordTrimmer::trim3PolyG(records.second);
+            RecordTrimmer::trim3PolyG(records.first, parameters.minPolyGCount);
+            RecordTrimmer::trim3PolyG(records.second, parameters.minPolyGCount);
         }
 
         trimWindowedQuality(records, {.windowTrimmingSize = parameters.windowTrimmingSize,

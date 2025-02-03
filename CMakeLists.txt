@@ -61,7 +61,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureAnnotator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureParser.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureWriter.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/Orientation.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/GenomicFeatureTreeMerger.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/SamFileUtility.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/SequenceFileUtility.cpp
@@ -70,6 +70,8 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/parameters/ParameterParser.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/GenomicRegion.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/RecordFragment.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/GenomicOrientation.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/Preprocess.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/PreprocessData.cpp
@@ -92,7 +94,6 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/Analyze.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/AnalyzeData.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/RecordFragment.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/InteractionCluster.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/InteractionClusterGenerator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/ParallelInteractionClusterGenerator.cpp
@@ -100,7 +101,6 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/StatisticEvaluator.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Closing.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/CooptimalPairwiseAligner.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Utility.cpp
 )
 

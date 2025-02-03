@@ -1,8 +1,11 @@
 #pragma once
 
 // Standard
+#include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <string>
+#include <utility>
 
 // Internal
 #include "DeduplicationOutput.hpp"
@@ -18,9 +21,9 @@ class DeduplicatorBySequencePairedEnd {
     static auto hashCombine(size_t lhs, size_t rhs) -> size_t;
 
     template <class T1, class T2>
-    static auto pairHash(const std::pair<T1, T2>& p) -> std::size_t {
-        auto hash1 = std::hash<T1>{}(p.first);
-        auto hash2 = std::hash<T2>{}(p.second);
+    static auto pairHash(const std::pair<T1, T2>& inputPair) -> std::size_t {
+        auto hash1 = std::hash<T1>{}(inputPair.first);
+        auto hash2 = std::hash<T2>{}(inputPair.second);
 
         return hashCombine(hash1, hash2);
     }

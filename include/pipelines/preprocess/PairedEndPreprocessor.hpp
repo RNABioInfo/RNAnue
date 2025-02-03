@@ -2,6 +2,8 @@
 
 // standard
 #include <cstdlib>
+#include <ranges>
+#include <utility>
 #include <vector>
 
 // seqan3
@@ -13,6 +15,8 @@
 #include "PreprocessParameters.hpp"
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
+#include "seqan3/contrib/std/zip_view.hpp"
+#include "seqan3/io/sequence_file/input.hpp"
 
 namespace pipelines::preprocess {
 

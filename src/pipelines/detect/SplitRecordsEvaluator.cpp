@@ -1,7 +1,12 @@
 #include "SplitRecordsEvaluator.hpp"
 
 // Standard
+#include <cassert>
 #include <cstddef>
+#include <cstdint>
+#include <cstdlib>
+#include <ostream>
+#include <variant>
 
 // seqan3
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
@@ -9,6 +14,10 @@
 // Internal
 #include "CustomSamTags.hpp"
 #include "Logger.hpp"
+#include "SplitRecords.hpp"
+#include "SplitRecordsComplementarityEvaluator.hpp"
+#include "SplitRecordsEvaluationParameters.hpp"
+#include "SplitRecordsHybridizationEvaluator.hpp"
 #include "SplitRecordsSplicingEvaluator.hpp"
 
 namespace pipelines::detect {
@@ -18,8 +27,7 @@ SplitRecordsEvaluator::SplitRecordsEvaluator(
                        SplitRecordsEvaluationParameters::SplicingParameters> &parameters)
     : parameters(parameters) {}
 
-auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords,
-                                     const std::deque<std::string> &referenceIDs) const
+auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords) const
     -> SplitRecordsEvaluator::Result {
     if (splitRecords.size() != 2) {
         Logger::log<LogLevel::DEBUG>("Currently only two split records are supported!");
@@ -39,8 +47,7 @@ auto SplitRecordsEvaluator::evaluate(SplitRecords &splitRecords,
     }
 
     return evaluateSplicing(
-        splitRecords, referenceIDs,
-        std::get<SplitRecordsEvaluationParameters::SplicingParameters>(parameters));
+        splitRecords, std::get<SplitRecordsEvaluationParameters::SplicingParameters>(parameters));
 }
 
 auto SplitRecordsEvaluator::evaluateBase(
@@ -69,11 +76,11 @@ auto SplitRecordsEvaluator::evaluateBase(
 }
 
 auto SplitRecordsEvaluator::evaluateSplicing(
-    SplitRecords &splitRecords, const std::deque<std::string> &referenceIDs,
+    SplitRecords &splitRecords,
     const SplitRecordsEvaluationParameters::SplicingParameters &parameters)
     -> SplitRecordsEvaluator::Result {
     const auto isSplicing =
-        SplitRecordsSplicingEvaluator::isSplicedSplitRecord(splitRecords, referenceIDs, parameters);
+        SplitRecordsSplicingEvaluator::isSplicedSplitRecord(splitRecords, parameters);
 
     if (isSplicing) {
         return SplitRecordsEvaluator::FilterReason::SPLICING;

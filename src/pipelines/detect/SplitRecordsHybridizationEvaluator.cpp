@@ -2,6 +2,7 @@
 
 // Standard
 #include <cassert>
+#include <cstdlib>
 #include <memory>
 #include <optional>
 #include <string>
@@ -24,6 +25,7 @@
 #include "Logger.hpp"
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
+#include "seqan3/alphabet/structure/dot_bracket3.hpp"
 
 namespace pipelines::detect {
 

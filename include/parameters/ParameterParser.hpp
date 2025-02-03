@@ -21,6 +21,7 @@
 namespace po = boost::program_options;
 
 namespace pipelines {
+
 class ParameterParser {
    public:
     using ParametersVariant =

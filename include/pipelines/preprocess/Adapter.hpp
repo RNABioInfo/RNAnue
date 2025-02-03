@@ -3,6 +3,7 @@
 // Standard
 #include <ostream>
 #include <string>
+#include <variant>
 #include <vector>
 
 // seqan3
@@ -12,6 +13,7 @@
 #include <seqan3/utility/range/to.hpp>
 
 // Internal
+#include "Logger.hpp"
 #include "PreprocessParameters.hpp"
 #include "TrimConfig.hpp"
 #include "VariantOverload.hpp"
@@ -32,14 +34,18 @@ struct Adapter {
             if (sequence.size() == 0) {
                 return;
             }
-            adapters.push_back(Adapter{sequence, maxMissMatchFraction, trimmingMode});
+            adapters.push_back(Adapter{.sequence = sequence,
+                                       .maxMissMatchFraction = maxMissMatchFraction,
+                                       .trimmingMode = trimmingMode});
         };
 
         auto addAdapterFromFile = [&adapters, &trimmingMode,
                                    maxMissMatchFraction](const std::string &filePath) {
             seqan3::sequence_file_input adapterFile{filePath};
             for (const auto &record : adapterFile) {
-                adapters.push_back(Adapter{record.sequence(), maxMissMatchFraction, trimmingMode});
+                adapters.push_back(Adapter{.sequence = record.sequence(),
+                                           .maxMissMatchFraction = maxMissMatchFraction,
+                                           .trimmingMode = trimmingMode});
             }
         };
 
@@ -57,7 +63,7 @@ struct Adapter {
     }
 };
 
-inline std::ostream &operator<<(std::ostream &outputStream, const Adapter &adapter) {
+inline auto operator<<(std::ostream &outputStream, const Adapter &adapter) -> std::ostream & {
     outputStream << (adapter.sequence | seqan3::views::to_char | seqan3::ranges::to<std::string>())
                  << " ";
     return outputStream;

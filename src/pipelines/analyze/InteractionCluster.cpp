@@ -1,12 +1,50 @@
 #include "InteractionCluster.hpp"
 
+// Standard
 #include <algorithm>
+#include <cassert>
+#include <cmath>
+#include <cstdint>
+#include <cstdlib>
+#include <numeric>
 #include <ostream>
+#include <string>
+#include <utility>
+#include <vector>
 
-#include "InteractionSegment.hpp"
+// Internal
+#include "GenomicOrientation.hpp"
+#include "GenomicStrandSpecificity.hpp"
+#include "Logger.hpp"
+#include "RecordFragment.hpp"
+#include "SortedGenomicRegionPair.hpp"
 #include "Utility.hpp"
 
 namespace pipelines::analyze {
+
+InteractionCluster::InteractionCluster(SortedGenomicRegionPair sortedSegments,
+                                       std::vector<std::string> recordIDs,
+                                       std::vector<double> complementarityScores,
+                                       std::vector<double> hybridizationEnergies,
+                                       std::vector<int32_t> crosslinkingSiteCounts)
+    : sortedSegments(sortedSegments),
+      recordIDs(std::move(recordIDs)),
+      complementarityScores(std::move(complementarityScores)),
+      maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
+      hybridizationEnergies(std::move(hybridizationEnergies)),
+      minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
+      crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {}
+
+InteractionCluster::InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
+                                       double complementarityScore, double hybridizationEnergy,
+                                       int crosslinkingSiteCount)
+    : sortedSegments(sortedSegments),
+      recordIDs({std::move(recordID)}),
+      complementarityScores({complementarityScore}),
+      maxComplementarityScore(complementarityScore),
+      hybridizationEnergies({hybridizationEnergy}),
+      minHybridizationEnergy(hybridizationEnergy),
+      crosslinkingSiteCounts({crosslinkingSiteCount}) {}
 
 auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment,
                                              const RecordFragment &secondFragment)
@@ -16,45 +54,31 @@ auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment
     assert(firstFragment.hybridizationEnergy == secondFragment.hybridizationEnergy);
     assert(firstFragment.crosslinkingSiteCount == secondFragment.crosslinkingSiteCount);
 
-    InteractionSegment firstSegment = {std::min(firstFragment, secondFragment)};
-    InteractionSegment secondSegment = {std::max(firstFragment, secondFragment)};
-
-    return {firstSegment,
-            secondSegment,
+    return {{firstFragment.genomicRegion, secondFragment.genomicRegion},
             firstFragment.recordID,
             firstFragment.complementarityScore,
             firstFragment.hybridizationEnergy,
             firstFragment.crosslinkingSiteCount};
 }
 
-/**
- * @brief Less-than comparison operator for InteractionCluster.
- *
- * This operator compares two InteractionCluster objects based on the end position
- * of the second segment and the referenceIndexID. It returns true if the referenceIndexID is less
- * in the current object or the end position of the segment in the current object are
- * lexicographically less than those in the provided object.
- *
- * @param a The InteractionCluster object to compare with.
- * @return true if the current object is less than the provided object, false otherwise.
- */
-auto InteractionCluster::operator<(const InteractionCluster &other) const -> bool {
-    if (secondSegment.getReferenceIDIndex() < other.secondSegment.getReferenceIDIndex()) {
+auto InteractionCluster::operator<(const InteractionCluster &other) const noexcept -> bool {
+    if (getSecondSegment().getReferenceIDIndex() < other.getSecondSegment().getReferenceIDIndex()) {
         return true;
     }
-    if (secondSegment.getReferenceIDIndex() == other.secondSegment.getReferenceIDIndex()) {
-        return secondSegment.getEnd() < other.secondSegment.getEnd();
+
+    if (getSecondSegment().getReferenceIDIndex() ==
+        other.getSecondSegment().getReferenceIDIndex()) {
+        return getSecondSegment().getEnd() < other.getSecondSegment().getEnd();
     }
     return false;
 }
 
-auto InteractionCluster::operator>(const InteractionCluster &other) const -> bool {
+auto InteractionCluster::operator>(const InteractionCluster &other) const noexcept -> bool {
     return other < *this;
 }
 
-auto InteractionCluster::operator==(const InteractionCluster &other) const -> bool {
-    return firstSegment == other.firstSegment && secondSegment == other.secondSegment &&
-           recordIDs == other.recordIDs &&
+auto InteractionCluster::operator==(const InteractionCluster &other) const noexcept -> bool {
+    return sortedSegments == sortedSegments && recordIDs == other.recordIDs &&
            helper::vectorsApproxEqual(complementarityScores, other.complementarityScores) &&
            helper::vectorsApproxEqual(hybridizationEnergies, other.hybridizationEnergies) &&
            crosslinkingSiteCounts == other.crosslinkingSiteCounts;
@@ -63,53 +87,79 @@ auto InteractionCluster::operator==(const InteractionCluster &other) const -> bo
 auto InteractionCluster::isBefore(const InteractionCluster &other) const noexcept -> bool {
     return (getSecondSegment().getReferenceIDIndex() <
             other.getSecondSegment().getReferenceIDIndex()) ||
-           (getSecondSegment().getEnd() < other.getSecondSegment().getStart());
+           (getSecondSegment().getReferenceIDIndex() ==
+                other.getSecondSegment().getReferenceIDIndex() &&
+            getSecondSegment().getEnd() < other.getSecondSegment().getStart());
 };
 
-auto InteractionCluster::overlaps(const InteractionCluster &other,
-                                  const int graceDistance) const noexcept -> bool {
-    return firstSegment.overlaps(other.firstSegment, graceDistance) &&
-           secondSegment.overlaps(other.secondSegment, graceDistance);
+auto InteractionCluster::overlapsWithTolerance(const InteractionCluster &other,
+                                               const GenomicStrandSpecificity strandSpecificity,
+                                               const int tolerance) const noexcept -> bool {
+    return sortedSegments.firstRegion.overlapsWithTolerance(
+               other.getFirstSegment(), overlapOrientation(strandSpecificity), tolerance) &&
+           sortedSegments.secondRegion.overlapsWithTolerance(
+               other.getSecondSegment(), overlapOrientation(strandSpecificity), tolerance);
 }
 
-auto InteractionCluster::segmentsMaxOverlapFraction() const noexcept -> double {
-    return std::max(firstSegment.overlapFraction(secondSegment),
-                    secondSegment.overlapFraction(firstSegment));
+auto InteractionCluster::overlapsWithShortestSegmentFraction(
+    const InteractionCluster &other, const GenomicStrandSpecificity strandSpecificity,
+    float shortestOverlapFraction) const noexcept -> bool {
+    return sortedSegments.firstRegion.overlapsWithShortestSegmentFraction(
+               other.getFirstSegment(), overlapOrientation(strandSpecificity),
+               shortestOverlapFraction) &&
+           sortedSegments.secondRegion.overlapsWithShortestSegmentFraction(
+               other.getSecondSegment(), overlapOrientation(strandSpecificity),
+               shortestOverlapFraction);
 }
 
-void InteractionCluster::merge(const InteractionCluster &other) {
-    assert(firstSegment.getReferenceIDIndex() == other.firstSegment.getReferenceIDIndex());
-    assert(secondSegment.getReferenceIDIndex() == other.secondSegment.getReferenceIDIndex());
-    assert(firstSegment.getStrand() == other.firstSegment.getStrand());
-    assert(secondSegment.getStrand() == other.secondSegment.getStrand());
+auto InteractionCluster::segmentsMaxSelfOverlapFraction() const noexcept -> double {
+    return std::max(
+        getFirstSegment().overlapFraction(getSecondSegment(), GenomicOrientation::SAME),
+        getSecondSegment().overlapFraction(getFirstSegment(), GenomicOrientation::SAME));
+}
 
-    firstSegment.merge(other.firstSegment);
-    secondSegment.merge(other.secondSegment);
+auto InteractionCluster::merge(const InteractionCluster &other,
+                               const GenomicStrandSpecificity &strandSpecificity) noexcept -> bool {
+    if (!sortedSegments.merge(other.sortedSegments, strandSpecificity)) [[unlikely]] {
+        Logger::log<LogLevel::WARNING>("Could not merge interaction clusters:\n", *this, other);
+        return false;
+    }
 
-    maxComplementarityScore = std::max(maxComplementarityScore, other.maxComplementarityScore);
-    minHybridizationEnergy = std::min(minHybridizationEnergy, other.minHybridizationEnergy);
+    maxComplementarityScore = (std::max)(maxComplementarityScore, other.maxComplementarityScore);
+    minHybridizationEnergy = (std::min)(minHybridizationEnergy, other.minHybridizationEnergy);
 
-    recordIDs.reserve(recordIDs.size() + other.recordIDs.size());
-    recordIDs.insert(recordIDs.end(), std::make_move_iterator(other.recordIDs.begin()),
-                     std::make_move_iterator(other.recordIDs.end()));
+    {
+        const auto oldSize = recordIDs.size();
+        const auto otherSize = other.recordIDs.size();
+        recordIDs.resize(oldSize + otherSize);
+        std::ranges::move(other.recordIDs, recordIDs.begin() + static_cast<long>(oldSize));
+    }
 
-    complementarityScores.reserve(complementarityScores.size() +
-                                  other.complementarityScores.size());
-    complementarityScores.insert(complementarityScores.end(),
-                                 std::make_move_iterator(other.complementarityScores.begin()),
-                                 std::make_move_iterator(other.complementarityScores.end()));
+    {
+        const auto oldSize = complementarityScores.size();
+        const auto otherSize = other.complementarityScores.size();
+        complementarityScores.resize(oldSize + otherSize);
+        std::ranges::move(other.complementarityScores,
+                          complementarityScores.begin() + static_cast<long>(oldSize));
+    }
 
-    hybridizationEnergies.reserve(hybridizationEnergies.size() +
-                                  other.hybridizationEnergies.size());
-    hybridizationEnergies.insert(hybridizationEnergies.end(),
-                                 std::make_move_iterator(other.hybridizationEnergies.begin()),
-                                 std::make_move_iterator(other.hybridizationEnergies.end()));
+    {
+        const auto oldSize = hybridizationEnergies.size();
+        const auto otherSize = other.hybridizationEnergies.size();
+        hybridizationEnergies.resize(oldSize + otherSize);
+        std::ranges::move(other.hybridizationEnergies,
+                          hybridizationEnergies.begin() + static_cast<long>(oldSize));
+    }
 
-    crosslinkingSiteCounts.reserve(crosslinkingSiteCounts.size() +
-                                   other.crosslinkingSiteCounts.size());
-    crosslinkingSiteCounts.insert(crosslinkingSiteCounts.end(),
-                                  std::make_move_iterator(other.crosslinkingSiteCounts.begin()),
-                                  std::make_move_iterator(other.crosslinkingSiteCounts.end()));
+    {
+        const auto oldSize = crosslinkingSiteCounts.size();
+        const auto otherSize = other.crosslinkingSiteCounts.size();
+        crosslinkingSiteCounts.resize(oldSize + otherSize);
+        std::ranges::move(other.crosslinkingSiteCounts,
+                          crosslinkingSiteCounts.begin() + static_cast<long>(oldSize));
+    }
+
+    return true;
 }
 
 auto InteractionCluster::complementarityStatistics() const -> double {
@@ -143,7 +193,7 @@ auto operator<<(std::ostream &outputStream, const InteractionCluster &interactio
     -> std::ostream & {
     outputStream << "InteractionCluster:\n"
                  << "First segment: " << interactionCluster.getFirstSegment()
-                 << "\nSecond segment id: " << interactionCluster.getSecondSegment() << "\n"
+                 << "Second segment: " << interactionCluster.getSecondSegment()
                  << "Count: " << interactionCluster.fragmentCount() << "\n";
 
     for (const auto &recordID : interactionCluster.getRecordIDs()) {

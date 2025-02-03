@@ -1,19 +1,47 @@
 #include "Detect.hpp"
 
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <deque>
 #include <filesystem>
+#include <fstream>
 #include <functional>
 #include <future>
+#include <iterator>
+#include <memory>
+#include <optional>
+#include <stdexcept>
 #include <string>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <variant>
 #include <vector>
 
+// seqan3
+#include <seqan3/alphabet/cigar/cigar.hpp>
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
+#include <seqan3/alphabet/quality/phred42.hpp>
+#include <seqan3/io/sam_file/input.hpp>
+#include <seqan3/io/sam_file/output.hpp>
+#include <seqan3/io/sam_file/sam_flag.hpp>
+#include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
+
 // Internal
+#include "AsyncSplitRecordGroupBuffer.hpp"
 #include "Constants.hpp"
-#include "CustomSamTags.hpp"  // NOLINT
+#include "CustomSamTags.hpp"
+#include "DetectData.hpp"
+#include "DetectParameters.hpp"
 #include "DetectSample.hpp"
+#include "FeatureAnnotator.hpp"
+#include "GenomicRegion.hpp"
 #include "Logger.hpp"
+#include "SamRecord.hpp"
+#include "SplitRecords.hpp"
+#include "SplitRecordsEvaluationParameters.hpp"
+#include "SplitRecordsEvaluator.hpp"
 #include "Utility.hpp"
 
 using namespace dataTypes;
@@ -23,8 +51,16 @@ namespace pipelines::detect {
 void Detect::process(const DetectData& data) {
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
+    const ReferenceIDToIndexMap referenceIDToIndex =
+        annotation::loadReferenceIDToIndexMap(data.getInputFilePaths());
+    std::shared_ptr<const FeatureAnnotator> featureAnnotator{
+        std::make_shared<const FeatureAnnotator>(params.featuresInPath, referenceIDToIndex,
+                                                 params.featureTypes)};
+
+    splitRecordsEvaluator =
+        SplitRecordsEvaluator(getSplitRecordsEvaluatorParameters(params, featureAnnotator));
     for (const auto& sample : data.treatmentSamples) {
-        processSample(sample);
+        processSample(sample, featureAnnotator);
     }
 
     if (!data.controlSamples.has_value()) {
@@ -35,11 +71,12 @@ void Detect::process(const DetectData& data) {
     Logger::log(constants::pipelines::PROCESSING_CONTROL_MESSAGE);
 
     for (const auto& sample : data.controlSamples.value()) {
-        processSample(sample);
+        processSample(sample, featureAnnotator);
     }
 }
 
-void Detect::processSample(const DetectSample& sample) const {
+void Detect::processSample(const DetectSample& sample,
+                           std::shared_ptr<const FeatureAnnotator> featureAnnotator) const {
     Logger::log("Processing sample: ", sample.input.sampleName);
 
     const fs::path outputTmpDir = sample.output.outputSplitAlignmentsPath.parent_path() / "tmp";
@@ -65,7 +102,8 @@ void Detect::processSample(const DetectSample& sample) const {
     for (size_t i = 1; i < params.threadCount; ++i) {
         processResults.emplace_back(std::async(
             std::launch::async, &Detect::processRecordChunk, this, std::ref(outTmpDirs),
-            std::ref(recordInputBuffer), std::ref(referenceIDs), std::ref(referenceLengths)));
+            std::ref(recordInputBuffer), std::ref(referenceIDs), std::ref(referenceLengths),
+            std::make_shared<const FeatureAnnotator>(*featureAnnotator)));
     }
 
     Detect::Result mergedResults;
@@ -96,7 +134,9 @@ void Detect::processSample(const DetectSample& sample) const {
 auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
                                 AsyncGroupBufferType& recordInputBuffer,
                                 const std::deque<std::string>& refIDs,
-                                const std::vector<size_t>& refLengths) const -> Detect::Result {
+                                const std::vector<size_t>& refLengths,
+                                std::shared_ptr<const FeatureAnnotator> featureAnnotator) const
+    -> Detect::Result {
     const std::string chunkID = helper::getUUID();
 
     const fs::path splitsOutPath = outTmpDirs.outputTmpSplitsDir / (chunkID + ".bam");
@@ -123,17 +163,17 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
             return;
         }
 
-        const auto region = GenomicRegion::fromSamRecord(record, refIDs);
+        const auto region = GenomicRegion::fromSamRecord(record);
 
         if (!region) [[unlikely]] {
             return;
         }
 
         const auto bestFeature =
-            featureAnnotator.getBestOverlappingFeature(region.value(), params.featureOrientation);
+            featureAnnotator->getBestOverlappingFeature(region.value(), params.featureOrientation);
 
         if (bestFeature) {
-            singletonTranscriptCounts[bestFeature->id]++;
+            singletonTranscriptCounts[bestFeature->featureID]++;
         } else {
             unassignedContiguousOut.push_back(record);
         }
@@ -190,8 +230,7 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
             return invalidRecordHitGroups.contains(record.tags().get<"HI"_tag>());
         });
 
-        size_t fragmentsCount =
-            processReadRecords(validRecordsGroup, refIDs, splitsOut, multiSplitsOut);
+        size_t fragmentsCount = processReadRecords(validRecordsGroup, splitsOut, multiSplitsOut);
         totalSplitFragmentsCount += fragmentsCount;
     }
 
@@ -203,7 +242,8 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
             .removedDueToFragmentLength = removedDueToReadLength};
 }
 
-auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) const
+auto Detect::getSplitRecordsEvaluatorParameters(
+    const DetectParameters& params, std::shared_ptr<const FeatureAnnotator> featureAnnotator)
     -> SplitRecordsEvaluationParameters::ParameterVariant {
     if (params.removeSplicingEvents) {
         return SplitRecordsEvaluationParameters::SplicingParameters{
@@ -214,7 +254,8 @@ auto Detect::getSplitRecordsEvaluatorParameters(const DetectParameters& params) 
                                    params.includeWobbleBasePairsInCrosslinkingSites},
             .orientation = params.featureOrientation,
             .splicingTolerance = params.splicingTolerance,
-            .featureAnnotator = &featureAnnotator};
+            .allowAlternativeSplicing = params.allowAlternativeSplicing,
+            .featureAnnotator = std::move(featureAnnotator)};
     }
 
     return SplitRecordsEvaluationParameters::BaseParameters{
@@ -242,14 +283,13 @@ auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::
  * @param multiSplitsOut The output stream for multi split records.
  * @return The count of fragments for a specific record id.
  */
-auto Detect::processReadRecords(const std::vector<SamRecord>& readRecords,
-                                const std::deque<std::string>& referenceIDs, auto& splitsOut,
+auto Detect::processReadRecords(const std::vector<SamRecord>& readRecords, auto& splitsOut,
                                 auto& multiSplitsOut [[maybe_unused]]) const -> size_t {
     if (readRecords.empty()) {
         return 0;
     }
 
-    const auto splitRecords = getSplitRecords(readRecords, referenceIDs);
+    const auto splitRecords = getSplitRecords(readRecords);
 
     if (!splitRecords.has_value()) {
         return 0;
@@ -447,8 +487,7 @@ auto Detect::constructSplitRecords(const std::vector<SamRecord>& readRecords) co
  * @return An optional containing the best evaluated split records, or an empty
  * optional if no split records were found.
  */
-auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords,
-                             const std::deque<std::string>& referenceIDs) const
+auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords) const
     -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords> {
     std::unordered_map<size_t, std::vector<SamRecord>> recordHitGroups{};
     for (const auto& record : readRecords) {
@@ -458,7 +497,7 @@ auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords,
     std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords> bestSplitRecords{};
 
     const auto insertBestSplitRecords = [&](SplitRecords& splitRecords) {
-        const auto evaluationResult = splitRecordsEvaluator.evaluate(splitRecords, referenceIDs);
+        const auto evaluationResult = splitRecordsEvaluator->evaluate(splitRecords);
 
         if (std::holds_alternative<SplitRecordsEvaluator::EvaluatedSplitRecords>(
                 evaluationResult)) {

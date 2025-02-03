@@ -2,11 +2,12 @@
 
 // Standard
 #include <cstdint>
+#include <memory>
 #include <variant>
 
 // Internal
 #include "FeatureAnnotator.hpp"
-#include "Orientation.hpp"
+#include "GenomicOrientation.hpp"
 
 namespace SplitRecordsEvaluationParameters {
 struct BaseParameters {
@@ -18,9 +19,10 @@ struct BaseParameters {
 
 struct SplicingParameters {
     BaseParameters baseParameters;
-    annotation::Orientation orientation;
+    dataTypes::GenomicOrientation orientation;
     int32_t splicingTolerance;
-    const annotation::FeatureAnnotator* featureAnnotator;
+    bool allowAlternativeSplicing;
+    std::shared_ptr<const annotation::FeatureAnnotator> featureAnnotator;
 };
 
 using ParameterVariant = std::variant<SplitRecordsEvaluationParameters::BaseParameters,

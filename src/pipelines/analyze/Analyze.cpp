@@ -3,25 +3,55 @@
 // Standard
 #include <sys/stat.h>
 
+#include <cassert>
+#include <cstddef>
+#include <deque>
+#include <filesystem>
+#include <fstream>
+#include <ios>
+#include <limits>
+#include <memory>
+#include <sstream>
 #include <string>
+#include <unordered_map>
+#include <utility>
 #include <vector>
 
+// seqan3
+#include <seqan3/io/sam_file/input.hpp>
+
 // Internal
+#include "AnalyzeData.hpp"
+#include "AnalyzeSample.hpp"
 #include "Constants.hpp"
+#include "FeatureAnnotator.hpp"
 #include "FeatureWriter.hpp"
+#include "FileType.hpp"
+#include "GenomicRegion.hpp"
+#include "InteractionCluster.hpp"
 #include "InteractionsWriter.hpp"
+#include "Logger.hpp"
 #include "ParallelInteractionClusterGenerator.hpp"
+#include "SamRecord.hpp"
 #include "SplitRecordsParser.hpp"
 #include "StatisticEvaluator.hpp"
 
 namespace pipelines::analyze {
 
+using namespace annotation;
+
 // Analyze
 void Analyze::process(const AnalyzeData &data) {
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
+    const ReferenceIDToIndexMap referenceIDToIndex =
+        annotation::loadReferenceIDToIndexMap(data.getInputFilePaths());
+    std::shared_ptr<const FeatureAnnotator> featureAnnotator{
+        std::make_shared<const FeatureAnnotator>(parameters.featuresInPath, referenceIDToIndex,
+                                                 parameters.featureTypes)};
+
     for (const auto &sample : data.treatmentSamples) {
-        processSample(sample);
+        processSample(sample, featureAnnotator);
     }
 
     if (!data.controlSamples.has_value()) {
@@ -30,11 +60,12 @@ void Analyze::process(const AnalyzeData &data) {
     }
 
     for (const auto &sample : data.controlSamples.value()) {
-        processSample(sample);
+        processSample(sample, featureAnnotator);
     }
 }
 
-void Analyze::processSample(AnalyzeSample sample) {
+void Analyze::processSample(const AnalyzeSample &sample,
+                            std::shared_ptr<const FeatureAnnotator> featureAnnotator) {
     Logger::log("Processing sample: ", sample.input.sampleName);
 
     std::vector<InteractionCluster> clusters =
@@ -45,13 +76,8 @@ void Analyze::processSample(AnalyzeSample sample) {
     auto &header = splitsIn.header();
     const std::deque<std::string> &referenceIDs = header.ref_ids();
 
-    ParallelInteractionClusterGenerator clusterGenerator{
-        featureAnnotator,
-        referenceIDs,
-        {.featureOrientation = parameters.featureOrientation,
-         .maxOverlapFraction = parameters.maxOverlapFraction,
-         .minReadCount = parameters.minimumClusterReadCount,
-         .graceDistance = parameters.clusterDistanceThreshold}};
+    ParallelInteractionClusterGenerator clusterGenerator{std::move(featureAnnotator),
+                                                         parameters.getClusteringParameters()};
 
     auto mergingResult = clusterGenerator.mergeClusters(std::move(clusters), parameters.threadCount,
                                                         parameters.chunkSize);
@@ -74,7 +100,7 @@ void Analyze::processSample(AnalyzeSample sample) {
 
     annotation::FeatureWriter::write(
         mergingResult.supplementaryFeatureAnnotator.getFeatureTreeMap(),
-        sample.output.supplementaryFeaturesPath, annotation::FileType::GFF);
+        sample.output.supplementaryFeaturesPath, FileType::GFF);
 
     const InteractionsWriter::OutputPaths outputPaths{
         .interactionsOutputPath = sample.output.interactionsPath,
@@ -123,8 +149,7 @@ void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
     const auto annotationOrientation = parameters.featureOrientation;
 
     for (auto &&records : unassignedSingletonsIn) {
-        const auto region = dataTypes::GenomicRegion::fromSamRecord(
-            records, unassignedSingletonsIn.header().ref_ids());
+        const auto region = GenomicRegion::fromSamRecord(records);
 
         if (!region) {
             continue;
@@ -137,7 +162,12 @@ void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
             continue;
         }
 
-        const std::string &transcriptID = bestFeature->id;
+        const std::string &transcriptID = bestFeature->featureID;
+
+        if (!transcriptCounts.contains(bestFeature->featureID)) {
+            std::clog << *bestFeature;
+        }
+
         assert(transcriptCounts.contains(transcriptID));
         ++transcriptCounts[transcriptID];
     }

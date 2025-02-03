@@ -2,16 +2,20 @@
 
 // Standard
 #include <cstddef>
+#include <filesystem>
+#include <ranges>
 #include <utility>
 #include <vector>
 
 // seqan3
+#include <seqan3/io/sequence_file/input.hpp>
 #include <seqan3/io/views/async_input_buffer.hpp>
 
 // Internal
 #include "Adapter.hpp"
 #include "PreprocessParameters.hpp"
 #include "PreprocessSample.hpp"
+#include "TrimConfig.hpp"
 
 namespace pipelines::preprocess {
 

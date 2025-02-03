@@ -1,10 +1,17 @@
 #pragma once
 
 // Standard
+#include <cstddef>
+#include <cstdint>
 #include <map>
+#include <optional>
+#include <ostream>
+#include <span>
+#include <string>
+#include <utility>
+#include <vector>
 
 // seqan3
-#include <ostream>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/structure/dot_bracket3.hpp>
 #include <seqan3/alphabet/views/char_to.hpp>

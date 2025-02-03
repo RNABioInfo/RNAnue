@@ -1,8 +1,11 @@
 #pragma once
 
+// Standard
+#include <cstdint>
 #include <string>
 
 namespace annotation {
+
 class FileType {
    public:
     enum Value : uint8_t { GFF, GTF };
@@ -45,4 +48,5 @@ class FileType {
    private:
     Value value;
 };
+
 }  // namespace annotation

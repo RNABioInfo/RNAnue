@@ -2,6 +2,7 @@
 
 // Standard
 #include <cstddef>
+#include <filesystem>
 #include <ranges>
 #include <unordered_map>
 #include <vector>

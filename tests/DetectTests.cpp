@@ -74,8 +74,9 @@
 
 // TEST(DetectTest, TestExpectedSplitRecordsMismatch) {
 //     SamRecord mismatchRecord{/* Populate with data that should result in a mismatch between
-//     expected and actual splits */}; auto result =
-//     Detect::constructSplitRecords({mismatchRecord}); EXPECT_EQ(result, std::nullopt);
+//     expected and actual splits */};
+//     auto result = Detect::constructSplitRecords({mismatchRecord});
+//     EXPECT_EQ(result, std::nullopt);
 // }
 
 // TEST(DetectTest, TestMultipleRecords) {

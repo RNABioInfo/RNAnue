@@ -1,7 +1,12 @@
 #include "FeatureWriter.hpp"
 
+#include "FeatureAnnotator.hpp"
+#include "FileType.hpp"
+
 // Standard
 #include <fstream>
+#include <stdexcept>
+#include <string>
 
 namespace annotation {
 
@@ -23,16 +28,15 @@ void FeatureWriter::write(const FeatureTreeMap &featureTreeMap, const std::strin
         for (const auto &interval : tree.intervals()) {
             const auto &feature = interval.data;
             outputFile << referenceID << '\t' << "." << '\t' << feature.type << '\t'
-                       << feature.startPosition + 1 << '\t' << feature.endPosition + 1 << '\t'
-                       << "." << '\t'
-                       << (feature.strand == dataTypes::GenomicStrand::FORWARD ? '+' : '-') << '\t'
-                       << "." << '\t';
+                       << feature.genomicRegion.getStart() + 1 << '\t'
+                       << feature.genomicRegion.getEnd() << '\t' << "." << '\t'
+                       << feature.genomicRegion.getStrand() << '\t' << "." << '\t';
 
             // Attributes field
             if (fileType == FileType::GFF) {
-                outputFile << "ID=" << feature.id;
+                outputFile << "ID=" << feature.featureID;
             } else if (fileType == FileType::GTF) {
-                outputFile << "gene_id \"" << feature.id << "\"; ";
+                outputFile << "gene_id \"" << feature.featureID << "\"; ";
             }
             outputFile << '\n';
         }

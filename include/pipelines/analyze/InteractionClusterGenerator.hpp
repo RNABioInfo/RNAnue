@@ -2,7 +2,6 @@
 
 // Standard
 #include <cstddef>
-#include <deque>
 #include <forward_list>
 #include <memory>
 #include <string>
@@ -15,33 +14,50 @@
 #include "AnnotatedInteractionCluster.hpp"
 #include "ClusteringParameters.hpp"
 #include "FeatureAnnotator.hpp"
-#include "GenomicRegion.hpp"
+#include "GenomicFeature.hpp"
 #include "InteractionCluster.hpp"
 #include "PartiallyAnnotatedInteractionCluster.hpp"
 
 namespace pipelines::analyze {
 
+using AnnotatedInteractionClusters = std::vector<AnnotatedInteractionCluster>;
+using PartiallyAnnotatedClusters = std::vector<PartiallyAnnotatedInteractionCluster>;
+using FeatureCountsByFeatureID = std::unordered_map<std::string, size_t>;
+
+using namespace annotation;
+
 class InteractionClusterGenerator {
    public:
-    using AnnotatedInteractionClusters = std::vector<AnnotatedInteractionCluster>;
-    using FeatureCounts = std::unordered_map<std::string, size_t>;
+    InteractionClusterGenerator(std::shared_ptr<const FeatureAnnotator> featureAnnotator,
+                                ClusteringParameters parameters) noexcept
+        : parameters(parameters), featureAnnotator(std::move(featureAnnotator)) {}
 
     struct Result {
         AnnotatedInteractionClusters finishedClusters;
-        std::vector<PartiallyAnnotatedInteractionCluster> partiallyAnnotatedClusters;
-        std::vector<GenomicRegion> supplementaryFeatureRegions;
-        FeatureCounts featureCounts;
-        size_t includedClusterCount;
-        size_t excludedClusterCount;
+        PartiallyAnnotatedClusters partiallyAnnotatedClusters;
+        FeatureMap supplementaryFeatureMap;
+        FeatureCountsByFeatureID featureCounts;
+        size_t includedClusterCount{0};
+        size_t excludedClusterCount{0};
+
+        void merge(Result&& other) noexcept;
+
+        [[nodiscard]] constexpr auto totalClusterCount() const noexcept -> size_t {
+            return includedClusterCount + excludedClusterCount;
+        };
     };
 
-    InteractionClusterGenerator(std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator,
-                                std::deque<std::string> referenceIDs,
-                                ClusteringParameters parameters) noexcept
-        : parameters(parameters),
-          featureAnnotator(std::move(featureAnnotator)),
-          referenceIDs(std::move(referenceIDs)) {}
-
+    /**
+     * @brief Merges overlapping interaction clusters and returns these.
+     *
+     * This function takes a sorted list of interaction clusters,
+     * and merges any overlapping clusters. This is done from back to front while closing clusters
+     * that are further back than the current cluster.
+     *
+     * @param clusters A forwaring reference to the sorted list of interaction clusters to be
+     * merged.
+     * @return A list of finalized interaction clusters.
+     */
     auto mergeClusters(std::vector<InteractionCluster>&& clusters) -> Result;
 
    private:
@@ -50,22 +66,33 @@ class InteractionClusterGenerator {
     AnnotatedInteractionClusters finishedClusters;
     std::vector<PartiallyAnnotatedInteractionCluster> partiallyAnnotatedClusters;
 
-    std::vector<GenomicRegion> supplementaryFeatureRegions;
+    FeatureMap supplementaryFeatureRegions;
 
     std::forward_list<InteractionCluster> openClusterQueue;
 
-    std::shared_ptr<annotation::FeatureAnnotator> featureAnnotator;
-    std::deque<std::string> referenceIDs;
+    std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 
-    FeatureCounts featureCounts;
+    FeatureCountsByFeatureID featureCountsByFeatureID;
 
     size_t includedClusterCount = 0;
     size_t excludedClusterCount = 0;
 
-    void finalizeCluster(InteractionCluster&& cluster) noexcept;
+    [[nodiscard]] static auto clustersOverlap(const InteractionCluster& cluster1,
+                                              const InteractionCluster& cluster2,
+                                              const ClusteringParameters& parameters) noexcept
+        -> bool;
 
-    auto annotateCluster(InteractionCluster&& cluster) noexcept
+    [[nodiscard]] auto clusterPassesFilters(const InteractionCluster& cluster) const noexcept
+        -> bool;
+
+    [[nodiscard]] auto annotateCluster(InteractionCluster&& cluster) noexcept
         -> std::variant<AnnotatedInteractionCluster, PartiallyAnnotatedInteractionCluster>;
+
+    void attributeCluster(AnnotatedInteractionCluster&& cluster) noexcept;
+
+    void attributeCluster(PartiallyAnnotatedInteractionCluster&& cluster) noexcept;
+
+    void finalizeCluster(InteractionCluster&& cluster) noexcept;
 };
 
 }  // namespace pipelines::analyze

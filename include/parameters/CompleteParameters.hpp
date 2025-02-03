@@ -13,6 +13,7 @@
 namespace po = boost::program_options;
 
 namespace pipelines {
+
 struct CompleteParameters {
     preprocess::PreprocessParameters preprocessParameters;
     align::AlignParameters alignParameters;

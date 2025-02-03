@@ -1,64 +1,73 @@
 #include <gtest/gtest.h>
 
+// seqan3
+#include <memory>
+#include <optional>
+#include <ostream>
 #include <seqan3/alignment/cigar_conversion/alignment_from_cigar.hpp>
 #include <seqan3/core/debug_stream.hpp>
 #include <seqan3/io/sam_file/all.hpp>
 #include <seqan3/io/sam_file/input.hpp>
 #include <seqan3/utility/type_list/type_list.hpp>
-#include <sstream>
 
+// Internal
 #include "FeatureAnnotator.hpp"
+#include "GenomicFeature.hpp"
+#include "GenomicOrientation.hpp"
+#include "GenomicRegion.hpp"
+#include "GenomicStrand.hpp"
 #include "ParseSamRecords.hpp"
+#include "Region.hpp"
+#include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
 #include "SplitRecordsSplicingEvaluator.hpp"
+
+using dataTypes::FeatureMap;
 
 using namespace seqan3::literals;
 
 struct IsSplicedTestParam {
     SplitRecords splitRecords;
     bool isSpliced;
+    bool allowAltsplice;
+    dataTypes::GenomicOrientation annotationOrientatation;
 };
 
-class EvaluatedSplitRecordsTests : public testing::TestWithParam<IsSplicedTestParam> {
+class SplitRecordSplicingEvaluatorTests : public testing::TestWithParam<IsSplicedTestParam> {
    protected:
-    EvaluatedSplitRecordsTests() : featureAnnotator(featureMap) {};
+    SplitRecordSplicingEvaluatorTests()
+        : featureAnnotator(std::make_shared<const FeatureAnnotator>(featureMap)) {};
 
-    const std::deque<std::string> referenceIDs = {"chromosome1"};
+    const FeatureMap featureMap = {
+        {0,
+         {GenomicFeature{
+              .type = "exon",
+              .genomicRegion = GenomicRegion{0, Region{.startPosition = 1, .endPosition = 9},
+                                             GenomicStrand::FORWARD},
+              .featureID = "exon1",
+              .groupID = "gene1",
+              .geneName = std::nullopt},
+          {.type = "exon",
+           .genomicRegion = GenomicRegion{0, Region{.startPosition = 19, .endPosition = 30},
+                                          GenomicStrand::FORWARD},
+           .featureID = "exon2",
+           .groupID = "gene1",
+           .geneName = std::nullopt},
+          {.type = "exon",
+           .genomicRegion = GenomicRegion{0, Region{.startPosition = 39, .endPosition = 50},
+                                          GenomicStrand::FORWARD},
+           .featureID = "exon3",
+           .groupID = "gene1",
+           .geneName = std::nullopt}}}};
 
-    const dataTypes::FeatureMap featureMap = {{"chromosome1",
-                                               {{.referenceID = "chromosome1",
-                                                 .type = "exon",
-                                                 .startPosition = 1,
-                                                 .endPosition = 10,
-                                                 .strand = dataTypes::GenomicStrand::FORWARD,
-                                                 .id = "exon1",
-                                                 .groupID = "gene1",
-                                                 .geneName = std::nullopt},
-                                                {.referenceID = "chromosome1",
-                                                 .type = "exon",
-                                                 .startPosition = 20,
-                                                 .endPosition = 30,
-                                                 .strand = dataTypes::GenomicStrand::FORWARD,
-                                                 .id = "exon2",
-                                                 .groupID = "gene1",
-                                                 .geneName = std::nullopt},
-                                                {.referenceID = "chromosome1",
-                                                 .type = "exon",
-                                                 .startPosition = 40,
-                                                 .endPosition = 50,
-                                                 .strand = dataTypes::GenomicStrand::FORWARD,
-                                                 .id = "exon3",
-                                                 .groupID = "gene1",
-                                                 .geneName = std::nullopt}}}};
-
-    annotation::FeatureAnnotator featureAnnotator;
+    std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 };
 
 const auto noSpliceRaw = R"(
 @HD     VN:1.6
 @SQ     SN:chromosome1 LN:100
 SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
-SRR18331301.232	0	chromosome1	10	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
+SRR18331301.232	0	chromosome1	15	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
 const auto spliceRaw = R"(
@@ -68,18 +77,25 @@ SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 SRR18331301.232	0	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
+const auto noSpliceRevStrand = R"(
+@HD     VN:1.6
+@SQ     SN:chromosome1 LN:100
+SRR18331301.231	16	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
+SRR18331301.232	16	chromosome1	20	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
+)";
+
 const auto noSpliceInBetweenExonRaw = R"(
 @HD     VN:1.6
 @SQ     SN:chromosome1 LN:100
 SRR18331301.231	0	chromosome1	5	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
-SRR18331301.232	0	chromosome1	41	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
+SRR18331301.232	0	chromosome1	40	20	5M	*	0	0	ATCGC	@@@@@	AS:i:0	XS:i:0
 )";
 
-void PrintTo(const IsSplicedTestParam& param, std::ostream* os) {
-    *os << "IsSplicedTestParam{.isSpliced = " << param.isSpliced << "}";
+void PrintTo(const IsSplicedTestParam& param, std::ostream* ostream) {
+    *ostream << "IsSplicedTestParam{.isSpliced = " << param.isSpliced << "}";
 };
 
-TEST_P(EvaluatedSplitRecordsTests, IsSplicedSplitRecord) {
+TEST_P(SplitRecordSplicingEvaluatorTests, IsSplicedSplitRecord) {
     const IsSplicedTestParam& param = GetParam();
 
     const SplitRecordsEvaluationParameters::SplicingParameters splicingParameters = {
@@ -89,20 +105,44 @@ TEST_P(EvaluatedSplitRecordsTests, IsSplicedSplitRecord) {
                 .minComplementarityFraction = 0.9,
                 .mfeThreshold = 10,
                 .includeWobbleBasePairsInCrosslinkingSites = true},
-        .orientation = annotation::Orientation::BOTH,
+        .orientation = param.annotationOrientatation,
         .splicingTolerance = 0,
-        .featureAnnotator = &featureAnnotator};
+        .allowAlternativeSplicing = param.allowAltsplice,
+        .featureAnnotator = featureAnnotator};
 
-    const auto isSpliced = SplitRecordsSplicingEvaluator::isSplicedSplitRecord(
-        param.splitRecords, referenceIDs, splicingParameters);
+    const auto isSpliced =
+        SplitRecordsSplicingEvaluator::isSplicedSplitRecord(param.splitRecords, splicingParameters);
 
     EXPECT_EQ(isSpliced, param.isSpliced);
 };
 
 INSTANTIATE_TEST_SUITE_P(
-    Default, EvaluatedSplitRecordsTests,
-    testing::Values(
-        IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceRaw), .isSpliced = false},
-        IsSplicedTestParam{.splitRecords = parseSamRecords(spliceRaw), .isSpliced = true},
-        IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceInBetweenExonRaw),
-                           .isSpliced = false}));
+    Default, SplitRecordSplicingEvaluatorTests,
+    testing::Values(IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceRaw),
+                                       .isSpliced = false,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::SAME},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(spliceRaw),
+                                       .isSpliced = true,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::SAME},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceRevStrand),
+                                       .isSpliced = false,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::SAME},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceRevStrand),
+                                       .isSpliced = true,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::BOTH},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceRevStrand),
+                                       .isSpliced = true,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::OPPOSITE},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceInBetweenExonRaw),
+                                       .isSpliced = false,
+                                       .allowAltsplice = false,
+                                       .annotationOrientatation = GenomicOrientation::SAME},
+                    IsSplicedTestParam{.splitRecords = parseSamRecords(noSpliceInBetweenExonRaw),
+                                       .isSpliced = true,
+                                       .allowAltsplice = true,
+                                       .annotationOrientatation = GenomicOrientation::SAME}));

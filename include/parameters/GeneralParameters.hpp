@@ -1,9 +1,12 @@
 #pragma once
 
 // Standard
+#include <algorithm>
 #include <climits>
 #include <cstddef>
 #include <filesystem>
+#include <optional>
+#include <sstream>
 #include <string>
 #include <unordered_set>
 
@@ -12,8 +15,8 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "GenomicOrientation.hpp"
 #include "Logger.hpp"
-#include "Orientation.hpp"
 #include "ParameterValidator.hpp"
 
 namespace po = boost::program_options;
@@ -25,7 +28,7 @@ class GeneralParameters {
 
     std::filesystem::path featuresInPath;
     std::unordered_set<std::string> featureTypes;
-    annotation::Orientation featureOrientation;
+    dataTypes::GenomicOrientation featureOrientation;
 
     LogLevel logLevel;
 
@@ -48,9 +51,9 @@ class GeneralParameters {
         -> std::optional<std::filesystem::path> {
         if ((params.count("ctrls") != 0U) && !params["ctrls"].as<std::string>().empty()) {
             return ParameterValidator::validateDirectory(params, "ctrls");
-        } else {
-            return std::nullopt;
         }
+
+        return std::nullopt;
     }
 
     static auto validateFeatureTypes(const po::variables_map& params)
@@ -59,9 +62,9 @@ class GeneralParameters {
 
         std::unordered_set<std::string> uniqueIncludedFeatures;
 
-        std::stringstream ss(featureTypesString);
+        std::stringstream stringStream(featureTypesString);
         std::string str;
-        while (getline(ss, str, ',')) {
+        while (getline(stringStream, str, ',')) {
             str.erase(remove_if(str.begin(), str.end(), isspace), str.end());
             uniqueIncludedFeatures.insert(str);
         }
@@ -70,8 +73,8 @@ class GeneralParameters {
     }
 
     static auto validateFeatureOrientation(const po::variables_map& params)
-        -> annotation::Orientation {
-        return params["orientation"].as<annotation::Orientation>();
+        -> dataTypes::GenomicOrientation {
+        return params["orientation"].as<dataTypes::GenomicOrientation>();
     }
 
     static auto validateLogLevel(const po::variables_map& params) -> LogLevel {
@@ -79,15 +82,17 @@ class GeneralParameters {
 
         if (logLevelStr == "debug" || logLevelStr == "DEBUG") {
             return LogLevel::DEBUG;
-        } else if (logLevelStr == "info" || logLevelStr == "INFO") {
-            return LogLevel::INFO;
-        } else if (logLevelStr == "warning" || logLevelStr == "WARNING") {
-            return LogLevel::WARNING;
-        } else if (logLevelStr == "error" || logLevelStr == "ERROR") {
-            return LogLevel::ERROR;
-        } else {
-            Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Invalid log level specified.");
+        }
+        if (logLevelStr == "info" || logLevelStr == "INFO") {
             return LogLevel::INFO;
         }
+        if (logLevelStr == "warning" || logLevelStr == "WARNING") {
+            return LogLevel::WARNING;
+        }
+        if (logLevelStr == "error" || logLevelStr == "ERROR") {
+            return LogLevel::ERROR;
+        }
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Invalid log level specified.");
+        return LogLevel::INFO;
     }
 };

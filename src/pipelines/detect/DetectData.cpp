@@ -2,8 +2,12 @@
 
 // Standard
 #include <filesystem>
+#include <stdexcept>
+#include <string>
+#include <vector>
 
 // Internal
+#include "DetectSample.hpp"
 #include "Logger.hpp"
 #include "Utility.hpp"
 
@@ -90,6 +94,23 @@ auto DetectData::retrieveInputSamples(const fs::path& parentDir) -> std::vector<
     }
 
     return samples;
+}
+
+auto DetectData::getInputFilePaths() const -> std::vector<fs::path> {
+    std::vector<fs::path> inputFilePaths;
+    inputFilePaths.reserve(treatmentSamples.size());
+
+    for (const auto& sample : treatmentSamples) {
+        inputFilePaths.push_back(sample.input.inputAlignmentsPath);
+    }
+
+    if (controlSamples) {
+        for (const auto& sample : controlSamples.value()) {
+            inputFilePaths.push_back(sample.input.inputAlignmentsPath);
+        }
+    }
+
+    return inputFilePaths;
 }
 
 }  // namespace pipelines::detect

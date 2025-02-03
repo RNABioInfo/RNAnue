@@ -1,8 +1,11 @@
 #pragma once
 
-// seqan3
+// Standard
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 #include <string>
+
+// seqan3
+#include <cstdint>
 
 using seqan3::operator""_tag;
 

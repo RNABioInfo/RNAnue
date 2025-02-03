@@ -4,9 +4,15 @@
 #include <algorithm>
 #include <chrono>
 #include <cmath>
+#include <concepts>
+#include <cstddef>
+#include <cstdint>
 #include <filesystem>
-#include <sstream>
+#include <iterator>
+#include <optional>
+#include <ranges>
 #include <string>
+#include <type_traits>
 #include <vector>
 
 // Boost
@@ -57,14 +63,21 @@ namespace fs = std::filesystem;
 void createTmpDir(const fs::path &subpath);
 void deleteDir(const fs::path &path);
 
-inline std::vector<std::string> splitString(const std::string &input, char delimiter) {
+[[nodiscard]] inline std::vector<std::string> splitString(const std::string &input,
+                                                          char delimiter) {
     std::vector<std::string> tokens;
+    tokens.reserve(std::count(input.begin(), input.end(), delimiter) + 1);
 
-    std::stringstream inputStream{input};
-    std::string currentToken;
-
-    while (getline(inputStream, currentToken, delimiter)) {
-        tokens.push_back(currentToken);
+    std::size_t start = 0;
+    while (true) {
+        std::size_t pos = input.find(delimiter, start);
+        if (pos == std::string::npos) {
+            // Last token
+            tokens.emplace_back(input.substr(start));
+            break;
+        }
+        tokens.emplace_back(input.substr(start, pos - start));
+        start = pos + 1;
     }
 
     return tokens;

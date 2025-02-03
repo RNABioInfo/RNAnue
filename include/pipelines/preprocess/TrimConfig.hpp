@@ -1,13 +1,14 @@
 #pragma once
 
 // seqan3
+#include <cstdint>
 #include <seqan3/alignment/configuration/align_config_method.hpp>
 
-namespace pipelines {
-namespace preprocess {
+namespace pipelines::preprocess {
+
 struct TrimConfig {
    public:
-    enum class Mode { FIVE_PRIME, THREE_PRIME };
+    enum class Mode : std::uint8_t { FIVE_PRIME, THREE_PRIME };
 
     /**
      * @brief Returns the semi-global alignment configuration for the given mode, assumes adapter as
@@ -37,5 +38,4 @@ struct TrimConfig {
         return config;
     }
 };
-}  // namespace preprocess
-}  // namespace pipelines
+}  // namespace pipelines::preprocess

@@ -2,11 +2,14 @@
 
 // Standard
 #include <filesystem>
+#include <iostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 // seqan3
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
+#include <seqan3/alphabet/quality/phred42.hpp>
 
 // Internal
 #include "DeduplicationConfig.hpp"
