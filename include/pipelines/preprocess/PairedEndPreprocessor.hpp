@@ -30,8 +30,8 @@ class PairedEndPreprocessor {
 
    private:
     using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
-        seqan::stl::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
-                                     std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
+        std::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
+                              std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
 
     struct ChunkResult {
         [[nodiscard]] auto getMergedRecords() const { return mergedRecords; }
