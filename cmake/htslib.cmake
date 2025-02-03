@@ -86,6 +86,7 @@ else()
             list(APPEND deps_LIB ${zlib_LIBRARIES} ${CMAKE_BINARY_DIR}/submodules/zlib-install/lib/libz.a)
         endif()
     endif()
+
     list(APPEND deps_LIB ${zlib_LIBRARIES})
 
     ExternalProject_Add(
@@ -95,7 +96,7 @@ else()
         URL https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
         BUILD_IN_SOURCE 1
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} CPPFLAGS=-I${CMAKE_BINARY_DIR}/submodules/zlib-install/include/ LDFLAGS=-L${CMAKE_BINARY_DIR}/submodules/zlib-install/lib/
+        CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} ${LOCAL_ZLIB_CONFIG}
         BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
         INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
   )
