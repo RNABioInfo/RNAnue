@@ -8,6 +8,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
+#include <iostream>
 #include <iterator>
 #include <mutex>
 #include <queue>
@@ -18,6 +19,7 @@
 
 // Internal
 #include "FeatureAnnotator.hpp"
+#include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
@@ -127,12 +129,12 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     }
 
     FeatureAnnotator supplementaryFeatureAnnotator{clusteringResults.supplementaryFeatureMap};
+
     supplementaryFeatureAnnotator.mergeIndexAllOverlappingFeatures(
         {parameters.featureOrientation.strandSpecificity(), 1});
 
     annotatePartiallyAnnotatedClusters(supplementaryFeatureAnnotator);
 
-    logClusteringStatus();
     Logger::log("Finished clustering");
 
     return {.annotatedClusters = std::move(clusteringResults.finishedClusters),
@@ -144,7 +146,8 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
     const FeatureAnnotator& supplementaryFeatureAnnotator) noexcept {
     auto getSupplementaryFeatureIDForSegment = [&](const GenomicRegion& segment) -> std::string {
         const auto features = supplementaryFeatureAnnotator.getOverlappingFeatures(
-            segment, parameters.featureOrientation);
+            segment,
+            GenomicOrientation::fromStrandSpecificity(parameters.clusterMergingStrandSpecificity));
 
         assert((features.size() == 1) &&
                "All segments should be annotated and should have a unique feature associated");
