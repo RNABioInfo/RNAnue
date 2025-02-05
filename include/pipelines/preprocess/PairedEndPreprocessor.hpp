@@ -29,9 +29,15 @@ class PairedEndPreprocessor {
     void process(const PreprocessSamplePaired& sample) const;
 
    private:
+#if defined __cpp_lib_ranges_zip && !defined(__clang__)
     using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
         std::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
                               std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
+#else
+    using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
+        seqan::stl::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
+                                     std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
+#endif
 
     struct ChunkResult {
         [[nodiscard]] auto getMergedRecords() const { return mergedRecords; }
