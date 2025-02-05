@@ -20,7 +20,7 @@ struct RecordFragment {
     GenomicRegion genomicRegion;
     double complementarityScore;
     double hybridizationEnergy;
-    int32_t crosslinkingSiteCount;
+    int32_t interCrosslinkingSiteCount;
 
     [[nodiscard]] static auto fromSamRecord(const SamRecord &record)
         -> std::optional<RecordFragment>;

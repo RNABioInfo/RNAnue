@@ -16,7 +16,6 @@
 #include "GenomicOrientation.hpp"
 #include "GenomicStrandSpecificity.hpp"
 #include "Logger.hpp"
-#include "RecordFragment.hpp"
 #include "SortedGenomicRegionPair.hpp"
 #include "Utility.hpp"
 
@@ -45,21 +44,6 @@ InteractionCluster::InteractionCluster(SortedGenomicRegionPair sortedSegments, s
       hybridizationEnergies({hybridizationEnergy}),
       minHybridizationEnergy(hybridizationEnergy),
       crosslinkingSiteCounts({crosslinkingSiteCount}) {}
-
-auto InteractionCluster::fromRecordFragments(const RecordFragment &firstFragment,
-                                             const RecordFragment &secondFragment)
-    -> InteractionCluster {
-    assert(firstFragment.recordID == secondFragment.recordID);
-    assert(firstFragment.complementarityScore == secondFragment.complementarityScore);
-    assert(firstFragment.hybridizationEnergy == secondFragment.hybridizationEnergy);
-    assert(firstFragment.crosslinkingSiteCount == secondFragment.crosslinkingSiteCount);
-
-    return {{firstFragment.genomicRegion, secondFragment.genomicRegion},
-            firstFragment.recordID,
-            firstFragment.complementarityScore,
-            firstFragment.hybridizationEnergy,
-            firstFragment.crosslinkingSiteCount};
-}
 
 auto InteractionCluster::operator<(const InteractionCluster &other) const noexcept -> bool {
     if (getSecondSegment().getReferenceIDIndex() < other.getSecondSegment().getReferenceIDIndex()) {

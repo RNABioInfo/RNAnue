@@ -29,13 +29,13 @@ auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<Rec
 
     const double hybridizationEnergy = record.tags().get<"XE"_tag>();
     const double complementarityScore = record.tags().get<"XC"_tag>();
-    const int32_t crosslinkingSiteCount = record.tags().get<"XO"_tag>();
+    const int32_t interCrosslinkingSiteCount = record.tags().get<"XO"_tag>();
 
     return RecordFragment{.recordID = record.id(),
                           .genomicRegion = *genomicRegion,
                           .complementarityScore = complementarityScore,
                           .hybridizationEnergy = hybridizationEnergy,
-                          .crosslinkingSiteCount = crosslinkingSiteCount};
+                          .interCrosslinkingSiteCount = interCrosslinkingSiteCount};
 }
 
 auto RecordFragment::toFeature(const std::string &featureID, const std::string &featureType) const

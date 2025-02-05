@@ -1,6 +1,7 @@
 #pragma once
 
 // Standard
+#include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <ostream>
@@ -31,8 +32,21 @@ class InteractionCluster {
 
     InteractionCluster() = delete;
 
-    static auto fromRecordFragments(const RecordFragment &firstFragment,
-                                    const RecordFragment &secondFragment) -> InteractionCluster;
+    static constexpr auto fromRecordFragments(const RecordFragment &firstFragment,
+                                              const RecordFragment &secondFragment) noexcept
+        -> InteractionCluster {
+        assert((firstFragment.recordID == secondFragment.recordID) &&
+               (firstFragment.complementarityScore == secondFragment.complementarityScore) &&
+               (firstFragment.hybridizationEnergy == secondFragment.hybridizationEnergy) &&
+               (firstFragment.interCrosslinkingSiteCount ==
+                secondFragment.interCrosslinkingSiteCount));
+
+        return {{firstFragment.genomicRegion, secondFragment.genomicRegion},
+                firstFragment.recordID,
+                firstFragment.complementarityScore,
+                firstFragment.hybridizationEnergy,
+                firstFragment.interCrosslinkingSiteCount};
+    };
 
     // Getters
     [[nodiscard]] auto getFirstSegment() const -> const GenomicRegion & {

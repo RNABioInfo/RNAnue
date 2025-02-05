@@ -70,11 +70,12 @@ void InteractionsWriter::writeInteractions(
 }
 
 void InteractionsWriter::writeInteractionsHeader(std::ofstream& interactionsOut) {
-    interactionsOut << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strd\tfst_seg_strt\tfst_seg_"
-                       "end\tsec_feat_id\t"
-                       "sec_seg_chr\tsec_seg_strd\tsec_seg_strt\tsec_seg_end\tno_splits\tmean_"
-                       "crosslinks\tsd_crosslinks\t"
-                       "gcs\tghs\tp_value\tpadj_value\n";
+    interactionsOut
+        << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strd\tfst_seg_strt\tfst_seg_"
+           "end\tsec_feat_id\t"
+           "sec_seg_chr\tsec_seg_strd\tsec_seg_strt\tsec_seg_end\tno_splits\tmean_inter_"
+           "crosslinks\tsd_inter_crosslinks\t"
+           "gcs\tghs\tp_value\tpadj_value\n";
 }
 
 void InteractionsWriter::writeInteractionsBEDHeader(std::ofstream& interactionsBEDOut,

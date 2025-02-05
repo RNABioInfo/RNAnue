@@ -64,7 +64,7 @@ struct seqan3::sam_tag_type<"XE"_tag> {
 template <>
 struct seqan3::sam_tag_type<"XO"_tag> {
     using type = int32_t;
-};  // number of crosslinking sites
+};  // number of intermolecular crosslinking sites
 
 template <>
 struct seqan3::sam_tag_type<"XA"_tag> {

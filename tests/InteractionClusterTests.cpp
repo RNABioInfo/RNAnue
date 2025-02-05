@@ -23,14 +23,14 @@ class InteractionClusterStatisticsTest : public testing::Test {
                                                  GenomicStrand::FORWARD},
                   .complementarityScore = 0.5,
                   .hybridizationEnergy = -18,
-                  .crosslinkingSiteCount = 1},
+                  .interCrosslinkingSiteCount = 1},
               RecordFragment{
                   .recordID = "record1",
                   .genomicRegion = GenomicRegion{0, Region{.startPosition = 0, .endPosition = 10},
                                                  GenomicStrand::FORWARD},
                   .complementarityScore = 0.5,
                   .hybridizationEnergy = -18,
-                  .crosslinkingSiteCount = 1})) {};
+                  .interCrosslinkingSiteCount = 1})) {};
 
     InteractionCluster cluster;
 };
@@ -52,14 +52,14 @@ TEST(InteractionClusterTest, OverlapsExact) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -68,14 +68,14 @@ TEST(InteractionClusterTest, OverlapsExact) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_TRUE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::SPECIFIC, -9));
 }
@@ -88,14 +88,14 @@ TEST(InteractionClusterTest, OverlapsGrace) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -104,14 +104,14 @@ TEST(InteractionClusterTest, OverlapsGrace) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster3 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -120,14 +120,14 @@ TEST(InteractionClusterTest, OverlapsGrace) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_TRUE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::SPECIFIC, 1));
     EXPECT_FALSE(cluster1.overlapsWithTolerance(cluster3, GenomicStrandSpecificity::SPECIFIC, 1));
@@ -141,14 +141,14 @@ TEST(InteractionClusterTest, OverlapsNegativeGrace) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -157,14 +157,14 @@ TEST(InteractionClusterTest, OverlapsNegativeGrace) {
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_TRUE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::UNSPECIFIC, -1));
 }
@@ -177,14 +177,14 @@ TEST(InteractionClusterTest, NoOverlapsNegativeGrace) {
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -193,14 +193,14 @@ TEST(InteractionClusterTest, NoOverlapsNegativeGrace) {
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_FALSE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::SPECIFIC, -2));
 }
@@ -213,14 +213,14 @@ TEST(InteractionClusterTest, NoOverlapsFirstNotOverlapping) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
             .recordID = "record2",
@@ -228,14 +228,14 @@ TEST(InteractionClusterTest, NoOverlapsFirstNotOverlapping) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_FALSE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::SPECIFIC, -1));
 }
@@ -248,14 +248,14 @@ TEST(InteractionClusterTest, NoOverlapsSecondNotOverlapping) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -264,14 +264,14 @@ TEST(InteractionClusterTest, NoOverlapsSecondNotOverlapping) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 10, .endPosition = 20},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_FALSE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::SPECIFIC, 0));
 }
@@ -284,14 +284,14 @@ TEST(InteractionClusterTest, NoOverlapsDifferentReferenceID) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -300,14 +300,14 @@ TEST(InteractionClusterTest, NoOverlapsDifferentReferenceID) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_FALSE(cluster1.overlapsWithTolerance(cluster2, GenomicStrandSpecificity::UNSPECIFIC, 0));
 }
@@ -321,14 +321,14 @@ TEST(InteractionClusterTest, BasicMerge) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{0, Region{.startPosition = 20, .endPosition = 25},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
@@ -337,14 +337,14 @@ TEST(InteractionClusterTest, BasicMerge) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{0, Region{.startPosition = 20, .endPosition = 30},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_TRUE(cluster1.merge(cluster2, GenomicStrandSpecificity::SPECIFIC));
 
@@ -374,14 +374,14 @@ TEST(InteractionClusterTest, MergeWithDifferentReferenceIDIndex) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{0, Region{.startPosition = 20, .endPosition = 25},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
             .recordID = "record2",
@@ -389,14 +389,14 @@ TEST(InteractionClusterTest, MergeWithDifferentReferenceIDIndex) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_TRUE(cluster1.merge(cluster2, GenomicStrandSpecificity::SPECIFIC));
 
@@ -429,14 +429,14 @@ TEST(InteractionClusterTest, MergeWithDifferentStrands) {
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record1",
             .genomicRegion = GenomicRegion{0, Region{.startPosition = 20, .endPosition = 25},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.5,
             .hybridizationEnergy = -18,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
     InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
         RecordFragment{
             .recordID = "record2",
@@ -444,14 +444,14 @@ TEST(InteractionClusterTest, MergeWithDifferentStrands) {
                                            GenomicStrand::REVERSE},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1},
+            .interCrosslinkingSiteCount = 1},
         RecordFragment{
             .recordID = "record2",
             .genomicRegion = GenomicRegion{0, Region{.startPosition = 20, .endPosition = 30},
                                            GenomicStrand::FORWARD},
             .complementarityScore = 0.8,
             .hybridizationEnergy = -15,
-            .crosslinkingSiteCount = 1});
+            .interCrosslinkingSiteCount = 1});
 
     EXPECT_FALSE(cluster1.merge(cluster2, GenomicStrandSpecificity::SPECIFIC));
 }

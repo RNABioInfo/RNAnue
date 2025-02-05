@@ -255,9 +255,8 @@ auto operator<<(std::ostream &outputStream, const CrosslinkingSitesEvaluator::Re
     outputStream << "\n";
     outputStream << "Inter-sequence crosslinking: ";
 
-    for (size_t i = 0; i < result.interCrosslinkingSites.size(); ++i) {
-        outputStream << result.getInterSequenceCrosslinking(i);
-    }
+    outputStream << result.getInterSequenceCrosslinking(0) << ";";
+    outputStream << result.getInterSequenceCrosslinking(1);
 
     outputStream << "\n";
     outputStream << "Dot-bracket: " << result.dotbracket;

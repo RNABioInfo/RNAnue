@@ -109,7 +109,7 @@ void SplitRecordsEvaluator::addTagsToRecords(
         if (hybridization.crosslinkingResult) {
             record.tags()["XD"_tag] = hybridization.crosslinkingResult->getDotbracket();
             record.tags()["XO"_tag] =
-                static_cast<int32_t>(hybridization.crosslinkingResult->getTotalCrosslinkingCount());
+                static_cast<int32_t>(hybridization.crosslinkingResult->getInterCrosslinkingCount());
 
             record.tags()["XA"_tag] =
                 hybridization.crosslinkingResult->getIntraSequenceCrosslinking(index);

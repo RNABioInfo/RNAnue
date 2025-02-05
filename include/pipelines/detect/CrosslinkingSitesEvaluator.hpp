@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
+#include <numeric>
 #include <optional>
 #include <ostream>
 #include <span>
@@ -84,6 +85,17 @@ struct CrosslinkingSitesEvaluator::Result {
           dotbracket(std::move(dotbracket)) {}
 
     Result() = default;
+
+    [[nodiscard]] constexpr auto getInterCrosslinkingCount() const noexcept -> size_t {
+        return interCrosslinkingSites.size();
+    };
+
+    [[nodiscard]] constexpr auto getIntraCrosslinkingCount() const noexcept -> size_t {
+        return std::accumulate(intraCrosslinkingSites.begin(), intraCrosslinkingSites.end(), 0,
+                               [](size_t sum, const auto &crosslinkingSites) {
+                                   return sum + crosslinkingSites.size();
+                               });
+    }
 
     [[nodiscard]] auto getTotalCrosslinkingCount() const -> size_t;
 
