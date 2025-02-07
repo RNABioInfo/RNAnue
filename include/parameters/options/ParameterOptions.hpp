@@ -2,6 +2,7 @@
 
 // Boost
 #include <boost/program_options/options_description.hpp>
+#include <string>
 
 namespace po = boost::program_options;
 
@@ -14,11 +15,13 @@ class ParameterOptions {
     auto operator=(ParameterOptions &&) -> ParameterOptions & = delete;
     ~ParameterOptions() = delete;
 
-    static auto getSubcallOptions() -> po::options_description;
-    static auto getGeneralOptions() -> po::options_description;
-    static auto getPreprocessOptions() -> po::options_description;
-    static auto getAlignOptions() -> po::options_description;
-    static auto getDetectOptions() -> po::options_description;
-    static auto getAnalyzeOptions() -> po::options_description;
-    static auto getOtherOptions() -> po::options_description;
+    template <typename T>
+    static auto getOptions() -> po::options_description {
+        po::options_description options{std::string(T::optionsDescription)};
+
+        std::apply([&options](const auto &...option) { (option.addOptionTo(options), ...); },
+                   T::allOptions);
+
+        return options;
+    };
 };

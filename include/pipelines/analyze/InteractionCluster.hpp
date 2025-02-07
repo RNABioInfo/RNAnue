@@ -1,11 +1,13 @@
 #pragma once
 
 // Standard
+#include <algorithm>
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
 #include <ostream>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Internal
@@ -21,14 +23,29 @@ using namespace dataTypes;
 
 class InteractionCluster {
    public:
-    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::vector<std::string> recordIDs,
-                       std::vector<double> complementarityScores,
-                       std::vector<double> hybridizationEnergies,
-                       std::vector<int32_t> crosslinkingSiteCounts);
+    constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments,
+                                 std::vector<std::string> recordIDs,
+                                 std::vector<double> complementarityScores,
+                                 std::vector<double> hybridizationEnergies,
+                                 std::vector<int32_t> crosslinkingSiteCounts)
+        : sortedSegments(sortedSegments),
+          recordIDs(std::move(recordIDs)),
+          complementarityScores(std::move(complementarityScores)),
+          maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
+          hybridizationEnergies(std::move(hybridizationEnergies)),
+          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
+          crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {};
 
-    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
-                       double complementarityScore, double hybridizationEnergy,
-                       int crosslinkingSiteCount);
+    constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
+                                 double complementarityScore, double hybridizationEnergy,
+                                 int crosslinkingSiteCount)
+        : sortedSegments(sortedSegments),
+          recordIDs({std::move(recordID)}),
+          complementarityScores({complementarityScore}),
+          maxComplementarityScore(complementarityScore),
+          hybridizationEnergies({hybridizationEnergy}),
+          minHybridizationEnergy(hybridizationEnergy),
+          crosslinkingSiteCounts({crosslinkingSiteCount}) {};
 
     InteractionCluster() = delete;
 

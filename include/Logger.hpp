@@ -17,7 +17,8 @@
 // seqan3
 #include <seqan3/core/debug_stream.hpp>
 
-enum class LogLevel : std::uint8_t { DEBUG, INFO, WARNING, ERROR };
+// Internal
+#include "LogLevel.hpp"
 
 template <typename T>
 concept IsOutputStreamable = requires() { T::operator<<(); };

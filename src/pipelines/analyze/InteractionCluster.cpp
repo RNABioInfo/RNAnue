@@ -8,8 +8,6 @@
 #include <cstdlib>
 #include <numeric>
 #include <ostream>
-#include <string>
-#include <utility>
 #include <vector>
 
 // Internal
@@ -20,30 +18,6 @@
 #include "Utility.hpp"
 
 namespace pipelines::analyze {
-
-InteractionCluster::InteractionCluster(SortedGenomicRegionPair sortedSegments,
-                                       std::vector<std::string> recordIDs,
-                                       std::vector<double> complementarityScores,
-                                       std::vector<double> hybridizationEnergies,
-                                       std::vector<int32_t> crosslinkingSiteCounts)
-    : sortedSegments(sortedSegments),
-      recordIDs(std::move(recordIDs)),
-      complementarityScores(std::move(complementarityScores)),
-      maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
-      hybridizationEnergies(std::move(hybridizationEnergies)),
-      minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
-      crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {}
-
-InteractionCluster::InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
-                                       double complementarityScore, double hybridizationEnergy,
-                                       int crosslinkingSiteCount)
-    : sortedSegments(sortedSegments),
-      recordIDs({std::move(recordID)}),
-      complementarityScores({complementarityScore}),
-      maxComplementarityScore(complementarityScore),
-      hybridizationEnergies({hybridizationEnergy}),
-      minHybridizationEnergy(hybridizationEnergy),
-      crosslinkingSiteCounts({crosslinkingSiteCount}) {}
 
 auto InteractionCluster::operator<(const InteractionCluster &other) const noexcept -> bool {
     if (getSecondSegment().getReferenceIDIndex() < other.getSecondSegment().getReferenceIDIndex()) {

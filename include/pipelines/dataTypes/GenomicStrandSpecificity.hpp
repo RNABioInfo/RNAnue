@@ -8,7 +8,7 @@
 
 namespace dataTypes {
 
-enum class GenomicStrandSpecificity : bool { SPECIFIC = true, UNSPECIFIC = false };
+enum GenomicStrandSpecificity : bool { SPECIFIC = true, UNSPECIFIC = false };
 
 inline auto operator>>(std::istream& input, GenomicStrandSpecificity& strandSpecificity)
     -> std::istream& {

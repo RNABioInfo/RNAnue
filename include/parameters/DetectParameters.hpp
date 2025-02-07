@@ -2,7 +2,6 @@
 
 // Standard
 #include <cfloat>
-#include <climits>
 #include <cstddef>
 
 // Boost
@@ -10,8 +9,8 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "DetectOptions.hpp"
 #include "GeneralParameters.hpp"
-#include "ParameterValidator.hpp"
 
 namespace po = boost::program_options;
 
@@ -32,23 +31,17 @@ struct DetectParameters : public GeneralParameters {
 
     DetectParameters(const po::variables_map& params)
         : GeneralParameters(params),
-          minimumFragmentLength(
-              ParameterValidator::validateArithmetic<size_t>(params, "minfraglen", 0, SIZE_MAX)),
-          minimumMapQuality(
-              ParameterValidator::validateArithmetic<size_t>(params, "mapqmin", 0, SIZE_MAX)),
-          minimumComplementarity(
-              ParameterValidator::validateArithmetic(params, "cmplmin", 0.0, 1.0)),
-          minimumSiteLengthRatio(
-              ParameterValidator::validateArithmetic(params, "sitelenratio", 0.0, 1.0)),
-          maxHybridizationEnergy(
-              ParameterValidator::validateArithmetic(params, "nrgmax", DBL_MIN, DBL_MAX)),
-          excludeSoftClipping(ParameterValidator::validateBool(params, "exclclipping")),
-          removeSplicingEvents(ParameterValidator::validateBool(params, "splicing")),
-          allowAlternativeSplicing(ParameterValidator::validateBool(params, "altsplice")),
-          splicingTolerance(ParameterValidator::validateArithmetic(params, "splicingtolerance",
-                                                                   INT_MIN, INT_MAX)),
+          minimumFragmentLength(DetectOptions::minDetectLength.extractValue(params)),
+          minimumMapQuality(DetectOptions::minMappingQuality.extractValue(params)),
+          minimumComplementarity(DetectOptions::minComplementarity.extractValue(params)),
+          minimumSiteLengthRatio(DetectOptions::siteLengthRatio.extractValue(params)),
+          maxHybridizationEnergy(DetectOptions::maxEnergy.extractValue(params)),
+          excludeSoftClipping(DetectOptions::excludeSoftClipping.extractValue(params)),
+          removeSplicingEvents(DetectOptions::filterSplicing.extractValue(params)),
+          allowAlternativeSplicing(DetectOptions::allowAltSplicing.extractValue(params)),
+          splicingTolerance(DetectOptions::splicingTolerance.extractValue(params)),
           includeWobbleBasePairsInCrosslinkingSites(
-              ParameterValidator::validateBool(params, "includewobble")) {};
+              DetectOptions::includeWobble.extractValue(params)) {};
 };
 
 }  // namespace pipelines::detect

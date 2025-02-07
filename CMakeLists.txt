@@ -43,8 +43,11 @@ add_subdirectory(submodules/segemehl)
 # ----------------------------------------------------------------------------
 
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include/concepts
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/utility
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters/options
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters/options/optionTypes
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/annotation
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/pipelines
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/pipelines/preprocess

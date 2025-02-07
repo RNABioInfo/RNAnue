@@ -10,8 +10,7 @@
 
 namespace dataTypes {
 
-class GenomicOrientation {
-   public:
+struct GenomicOrientation {
     enum Value : std::uint8_t { SAME, OPPOSITE, BOTH };
 
     GenomicOrientation() = default;
@@ -57,7 +56,6 @@ class GenomicOrientation {
 
     explicit operator bool() const = delete;
 
-   private:
     Value value;
 };
 

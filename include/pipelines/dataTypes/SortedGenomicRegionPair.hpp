@@ -17,7 +17,7 @@ struct SortedGenomicRegionPair {
      * @param regionOne The first region to be sorted
      * @param regionTwo The second region to be sorted
      */
-    SortedGenomicRegionPair(GenomicRegion regionOne, GenomicRegion regionTwo)
+    constexpr SortedGenomicRegionPair(GenomicRegion regionOne, GenomicRegion regionTwo)
         : firstRegion(std::min(regionOne, regionTwo)),
           secondRegion(std::max(regionOne, regionTwo)) {}
 

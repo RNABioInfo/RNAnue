@@ -30,7 +30,8 @@ struct GenomicRegion {
      * @param region The region of the genomic region.
      * @param strand The strand of the genomic region (optional).
      */
-    GenomicRegion(int referenceID, Region region, GenomicStrand strand = GenomicStrand::NONE)
+    constexpr GenomicRegion(int referenceID, Region region,
+                            GenomicStrand strand = GenomicStrand::NONE)
         : referenceIDIndex(referenceID), region(region), strand(strand) {};
 
     // Getters

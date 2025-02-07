@@ -2,7 +2,6 @@
 
 // Standard
 #include <cstddef>
-#include <cstdint>
 #include <filesystem>
 
 // Boost
@@ -10,8 +9,8 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "AlignOptions.hpp"
 #include "GeneralParameters.hpp"
-#include "ParameterValidator.hpp"
 
 namespace po = boost::program_options;
 
@@ -28,17 +27,13 @@ struct AlignParameters : public GeneralParameters {
 
     AlignParameters(const po::variables_map& params)
         : GeneralParameters(params),
-          referenceGenome(ParameterValidator::validateFilePath(params, "dbref")),
-          multimapAlignments(ParameterValidator::validateBool(params, "multimap")),
-          minLengthThreshold(
-              ParameterValidator::validateArithmetic<size_t>(params, "minlen", 0, 1000)),
-          accuracy(ParameterValidator::validateArithmetic<size_t>(params, "accuracy", 0, 100)),
-          minimumFragmentScore(
-              ParameterValidator::validateArithmetic<size_t>(params, "minfragsco", 0, SIZE_MAX)),
-          minimumFragmentLength(
-              ParameterValidator::validateArithmetic<size_t>(params, "minfraglen", 0, SIZE_MAX)),
-          minimumSpliceCoverage(
-              ParameterValidator::validateArithmetic<size_t>(params, "minsplicecov", 0, 100)) {};
+          referenceGenome(AlignOptions::refGenome.extractValue(params)),
+          multimapAlignments(AlignOptions::allowMultimap.extractValue(params)),
+          minLengthThreshold(AlignOptions::minAlignLength.extractValue(params)),
+          accuracy(AlignOptions::accuracy.extractValue(params)),
+          minimumFragmentScore(AlignOptions::minFragmentScore.extractValue(params)),
+          minimumFragmentLength(AlignOptions::minFragmentLength.extractValue(params)),
+          minimumSpliceCoverage(AlignOptions::minSpliceCoverage.extractValue(params)) {};
 };
 
 }  // namespace pipelines::align

@@ -2,7 +2,7 @@
 
 // Standard
 #include <algorithm>
-#include <climits>
+#include <cctype>
 #include <cstddef>
 #include <filesystem>
 #include <optional>
@@ -15,9 +15,9 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "GeneralOptions.hpp"
 #include "GenomicOrientation.hpp"
-#include "Logger.hpp"
-#include "ParameterValidator.hpp"
+#include "LogLevel.hpp"
 
 namespace po = boost::program_options;
 class GeneralParameters {
@@ -35,27 +35,19 @@ class GeneralParameters {
     size_t threadCount;
     size_t chunkSize;
 
+    // TODO: Write standalone featureTypes from string
     GeneralParameters(const po::variables_map& params)
-        : treatmentsDir(ParameterValidator::validateDirectory(params, "trtms")),
-          controlDir(validateControlDir(params)),
-          outputDir(ParameterValidator::validateDirectory(params, "outdir")),
-          featuresInPath(ParameterValidator::validateFilePath(params, "features")),
+        : treatmentsDir(GeneralOptions::trtms.extractValue(params)),
+          controlDir(GeneralOptions::ctrls.extractValue(params)),
+          outputDir(GeneralOptions::out.extractValue(params)),
+          featuresInPath(GeneralOptions::featuresPath.extractValue(params)),
           featureTypes(validateFeatureTypes(params)),
-          featureOrientation(validateFeatureOrientation(params)),
-          logLevel(validateLogLevel(params)),
-          threadCount(ParameterValidator::validateArithmetic(params, "threads", 1, INT_MAX)),
-          chunkSize(ParameterValidator::validateArithmetic(params, "chunksize", 1, INT_MAX)) {};
+          featureOrientation(GeneralOptions::featureOrientation.extractValue(params)),
+          logLevel(GeneralOptions::logLevel.extractValue(params)),
+          threadCount(GeneralOptions::threads.extractValue(params)),
+          chunkSize(GeneralOptions::chunkSize.extractValue(params)) {};
 
    private:
-    static auto validateControlDir(const po::variables_map& params)
-        -> std::optional<std::filesystem::path> {
-        if ((params.count("ctrls") != 0U) && !params["ctrls"].as<std::string>().empty()) {
-            return ParameterValidator::validateDirectory(params, "ctrls");
-        }
-
-        return std::nullopt;
-    }
-
     static auto validateFeatureTypes(const po::variables_map& params)
         -> std::unordered_set<std::string> {
         const auto featureTypesString = params["featuretypes"].as<std::string>();
@@ -65,34 +57,10 @@ class GeneralParameters {
         std::stringstream stringStream(featureTypesString);
         std::string str;
         while (getline(stringStream, str, ',')) {
-            str.erase(remove_if(str.begin(), str.end(), isspace), str.end());
+            str.erase(remove_if(str.begin(), str.end(), isspace), str.end());  // NOLINT
             uniqueIncludedFeatures.insert(str);
         }
 
         return uniqueIncludedFeatures;
-    }
-
-    static auto validateFeatureOrientation(const po::variables_map& params)
-        -> dataTypes::GenomicOrientation {
-        return params["orientation"].as<dataTypes::GenomicOrientation>();
-    }
-
-    static auto validateLogLevel(const po::variables_map& params) -> LogLevel {
-        const std::string logLevelStr = params["loglevel"].as<std::string>();
-
-        if (logLevelStr == "debug" || logLevelStr == "DEBUG") {
-            return LogLevel::DEBUG;
-        }
-        if (logLevelStr == "info" || logLevelStr == "INFO") {
-            return LogLevel::INFO;
-        }
-        if (logLevelStr == "warning" || logLevelStr == "WARNING") {
-            return LogLevel::WARNING;
-        }
-        if (logLevelStr == "error" || logLevelStr == "ERROR") {
-            return LogLevel::ERROR;
-        }
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Invalid log level specified.");
-        return LogLevel::INFO;
     }
 };

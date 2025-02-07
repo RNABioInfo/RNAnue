@@ -13,15 +13,23 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "AlignOptions.hpp"
 #include "AlignParameters.hpp"
+#include "AnalyzeOptions.hpp"
 #include "AnalyzeParameters.hpp"
 #include "Closing.hpp"
 #include "CompleteParameters.hpp"
 #include "Constants.hpp"
+#include "DetectOptions.hpp"
 #include "DetectParameters.hpp"
+#include "GeneralOptions.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "OtherOptions.hpp"
 #include "ParameterOptions.hpp"
+#include "PreprocessOptions.hpp"
 #include "PreprocessParameters.hpp"
+#include "SubcallOptions.hpp"
 
 namespace pipelines {
 
@@ -29,8 +37,7 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
     -> ParameterParser::ParametersVariant {
     const auto params = parseParameters(argc, argv);
 
-    const std::string subcall = params["subcall"].as<std::string>();
-
+    const std::string subcall = params.at("subcall").as<std::string>();
     if (subcall == constants::pipelines::COMPLETE) {
         return CompleteParameters{params};
     }
@@ -68,12 +75,12 @@ auto ParameterParser::parseParameters(int argc,
 
     printVersion();
 
-    if (params.count("version") != 0U) {
+    if (params.at("version").as<bool>()) {
         Closing::printQuote();
         exit(EXIT_SUCCESS);
     }
 
-    if (params.count("help") != 0U) {
+    if (params.at("help").as<bool>()) {
         std::cout << commandLineOptions << "\n";
         Closing::printQuote();
         exit(EXIT_SUCCESS);
@@ -83,7 +90,7 @@ auto ParameterParser::parseParameters(int argc,
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
-    Logger::setLogLevel(params["loglevel"].as<std::string>());
+    Logger::setLogLevel(params.at("loglevel").as<LogLevel>());
 
     insertConfigFileParameters(params);
 
@@ -111,13 +118,14 @@ void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
 }
 
 auto ParameterParser::getCommandLineOptions() -> po::options_description {
-    const po::options_description generalOptions{ParameterOptions::getGeneralOptions()};
-    const po::options_description preprocessOptions{ParameterOptions::getPreprocessOptions()};
-    const po::options_description alignOptions{ParameterOptions::getAlignOptions()};
-    const po::options_description detectOptions{ParameterOptions::getDetectOptions()};
-    const po::options_description analyzeOptions{ParameterOptions::getAnalyzeOptions()};
-    const po::options_description otherOptions{ParameterOptions::getOtherOptions()};
-    const po::options_description subcallOptions{ParameterOptions::getSubcallOptions()};
+    const po::options_description generalOptions{ParameterOptions::getOptions<GeneralOptions>()};
+    const po::options_description preprocessOptions{
+        ParameterOptions::getOptions<PreprocessOptions>()};
+    const po::options_description alignOptions{ParameterOptions::getOptions<AlignOptions>()};
+    const po::options_description detectOptions{ParameterOptions::getOptions<DetectOptions>()};
+    const po::options_description analyzeOptions{ParameterOptions::getOptions<AnalyzeOptions>()};
+    const po::options_description otherOptions{ParameterOptions::getOptions<OtherOptions>()};
+    const po::options_description subcallOptions{ParameterOptions::getOptions<SubcallOptions>()};
 
     po::options_description commandLineOptions{"Command line options"};
 
@@ -133,11 +141,12 @@ auto ParameterParser::getCommandLineOptions() -> po::options_description {
 }
 
 auto ParameterParser::getConfigFileOptions() -> po::options_description {
-    const po::options_description generalOptions{ParameterOptions::getGeneralOptions()};
-    const po::options_description preprocessOptions{ParameterOptions::getPreprocessOptions()};
-    const po::options_description alignOptions{ParameterOptions::getAlignOptions()};
-    const po::options_description detectOptions{ParameterOptions::getDetectOptions()};
-    const po::options_description analyzeOptions{ParameterOptions::getAnalyzeOptions()};
+    const po::options_description generalOptions{ParameterOptions::getOptions<GeneralOptions>()};
+    const po::options_description preprocessOptions{
+        ParameterOptions::getOptions<PreprocessOptions>()};
+    const po::options_description alignOptions{ParameterOptions::getOptions<AlignOptions>()};
+    const po::options_description detectOptions{ParameterOptions::getOptions<DetectOptions>()};
+    const po::options_description analyzeOptions{ParameterOptions::getOptions<AnalyzeOptions>()};
 
     po::options_description configFileOptions{"Config file options"};
 

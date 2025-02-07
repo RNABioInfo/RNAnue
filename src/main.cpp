@@ -10,6 +10,7 @@
 
 // Internal
 #include "Config.hpp"
+#include "ParameterOption.hpp"
 #include "Runner.hpp"
 #include "Utility.hpp"
 

@@ -2,7 +2,6 @@
 
 // Standard
 #include <cstddef>
-#include <cstdint>
 #include <filesystem>
 #include <string>
 #include <variant>
@@ -17,9 +16,8 @@
 #include <seqan3/utility/range/to.hpp>
 
 // Internal
-#include "Constants.hpp"
 #include "GeneralParameters.hpp"
-#include "ParameterValidator.hpp"
+#include "PreprocessOptions.hpp"
 
 namespace pipelines::preprocess {
 
@@ -51,58 +49,31 @@ class PreprocessParameters : public GeneralParameters {
 
     PreprocessParameters(const po::variables_map& params)
         : GeneralParameters(params),
-          preprocessEnabled(validatePreprocessEnabled(params)),
-          trimPolyG(validateTrimPolyG(params)),
-          deduplicate(validateDedupliate(params)),
-          adapter5Forward(validateAdapter(params, "adpt5f")),
-          adapter3Forward(validateAdapter(params, "adpt3f")),
-          adapter5Reverse(validateAdapter(params, "adpt5r")),
-          adapter3Reverse(validateAdapter(params, "adpt3r")),
-          minPolyGCount(
-              ParameterValidator::validateArithmetic(params, "minpolygcount", size_t{0}, SIZE_MAX)),
-          maxMissMatchFractionTrimming(
-              ParameterValidator::validateArithmetic(params, "mtrim", 0.0, 1.0)),
-          minOverlapTrimming(
-              ParameterValidator::validateArithmetic(params, "minovltrim", size_t{0}, SIZE_MAX)),
-          minQualityThreshold(
-              ParameterValidator::validateArithmetic(params, "minqual", size_t{0}, SIZE_MAX)),
-          minLengthThreshold(ParameterValidator::validateArithmetic<size_t>(params, "minlen",
-                                                                            size_t{1}, SIZE_MAX)),
-          minMeanWindowQuality(
-              ParameterValidator::validateArithmetic(params, "wqual", size_t{0}, SIZE_MAX)),
-          windowTrimmingSize(
-              ParameterValidator::validateArithmetic(params, "wtrim", size_t{0}, SIZE_MAX)),
-          minOverlapMerging(
-              ParameterValidator::validateArithmetic(params, "minovl", size_t{0}, SIZE_MAX)),
-          maxMissMatchFractionMerging(
-              ParameterValidator::validateArithmetic(params, "mmerge", 0.0, 1.0)) {}
+          preprocessEnabled(PreprocessOptions::enablePreprocess.extractValue(params)),
+          trimPolyG(PreprocessOptions::trimPolyG.extractValue(params)),
+          deduplicate(PreprocessOptions::enableDeduplicate.extractValue(params)),
+          adapter5Forward(getAdapter(PreprocessOptions::adpt5f.extractValue(params))),
+          adapter3Forward(getAdapter(PreprocessOptions::adpt3f.extractValue(params))),
+          adapter5Reverse(getAdapter(PreprocessOptions::adpt5r.extractValue(params))),
+          adapter3Reverse(getAdapter(PreprocessOptions::adpt3r.extractValue(params))),
+          minPolyGCount(PreprocessOptions::minPolyGCount.extractValue(params)),
+          maxMissMatchFractionTrimming(PreprocessOptions::mtrim.extractValue(params)),
+          minOverlapTrimming(PreprocessOptions::minOvlTrim.extractValue(params)),
+          minQualityThreshold(PreprocessOptions::minQual.extractValue(params)),
+          minLengthThreshold(PreprocessOptions::minLen.extractValue(params)),
+          minMeanWindowQuality(PreprocessOptions::wqual.extractValue(params)),
+          windowTrimmingSize(PreprocessOptions::wtrim.extractValue(params)),
+          minOverlapMerging(PreprocessOptions::minOvl.extractValue(params)),
+          maxMissMatchFractionMerging(PreprocessOptions::mmerge.extractValue(params)) {}
 
    private:
-    static auto validateTrimPolyG(const po::variables_map& params) -> bool {
-        return params["trimpolyg"].as<bool>();
-    }
-
-    static auto validateDedupliate(const po::variables_map& params) -> bool {
-        return params["deduplicate"].as<bool>();
-    }
-
-    static auto validatePreprocessEnabled(const po::variables_map& params) -> bool {
-        return params[constants::pipelines::PREPROCESS].as<bool>();
-    }
-
-    static auto validateAdapter(const po::variables_map& params, const std::string& paramName)
-        -> AdapterInput {
-        if (params.count(paramName) != 0U) {
-            const std::string adapterStr = params[paramName].as<std::string>();
-
-            if (std::filesystem::exists(adapterStr)) {
-                return std::filesystem::path(adapterStr);
-            }
-
-            return adapterStr | seqan3::views::char_to<seqan3::dna5> |
-                   seqan3::ranges::to<std::vector>();
+    static auto getAdapter(const std::string& adapterStr) -> AdapterInput {
+        if (std::filesystem::exists(adapterStr)) {
+            return std::filesystem::path(adapterStr);
         }
-        return std::monostate{};
+
+        return adapterStr | seqan3::views::char_to<seqan3::dna5> |
+               seqan3::ranges::to<std::vector>();
     }
 };
 
