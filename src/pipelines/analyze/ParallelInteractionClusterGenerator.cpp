@@ -130,7 +130,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
 
     FeatureAnnotator supplementaryFeatureAnnotator{clusteringResults.supplementaryFeatureMap};
 
-    supplementaryFeatureAnnotator.mergeIndexAllOverlappingFeatures(
+    supplementaryFeatureAnnotator.mergeAllOverlappingFeatures(
         {parameters.featureOrientation.strandSpecificity(), 1});
 
     annotatePartiallyAnnotatedClusters(supplementaryFeatureAnnotator);

@@ -45,7 +45,7 @@ auto SplitRecordsSplicingEvaluator::getGroupedFeaturesAtBoundingRegions(
 
     // Iterate all features that overlap the upstream bounding region and check whether their end is
     // within upstream bounding region.
-    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIterator(
+    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIt(
              boundingRegions.first, parameters.orientation)) {
         if (not feature.groupID ||
             !boundingRegions.first.contains(feature.genomicRegion.getEnd() - 1)) {
@@ -63,7 +63,7 @@ auto SplitRecordsSplicingEvaluator::getGroupedFeaturesAtBoundingRegions(
 
     // Iterate all features that overlap the second bounding regions and check whether their start
     // is within the second bounding region.
-    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIterator(
+    for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIt(
              boundingRegions.second, parameters.orientation)) {
         if (!feature.groupID || !featuresFirstRegionByGroupID.contains(*feature.groupID) ||
             !boundingRegions.second.contains(feature.genomicRegion.getStart())) {
@@ -104,8 +104,8 @@ auto SplitRecordsSplicingEvaluator::groupedFeaturePairsEncloseAdditonalFeatureFr
             featurePair.first.genomicRegion.getStrand()};
 
         for (const GenomicFeature &enclosedFeature :
-             parameters.featureAnnotator->overlappingFeatureIterator(enclosingRegion,
-                                                                     parameters.orientation)) {
+             parameters.featureAnnotator->overlappingFeatureIt(enclosingRegion,
+                                                               parameters.orientation)) {
             if (enclosedFeature.groupID == featurePair.first.groupID) {
                 return true;
             }

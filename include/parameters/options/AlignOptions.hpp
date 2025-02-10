@@ -21,7 +21,8 @@ struct AlignOptions {
         {.shortName = std::nullopt, .longName = "dbref"}, "reference genome (.fasta) (required)"sv};
 
     static constexpr DefaultedParameterOption<bool, false> allowMultimap{
-        {.shortName = std::nullopt, .longName = "multimap"}, "search all hits for multimapper"sv};
+        {.shortName = std::nullopt, .longName = "multimap"},
+        "consider multimapping alignments. This is recommended for accurate interaction detection within multicopy genes."sv};
 
     static constexpr ArithmeticParameterOption<size_t, 90, {.lowerBound = 0, .upperBound = 100}>
         accuracy{{.shortName = std::nullopt, .longName = "accuracy"},

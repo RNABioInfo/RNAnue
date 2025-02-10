@@ -119,7 +119,7 @@ TEST_P(FeatureAnnotatorTest, OverlappingFeatures) {
 
 TEST_P(FeatureAnnotatorTest, OverlappingFeatureIterator) {
     const auto& param = GetParam();
-    const auto results = annotator.overlappingFeatureIterator(param.region, param.orientation);
+    const auto results = annotator.overlappingFeatureIt(param.region, param.orientation);
 
     size_t index = 0;
     for (const auto& feature : results) {
@@ -469,7 +469,7 @@ class MergeFeatureAnnotatorTest : public testing::Test {
 
 TEST_F(MergeFeatureAnnotatorTest, MergeOverlapOne) {
     FeatureMergingParameters parameters{GenomicStrandSpecificity::SPECIFIC, -1};
-    annotator.mergeIndexAllOverlappingFeatures(parameters);
+    annotator.mergeAllOverlappingFeatures(parameters);
 
     ASSERT_EQ(annotator.featureCount(), 4UL);
 
