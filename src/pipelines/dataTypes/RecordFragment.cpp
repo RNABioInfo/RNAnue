@@ -40,11 +40,7 @@ auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<Rec
 
 auto RecordFragment::toFeature(const std::string &featureID, const std::string &featureType) const
     -> GenomicFeature {
-    return GenomicFeature{.type = featureType,
-                          .genomicRegion = genomicRegion,
-                          .featureID = featureID,
-                          .groupID = std::nullopt,
-                          .geneName = std::nullopt};
+    return GenomicFeature{featureType, genomicRegion, featureID, std::nullopt, std::nullopt};
 }
 
 [[nodiscard]] auto RecordFragment::merge(const RecordFragment &other) -> bool {

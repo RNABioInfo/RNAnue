@@ -98,25 +98,22 @@ struct ParallelInteractionClusterGeneratorTestParam {
 // Feature Map Setup (Same as in InteractionClusterGeneratorTests)
 static const FeatureMap featureMap = {
     {1,
-     {GenomicFeature{
-          .type = "gene",
-          .genomicRegion = {1, {.startPosition = 20, .endPosition = 30}, GenomicStrand::FORWARD},
-          .featureID = "gene1",
-          .groupID = std::nullopt,
-          .geneName = std::nullopt},
-      GenomicFeature{
-          .type = "gene",
-          .genomicRegion = {1, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
-          .featureID = "gene2",
-          .groupID = std::nullopt,
-          .geneName = std::nullopt}}},
+     {GenomicFeature{"gene",
+                     {1, {.startPosition = 20, .endPosition = 30}, GenomicStrand::FORWARD},
+                     "gene1",
+                     std::nullopt,
+                     std::nullopt},
+      GenomicFeature{"gene",
+                     {1, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
+                     "gene2",
+                     std::nullopt,
+                     std::nullopt}}},
     {2,
-     {GenomicFeature{
-         .type = "gene",
-         .genomicRegion = {2, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
-         .featureID = "gene3",
-         .groupID = std::nullopt,
-         .geneName = std::nullopt}}}};
+     {GenomicFeature{"gene",
+                     {2, {.startPosition = 50, .endPosition = 60}, GenomicStrand::FORWARD},
+                     "gene3",
+                     std::nullopt,
+                     std::nullopt}}}};
 
 static const std::shared_ptr<FeatureAnnotator> featureAnnotator =
     std::make_shared<FeatureAnnotator>(featureMap);

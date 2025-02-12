@@ -30,6 +30,7 @@
 #include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionsWriter.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "ParallelInteractionClusterGenerator.hpp"
 #include "SamRecord.hpp"
@@ -162,11 +163,7 @@ void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
             continue;
         }
 
-        const std::string &transcriptID = bestFeature->featureID;
-
-        if (!transcriptCounts.contains(bestFeature->featureID)) {
-            std::clog << *bestFeature;
-        }
+        const std::string &transcriptID = bestFeature->getAnnotationID();
 
         assert(transcriptCounts.contains(transcriptID));
         ++transcriptCounts[transcriptID];

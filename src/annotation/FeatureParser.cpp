@@ -22,6 +22,7 @@
 #include "GenomicFeature.hpp"
 #include "GenomicRegion.hpp"
 #include "GenomicStrand.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 
 using namespace constants::annotation;
@@ -147,8 +148,8 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath, const Fi
 
         ++parsedFeatures;
 
-        if (featureMap[referenceIDIndex].back().groupID.has_value()) {
-            featureGroups.insert(featureMap[referenceIDIndex].back().groupID.value());
+        if (featureMap[referenceIDIndex].back().getGroupID().has_value()) {
+            featureGroups.insert(featureMap[referenceIDIndex].back().getGroupID().value());
         }
     }
 

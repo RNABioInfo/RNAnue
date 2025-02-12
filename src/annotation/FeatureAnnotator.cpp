@@ -96,7 +96,8 @@ auto FeatureAnnotator::buildFeatureTreeMap(const FeatureMap &featureMap) -> Feat
     for (const auto &[referenceIDIndex, features] : featureMap) {
         IITree<int, dataTypes::GenomicFeature> tree;
         for (const auto &feature : features) {
-            tree.add(feature.genomicRegion.getStart(), feature.genomicRegion.getEnd(), feature);
+            tree.add(feature.getGenomicRegion().getStart(), feature.getGenomicRegion().getEnd(),
+                     feature);
         }
 
         tree.index();
@@ -128,11 +129,7 @@ auto FeatureAnnotator::insertIndex(const GenomicRegion &region) -> std::string {
 
     auto &tree = featureTreeMap[region.getReferenceIDIndex()];
 
-    GenomicFeature feature{.type = "supplementary_feature",
-                           .genomicRegion = region,
-                           .featureID = uuid,
-                           .groupID = std::nullopt,
-                           .geneName = std::nullopt};
+    GenomicFeature feature{"supplementary_feature", region, uuid, std::nullopt, std::nullopt};
 
     tree.add(region.getStart(), region.getEnd(), feature);
     tree.index();
@@ -155,9 +152,9 @@ auto FeatureAnnotator::getOverlappingFeatures(const GenomicRegion &region,
 
             if ((orientation == GenomicOrientation::BOTH) ||
                 (orientation == GenomicOrientation::OPPOSITE &&
-                 feature.genomicRegion.getStrand() == !region.getStrand()) ||
+                 feature.getGenomicRegion().getStrand() == !region.getStrand()) ||
                 (orientation == GenomicOrientation::SAME &&
-                 feature.genomicRegion.getStrand() == region.getStrand())) {
+                 feature.getGenomicRegion().getStrand() == region.getStrand())) {
                 features.push_back(feature);
             }
         }
@@ -194,8 +191,8 @@ auto FeatureAnnotator::getBestOverlappingFeature(const GenomicRegion &region,
                                                  const GenomicOrientation orientation) const
     -> std::optional<dataTypes::GenomicFeature> {
     auto overlapSizeWithRegion = [region](const GenomicFeature &feature) -> size_t {
-        return std::min(region.getEnd(), feature.genomicRegion.getEnd()) -
-               std::max(region.getStart(), feature.genomicRegion.getStart());
+        return std::min(region.getEnd(), feature.getGenomicRegion().getEnd()) -
+               std::max(region.getStart(), feature.getGenomicRegion().getStart());
     };
 
     auto featureIterator = overlappingFeatureIt(region, orientation);
@@ -260,7 +257,7 @@ FeatureAnnotator::Results::Results(const IITree<int, dataTypes::GenomicFeature> 
     if (strand.has_value()) {
         // Find the first index with the specified strand
         auto iterator = std::ranges::find_if(indices, [&](size_t index) {
-            return tree->getData(index).genomicRegion.getStrand() == *strand;
+            return tree->getData(index).getGenomicRegion().getStrand() == *strand;
         });
         startIndex =
             iterator != indices.end() ? std::distance(indices.begin(), iterator) : indices.size();
@@ -296,7 +293,7 @@ FeatureAnnotator::Results::Iterator::Iterator(const IITree<int, dataTypes::Genom
 auto FeatureAnnotator::Results::Iterator::operator++() -> FeatureAnnotator::Results::Iterator & {
     auto matchStrand = [&](size_t index) {
         if (strand.has_value()) {
-            return tree->getData(indices[index]).genomicRegion.getStrand() == *strand;
+            return tree->getData(indices[index]).getGenomicRegion().getStrand() == *strand;
         }
         return true;
     };

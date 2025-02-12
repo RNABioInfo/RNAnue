@@ -43,7 +43,7 @@ void GenomicFeatureTreeMerger::merge(IITree<int, GenomicFeature> &featureTree) {
 void GenomicFeatureTreeMerger::updateIntervalsToMergedCoordinates(
     IITree<int, GenomicFeature> &featureTree) noexcept {
     for (size_t index = 0; index < featureTree.size(); ++index) {
-        const GenomicRegion &region = featureTree.getData(index).genomicRegion;
+        const GenomicRegion &region = featureTree.getData(index).getGenomicRegion();
 
         featureTree.setIntervalStart(index, region.getStart());
         featureTree.setIntervalEnd(index, region.getEnd());
@@ -53,7 +53,7 @@ void GenomicFeatureTreeMerger::updateIntervalsToMergedCoordinates(
 auto GenomicFeatureTreeMerger::featureMeetsMergingConditions(
     const GenomicFeature &feature, const GenomicRegion &searchRegion) const noexcept -> bool {
     return searchRegion.overlapsWithTolerance(
-        feature.genomicRegion,
+        feature.getGenomicRegion(),
         GenomicOrientation::fromStrandSpecificity(parameters.mergingSpecificity),
         parameters.mergingTolerance);
 }
@@ -70,7 +70,7 @@ auto GenomicFeatureTreeMerger::updateSearchRegion(
 
         if (featureMeetsMergingConditions(feature, searchRegion)) {
             validatedFeatureIndices.push_back(index);
-            updatedRegion = searchRegion.combine(feature.genomicRegion) || updatedRegion;
+            updatedRegion = searchRegion.combine(feature.getGenomicRegion()) || updatedRegion;
         }
     }
 
@@ -82,7 +82,7 @@ auto GenomicFeatureTreeMerger::mergeFeaturesWithinGenomicRegion(
     size_t baseFeatureIndex, IITree<int, GenomicFeature> &featureTree) const noexcept
     -> std::unordered_set<size_t> {
     GenomicFeature &baseFeature = featureTree.getData(baseFeatureIndex);
-    GenomicRegion expandingSearchRegion = baseFeature.genomicRegion;
+    GenomicRegion expandingSearchRegion = baseFeature.getGenomicRegion();
 
     if (parameters.mergingSpecificity == GenomicStrandSpecificity::UNSPECIFIC) {
         expandingSearchRegion.setStrand(GenomicStrand::NONE);
@@ -117,9 +117,9 @@ auto GenomicFeatureTreeMerger::mergeFeaturesWithinGenomicRegion(
 
     // Only set the internal start and end coordinate since setting the IITree
     // start end ends might cause issues with the IITree index
-    baseFeature.genomicRegion.setStart(expandingSearchRegion.getStart());
-    baseFeature.genomicRegion.setEnd(expandingSearchRegion.getEnd());
-    baseFeature.genomicRegion.setStrand(expandingSearchRegion.getStrand());
+    baseFeature.getGenomicRegion().setStart(expandingSearchRegion.getStart());
+    baseFeature.getGenomicRegion().setEnd(expandingSearchRegion.getEnd());
+    baseFeature.getGenomicRegion().setStrand(expandingSearchRegion.getStrand());
 
     return {overlappingFeatureIndices.begin(), overlappingFeatureIndices.end()};
 }

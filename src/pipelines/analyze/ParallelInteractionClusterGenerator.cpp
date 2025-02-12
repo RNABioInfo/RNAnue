@@ -8,7 +8,6 @@
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
-#include <iostream>
 #include <iterator>
 #include <mutex>
 #include <queue>
@@ -152,7 +151,7 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
         assert((features.size() == 1) &&
                "All segments should be annotated and should have a unique feature associated");
 
-        return features.front().featureID;
+        return features.front().getAnnotationID();
     };
 
     for (auto& partiallyAnnotatedCluster : clusteringResults.partiallyAnnotatedClusters) {

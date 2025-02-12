@@ -47,12 +47,12 @@ auto SplitRecordsSplicingEvaluator::getGroupedFeaturesAtBoundingRegions(
     // within upstream bounding region.
     for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIt(
              boundingRegions.first, parameters.orientation)) {
-        if (not feature.groupID ||
-            !boundingRegions.first.contains(feature.genomicRegion.getEnd() - 1)) {
+        if (not feature.getGroupID() ||
+            !boundingRegions.first.contains(feature.getGenomicRegion().getEnd() - 1)) {
             continue;
         }
 
-        featuresFirstRegionByGroupID.emplace(*feature.groupID, feature);
+        featuresFirstRegionByGroupID.emplace(*feature.getGroupID(), feature);
     }
 
     if (featuresFirstRegionByGroupID.empty()) {
@@ -65,14 +65,16 @@ auto SplitRecordsSplicingEvaluator::getGroupedFeaturesAtBoundingRegions(
     // is within the second bounding region.
     for (const GenomicFeature &feature : parameters.featureAnnotator->overlappingFeatureIt(
              boundingRegions.second, parameters.orientation)) {
-        if (!feature.groupID || !featuresFirstRegionByGroupID.contains(*feature.groupID) ||
-            !boundingRegions.second.contains(feature.genomicRegion.getStart())) {
+        if (!feature.getGroupID() ||
+            !featuresFirstRegionByGroupID.contains(*feature.getGroupID()) ||
+            !boundingRegions.second.contains(feature.getGenomicRegion().getStart())) {
             continue;
         }
 
-        auto partnerFeature = featuresFirstRegionByGroupID.at(*feature.groupID);
+        auto partnerFeature = featuresFirstRegionByGroupID.at(*feature.getGroupID());
 
-        if (feature.genomicRegion.getStrand() != partnerFeature.genomicRegion.getStrand()) {
+        if (feature.getGenomicRegion().getStrand() !=
+            partnerFeature.getGenomicRegion().getStrand()) {
             continue;
         }
 
@@ -98,15 +100,15 @@ auto SplitRecordsSplicingEvaluator::groupedFeaturePairsEncloseAdditonalFeatureFr
     const SplitRecordsEvaluationParameters::SplicingParameters &parameters) -> bool {
     for (const FeaturePair &featurePair : featurePairs) {
         const GenomicRegion enclosingRegion{
-            featurePair.first.genomicRegion.getReferenceIDIndex(),
-            {.startPosition = featurePair.first.genomicRegion.getEnd(),
-             .endPosition = featurePair.second.genomicRegion.getStart()},
-            featurePair.first.genomicRegion.getStrand()};
+            featurePair.first.getGenomicRegion().getReferenceIDIndex(),
+            {.startPosition = featurePair.first.getGenomicRegion().getEnd(),
+             .endPosition = featurePair.second.getGenomicRegion().getStart()},
+            featurePair.first.getGenomicRegion().getStrand()};
 
         for (const GenomicFeature &enclosedFeature :
              parameters.featureAnnotator->overlappingFeatureIt(enclosingRegion,
                                                                parameters.orientation)) {
-            if (enclosedFeature.groupID == featurePair.first.groupID) {
+            if (enclosedFeature.getGroupID() == featurePair.first.getGroupID()) {
                 return true;
             }
         }

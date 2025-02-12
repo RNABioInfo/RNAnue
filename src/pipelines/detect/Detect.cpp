@@ -173,7 +173,7 @@ auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
             featureAnnotator->getBestOverlappingFeature(region.value(), params.featureOrientation);
 
         if (bestFeature) {
-            singletonTranscriptCounts[bestFeature->featureID]++;
+            singletonTranscriptCounts[bestFeature->getAnnotationID()]++;
         } else {
             unassignedContiguousOut.push_back(record);
         }

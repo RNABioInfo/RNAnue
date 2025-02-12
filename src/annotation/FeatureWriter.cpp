@@ -27,16 +27,16 @@ void FeatureWriter::write(const FeatureTreeMap &featureTreeMap, const std::strin
     for (const auto &[referenceID, tree] : featureTreeMap) {
         for (const auto &interval : tree.intervals()) {
             const auto &feature = interval.data;
-            outputFile << referenceID << '\t' << "." << '\t' << feature.type << '\t'
-                       << feature.genomicRegion.getStart() + 1 << '\t'
-                       << feature.genomicRegion.getEnd() << '\t' << "." << '\t'
-                       << feature.genomicRegion.getStrand() << '\t' << "." << '\t';
+            outputFile << referenceID << '\t' << "." << '\t' << feature.getType() << '\t'
+                       << feature.getGenomicRegion().getStart() + 1 << '\t'
+                       << feature.getGenomicRegion().getEnd() << '\t' << "." << '\t'
+                       << feature.getGenomicRegion().getStrand() << '\t' << "." << '\t';
 
             // Attributes field
             if (fileType == FileType::GFF) {
-                outputFile << "ID=" << feature.featureID;
+                outputFile << "ID=" << feature.getID();
             } else if (fileType == FileType::GTF) {
-                outputFile << "gene_id \"" << feature.featureID << "\"; ";
+                outputFile << "gene_id \"" << feature.getID() << "\"; ";
             }
             outputFile << '\n';
         }

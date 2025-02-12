@@ -40,25 +40,16 @@ class SplitRecordSplicingEvaluatorTests : public testing::TestWithParam<IsSplice
 
     const FeatureMap featureMap = {
         {0,
-         {GenomicFeature{
-              .type = "exon",
-              .genomicRegion = GenomicRegion{0, Region{.startPosition = 1, .endPosition = 9},
-                                             GenomicStrand::FORWARD},
-              .featureID = "exon1",
-              .groupID = "gene1",
-              .geneName = std::nullopt},
-          {.type = "exon",
-           .genomicRegion = GenomicRegion{0, Region{.startPosition = 19, .endPosition = 30},
-                                          GenomicStrand::FORWARD},
-           .featureID = "exon2",
-           .groupID = "gene1",
-           .geneName = std::nullopt},
-          {.type = "exon",
-           .genomicRegion = GenomicRegion{0, Region{.startPosition = 39, .endPosition = 50},
-                                          GenomicStrand::FORWARD},
-           .featureID = "exon3",
-           .groupID = "gene1",
-           .geneName = std::nullopt}}}};
+         {GenomicFeature{"exon",
+                         GenomicRegion{0, Region{.startPosition = 1, .endPosition = 9},
+                                       GenomicStrand::FORWARD},
+                         "exon1", "gene1", std::nullopt},
+          {"exon",
+           GenomicRegion{0, Region{.startPosition = 19, .endPosition = 30}, GenomicStrand::FORWARD},
+           "exon2", "gene1", std::nullopt},
+          {"exon",
+           GenomicRegion{0, Region{.startPosition = 39, .endPosition = 50}, GenomicStrand::FORWARD},
+           "exon3", "gene1", std::nullopt}}}};
 
     std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 };

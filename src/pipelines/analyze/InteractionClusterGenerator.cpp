@@ -55,7 +55,7 @@ auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) 
             return std::nullopt;
         }
         // Prefer groupID if it exists; otherwise fallback to featureID
-        return feature->groupID.value_or(feature->featureID);
+        return feature->getAnnotationID();
     };
 
     auto firstFeatureID = extractFeatureID(firstFeature);

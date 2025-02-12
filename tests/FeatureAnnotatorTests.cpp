@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 
 #include <cstddef>
@@ -47,50 +49,32 @@ class FeatureAnnotatorTest : public testing::TestWithParam<FeatureAnnotatorTestP
     const dataTypes::FeatureMap featureMap = {
         {
             1,
-            {GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
-                                                dataTypes::GenomicStrand::FORWARD},
-                 .featureID = "feature1",
-                 .groupID = "group1",
-                 .geneName = std::nullopt},
-             GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
-                                                dataTypes::GenomicStrand::FORWARD},
-                 .featureID = "feature2",
-                 .groupID = "group1",
-                 .geneName = std::nullopt},
-             GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 40, .endPosition = 50},
-                                                dataTypes::GenomicStrand::FORWARD},
-                 .featureID = "feature3",
-                 .groupID = "group2",
-                 .geneName = std::nullopt},
-             GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 5, .endPosition = 25},
-                                                dataTypes::GenomicStrand::REVERSE},
-                 .featureID = "feature4",
-                 .groupID = "group3",
-                 .geneName = std::nullopt}},
+            {GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
+                                          dataTypes::GenomicStrand::FORWARD},
+                            "feature1", "group1", std::nullopt},
+             GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
+                                          dataTypes::GenomicStrand::FORWARD},
+                            "feature2", "group1", std::nullopt},
+             GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 40, .endPosition = 50},
+                                          dataTypes::GenomicStrand::FORWARD},
+                            "feature3", "group2", std::nullopt},
+             GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 5, .endPosition = 25},
+                                          dataTypes::GenomicStrand::REVERSE},
+                            "feature4", "group3", std::nullopt}},
         },
         {2,
-         {GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{2, Region{.startPosition = 1, .endPosition = 10},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature3",
-              .groupID = "group4",
-              .geneName = std::nullopt},
-          GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{2, Region{.startPosition = 20, .endPosition = 30},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature4",
-              .groupID = "group4",
-              .geneName = std::nullopt}}},
+         {GenomicFeature{"transcript",
+                         GenomicRegion{2, Region{.startPosition = 1, .endPosition = 10},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature3", "group4", std::nullopt},
+          GenomicFeature{"transcript",
+                         GenomicRegion{2, Region{.startPosition = 20, .endPosition = 30},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature4", "group4", std::nullopt}}},
     };
 
     FeatureAnnotator annotator;
@@ -113,7 +97,7 @@ TEST_P(FeatureAnnotatorTest, OverlappingFeatures) {
     ASSERT_EQ(features.size(), param.expectedFeatureIds.size());
 
     for (size_t i = 0; i < features.size(); ++i) {
-        EXPECT_EQ(features[i].featureID, param.expectedFeatureIds[i]);
+        EXPECT_EQ(features[i].getID(), param.expectedFeatureIds[i]);
     }
 }
 
@@ -123,7 +107,7 @@ TEST_P(FeatureAnnotatorTest, OverlappingFeatureIterator) {
 
     size_t index = 0;
     for (const auto& feature : results) {
-        EXPECT_EQ(feature.featureID, param.expectedFeatureIds[index]);
+        EXPECT_EQ(feature.getID(), param.expectedFeatureIds[index]);
         ++index;
     }
     EXPECT_EQ(index, param.expectedFeatureIds.size());
@@ -157,49 +141,31 @@ class BestFeatureAnnotatorTest : public testing::TestWithParam<FeatureAnnotatorT
 
     const dataTypes::FeatureMap featureMap = {
         {1,
-         {GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature1",
-              .groupID = "group1",
-              .geneName = std::nullopt},
-          GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature2",
-              .groupID = "group1",
-              .geneName = std::nullopt},
-          GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{1, Region{.startPosition = 40, .endPosition = 50},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature3",
-              .groupID = "group2",
-              .geneName = std::nullopt},
-          GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{1, Region{.startPosition = 5, .endPosition = 25},
-                                             dataTypes::GenomicStrand::REVERSE},
-              .featureID = "feature4",
-              .groupID = "group3",
-              .geneName = std::nullopt}}},
+         {GenomicFeature{"transcript",
+                         GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature1", "group1", std::nullopt},
+          GenomicFeature{"transcript",
+                         GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature2", "group1", std::nullopt},
+          GenomicFeature{"transcript",
+                         GenomicRegion{1, Region{.startPosition = 40, .endPosition = 50},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature3", "group2", std::nullopt},
+          GenomicFeature{"transcript",
+                         GenomicRegion{1, Region{.startPosition = 5, .endPosition = 25},
+                                       dataTypes::GenomicStrand::REVERSE},
+                         "feature4", "group3", std::nullopt}}},
         {2,
-         {GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{2, Region{.startPosition = 1, .endPosition = 10},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature3",
-              .groupID = "group4",
-              .geneName = std::nullopt},
-          GenomicFeature{
-              .type = "transcript",
-              .genomicRegion = GenomicRegion{2, Region{.startPosition = 20, .endPosition = 30},
-                                             dataTypes::GenomicStrand::FORWARD},
-              .featureID = "feature4",
-              .groupID = "group4",
-              .geneName = std::nullopt}}},
+         {GenomicFeature{"transcript",
+                         GenomicRegion{2, Region{.startPosition = 1, .endPosition = 10},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature3", "group4", std::nullopt},
+          GenomicFeature{"transcript",
+                         GenomicRegion{2, Region{.startPosition = 20, .endPosition = 30},
+                                       dataTypes::GenomicStrand::FORWARD},
+                         "feature4", "group4", std::nullopt}}},
     };
 
     FeatureAnnotator annotator;
@@ -214,7 +180,7 @@ TEST_P(BestFeatureAnnotatorTest, GetBestOverlappingFeature) {
         EXPECT_FALSE(feature.has_value());
     } else {
         EXPECT_TRUE(feature.has_value());
-        EXPECT_EQ(feature->featureID, param.expectedFeatureIds[0]);
+        EXPECT_EQ(feature->getID(), param.expectedFeatureIds[0]);
     }
 }
 
@@ -242,20 +208,14 @@ class InsertFeatureAnnotatorTest : public testing::Test {
     const dataTypes::FeatureMap featureMap = {
         {1,
          {
-             GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
-                                                dataTypes::GenomicStrand::FORWARD},
-                 .featureID = "feature1",
-                 .groupID = "group1",
-                 .geneName = std::nullopt},
-             GenomicFeature{
-                 .type = "transcript",
-                 .genomicRegion = GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
-                                                dataTypes::GenomicStrand::FORWARD},
-                 .featureID = "feature2",
-                 .groupID = "group1",
-                 .geneName = std::nullopt},
+             GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 1, .endPosition = 10},
+                                          dataTypes::GenomicStrand::FORWARD},
+                            "feature1", "group1", std::nullopt},
+             GenomicFeature{"transcript",
+                            GenomicRegion{1, Region{.startPosition = 20, .endPosition = 30},
+                                          dataTypes::GenomicStrand::FORWARD},
+                            "feature2", "group1", std::nullopt},
          }},
     };
 
@@ -270,141 +230,9 @@ TEST_F(InsertFeatureAnnotatorTest, Insert) {
     const auto features =
         annotator.getOverlappingFeatures(region, dataTypes::GenomicOrientation::SAME);
     ASSERT_EQ(features.size(), 2UL);
-    EXPECT_EQ(features[0].featureID, "feature1");
-    EXPECT_NE(features[1].featureID, "feature2");
+    EXPECT_EQ(features[0].getID(), "feature1");
+    EXPECT_NE(features[1].getID(), "feature2");
 }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsert) {
-//     const dataTypes::GenomicRegion region{
-//         1, {.startPosition = 5, .endPosition = 15}, dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 2UL);
-
-//     EXPECT_EQ(result.featureID, "feature1");
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, "feature1");
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 1);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 15);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertTwoOverlapping) {
-//     const dataTypes::GenomicRegion region{1, Region{.startPosition = 5, .endPosition = 25},
-//                                           dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 1UL);
-
-//     EXPECT_EQ(result.featureID, "feature1");
-//     ASSERT_EQ(result.mergedFeatureIDs.size(), 1UL);
-//     EXPECT_EQ(result.mergedFeatureIDs[0], "feature2");
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, "feature1");
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 1);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 30);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertWithReverseStrand) {
-//     const dataTypes::GenomicRegion region{1, Region{.startPosition = 5, .endPosition = 15},
-//                                           dataTypes::GenomicStrand::REVERSE};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 3UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 5);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 15);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertWithNoStrand) {
-//     const dataTypes::GenomicRegion region{1, Region{.startPosition = 5, .endPosition = 15},
-//                                           dataTypes::GenomicStrand::NONE};
-//     ASSERT_DEATH(annotator.mergeInsertIndex(region, 0), "Strand must be specified for
-//     insertion");
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertNotExistingReferenceID) {
-//     const dataTypes::GenomicRegion region{
-//         2, {.startPosition = 5, .endPosition = 25}, dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 3UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 5);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 25);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertGraceDistance) {
-//     const dataTypes::GenomicRegion region{
-//         1, {.startPosition = 5, .endPosition = 15}, dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, -5);
-
-//     ASSERT_EQ(annotator.featureCount(), 1UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_EQ(result.mergedFeatureIDs, std::vector<std::string>{"feature2"});
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 1);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 30);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertGraceDistanceNotSecondOverlapping) {
-//     const dataTypes::GenomicRegion region{
-//         1, {.startPosition = 1, .endPosition = 13}, dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, -5);
-
-//     ASSERT_EQ(annotator.featureCount(), 2UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 1);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 13);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertGraceDistanceOneSpace) {
-//     const dataTypes::GenomicRegion region{1, Region{.startPosition = 12, .endPosition = 15},
-//                                           dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 3UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 12);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 15);
-// }
-
-// TEST_F(InsertFeatureAnnotatorTest, MergeInsertGraceDistanceBluntEnds) {
-//     const dataTypes::GenomicRegion region{1, Region{.startPosition = 10, .endPosition = 15},
-//                                           dataTypes::GenomicStrand::FORWARD};
-//     const auto result = annotator.mergeInsertIndex(region, 0);
-
-//     ASSERT_EQ(annotator.featureCount(), 2UL);
-
-//     const auto features = annotator.getOverlappingFeatures(region,
-//     annotation::Orientation::SAME); ASSERT_EQ(features.size(), 1UL);
-//     EXPECT_EQ(features[0].featureID, result.featureID);
-//     EXPECT_TRUE(result.mergedFeatureIDs.empty());
-//     EXPECT_EQ(features[0].genomicRegion.getStart(), 1);
-//     EXPECT_EQ(features[0].genomicRegion.getEnd(), 15);
-// }
 
 class MergeFeatureAnnotatorTest : public testing::Test {
    protected:
@@ -412,56 +240,49 @@ class MergeFeatureAnnotatorTest : public testing::Test {
 
     const dataTypes::FeatureMap featureMap = {
         {1,
-         {GenomicFeature{.type = "transcript",
-                         .genomicRegion = {1,
-                                           {.startPosition = 1, .endPosition = 10},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature1",
-                         .groupID = "group1",
-                         .geneName = std::nullopt},
-          GenomicFeature{.type = "transcript",
-                         .genomicRegion = {1,
-                                           {.startPosition = 20, .endPosition = 30},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature2",
-                         .groupID = "group1",
-                         .geneName = std::nullopt},
-          GenomicFeature{.type = "transcript",
-                         .genomicRegion = {1,
-                                           {.startPosition = 8, .endPosition = 50},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature3",
-                         .groupID = "group2",
-                         .geneName = std::nullopt},
-          GenomicFeature{.type = "transcript",
-                         .genomicRegion = {1,
-                                           {.startPosition = 5, .endPosition = 25},
-                                           dataTypes::GenomicStrand::REVERSE},
-                         .featureID = "feature4",
-                         .groupID = "group3",
-                         .geneName = std::nullopt},
-          GenomicFeature{.type = "transcript",
-                         .genomicRegion = {1,
-                                           {.startPosition = 50, .endPosition = 56},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature5",
-                         .groupID = "group2",
-                         .geneName = std::nullopt}}},
+         {GenomicFeature{
+              "transcript",
+              {1, {.startPosition = 1, .endPosition = 10}, dataTypes::GenomicStrand::FORWARD},
+              "feature1",
+              "group1",
+              std::nullopt},
+          GenomicFeature{
+              "transcript",
+              {1, {.startPosition = 20, .endPosition = 30}, dataTypes::GenomicStrand::FORWARD},
+              "feature2",
+              "group1",
+              std::nullopt},
+          GenomicFeature{
+              "transcript",
+              {1, {.startPosition = 8, .endPosition = 50}, dataTypes::GenomicStrand::FORWARD},
+              "feature3",
+              "group2",
+              std::nullopt},
+          GenomicFeature{
+              "transcript",
+              {1, {.startPosition = 5, .endPosition = 25}, dataTypes::GenomicStrand::REVERSE},
+              "feature4",
+              "group3",
+              std::nullopt},
+          GenomicFeature{
+              "transcript",
+              {1, {.startPosition = 50, .endPosition = 56}, dataTypes::GenomicStrand::FORWARD},
+              "feature5",
+              "group2",
+              std::nullopt}}},
         {2,
-         {GenomicFeature{.type = "transcript",
-                         .genomicRegion = {2,
-                                           {.startPosition = 1, .endPosition = 10},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature6",
-                         .groupID = "group4",
-                         .geneName = std::nullopt},
-          GenomicFeature{.type = "transcript",
-                         .genomicRegion = {2,
-                                           {.startPosition = 8, .endPosition = 30},
-                                           dataTypes::GenomicStrand::FORWARD},
-                         .featureID = "feature7",
-                         .groupID = "group4",
-                         .geneName = std::nullopt}}},
+         {GenomicFeature{
+              "transcript",
+              {2, {.startPosition = 1, .endPosition = 10}, dataTypes::GenomicStrand::FORWARD},
+              "feature6",
+              "group4",
+              std::nullopt},
+          GenomicFeature{
+              "transcript",
+              {2, {.startPosition = 8, .endPosition = 30}, dataTypes::GenomicStrand::FORWARD},
+              "feature7",
+              "group4",
+              std::nullopt}}},
     };
 
     FeatureAnnotator annotator;
@@ -478,31 +299,33 @@ TEST_F(MergeFeatureAnnotatorTest, MergeOverlapOne) {
     const auto feature1 = annotator.getOverlappingFeatures(regionOne, GenomicOrientation::SAME);
 
     ASSERT_EQ(feature1.size(), 1UL);
-    EXPECT_EQ(feature1[0].featureID, "feature1");
-    EXPECT_EQ(feature1[0].genomicRegion.getStart(), 1);
-    EXPECT_EQ(feature1[0].genomicRegion.getEnd(), 50);
+    EXPECT_EQ(feature1[0].getID(), "feature1");
+    EXPECT_EQ(feature1[0].getGenomicRegion().getStart(), 1);
+    EXPECT_EQ(feature1[0].getGenomicRegion().getEnd(), 50);
 
     const auto regionTwo = GenomicRegion{
         1, {.startPosition = 5, .endPosition = 25}, dataTypes::GenomicStrand::REVERSE};
     const auto feature2 = annotator.getOverlappingFeatures(regionTwo, GenomicOrientation::SAME);
     ASSERT_EQ(feature2.size(), 1UL);
-    EXPECT_EQ(feature2[0].featureID, "feature4");
-    EXPECT_EQ(feature2[0].genomicRegion.getStart(), 5);
-    EXPECT_EQ(feature2[0].genomicRegion.getEnd(), 25);
+    EXPECT_EQ(feature2[0].getID(), "feature4");
+    EXPECT_EQ(feature2[0].getGenomicRegion().getStart(), 5);
+    EXPECT_EQ(feature2[0].getGenomicRegion().getEnd(), 25);
 
     const auto regionThree = GenomicRegion{
         1, {.startPosition = 51, .endPosition = 56}, dataTypes::GenomicStrand::FORWARD};
     const auto feature3 = annotator.getOverlappingFeatures(regionThree, GenomicOrientation::SAME);
     ASSERT_EQ(feature3.size(), 1UL);
-    EXPECT_EQ(feature3[0].featureID, "feature5");
-    EXPECT_EQ(feature3[0].genomicRegion.getStart(), 50);
-    EXPECT_EQ(feature3[0].genomicRegion.getEnd(), 56);
+    EXPECT_EQ(feature3[0].getID(), "feature5");
+    EXPECT_EQ(feature3[0].getGenomicRegion().getStart(), 50);
+    EXPECT_EQ(feature3[0].getGenomicRegion().getEnd(), 56);
 
     const auto regionFour = GenomicRegion{
         2, {.startPosition = 1, .endPosition = 30}, dataTypes::GenomicStrand::FORWARD};
     const auto feature4 = annotator.getOverlappingFeatures(regionFour, GenomicOrientation::SAME);
     ASSERT_EQ(feature4.size(), 1UL);
-    EXPECT_EQ(feature4[0].featureID, "feature6");
-    EXPECT_EQ(feature4[0].genomicRegion.getStart(), 1);
-    EXPECT_EQ(feature4[0].genomicRegion.getEnd(), 30);
+    EXPECT_EQ(feature4[0].getID(), "feature6");
+    EXPECT_EQ(feature4[0].getGenomicRegion().getStart(), 1);
+    EXPECT_EQ(feature4[0].getGenomicRegion().getEnd(), 30);
 }
+
+// NOLINTEND

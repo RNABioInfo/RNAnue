@@ -1,3 +1,5 @@
+// NOLINTBEGIN
+
 #include <gtest/gtest.h>
 
 #include <cstddef>
@@ -186,7 +188,7 @@ TEST_F(GenomicFeatureTreeMergerTest, MergeUnspecificStrand) {
 
     // The merged interval should have .strand = NONE
     // Because the code sets it to NONE in UNSPECIFIC merges:
-    EXPECT_EQ(featureTree.getData(0).genomicRegion.getStrand(), GenomicStrand::NONE);
+    EXPECT_EQ(featureTree.getData(0).getGenomicRegion().getStrand(), GenomicStrand::NONE);
 }
 
 // Test merging intervals in SPECIFIC strand mode
@@ -222,8 +224,8 @@ TEST_F(GenomicFeatureTreeMergerTest, MergeSpecificStrand) {
     EXPECT_EQ(featureTree.getIntervalEnd(1), 6);
 
     // Check strands
-    EXPECT_EQ(featureTree.getData(0).genomicRegion.getStrand(), GenomicStrand::FORWARD);
-    EXPECT_EQ(featureTree.getData(1).genomicRegion.getStrand(), GenomicStrand::REVERSE);
+    EXPECT_EQ(featureTree.getData(0).getGenomicRegion().getStrand(), GenomicStrand::FORWARD);
+    EXPECT_EQ(featureTree.getData(1).getGenomicRegion().getStrand(), GenomicStrand::REVERSE);
 }
 
 // Test that multiple merges happen iteratively
@@ -286,3 +288,5 @@ TEST_F(GenomicFeatureTreeMergerTest, MergeAndCheckRemovedIndices) {
 }
 
 }  // end anonymous namespace
+
+// NOLINTEND
