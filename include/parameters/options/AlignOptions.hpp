@@ -1,9 +1,8 @@
 #pragma once
 
 // Standard
-#include <machine/limits.h>
-
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -33,12 +32,12 @@ struct AlignOptions {
                          "minimum score of a spliced fragment"sv};
 
     static constexpr ArithmeticParameterOption<size_t, 20,
-                                               {.lowerBound = 0, .upperBound = SIZE_T_MAX}>
+                                               {.lowerBound = 0, .upperBound = SIZE_MAX}>
         minAlignLength{{.shortName = std::nullopt, .longName = "minalignlen"},
                        "minimum total length of the aligned fraction"sv};
 
     static constexpr ArithmeticParameterOption<size_t, 10,
-                                               {.lowerBound = 0, .upperBound = SIZE_T_MAX}>
+                                               {.lowerBound = 0, .upperBound = SIZE_MAX}>
         minFragmentLength{{.shortName = std::nullopt, .longName = "minfraglen"},
                           "minimum length of a spliced fragment"sv};
 

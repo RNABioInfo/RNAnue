@@ -1,10 +1,9 @@
 #pragma once
 
 // Standard
-#include <machine/limits.h>
-
 #include <cfloat>
 #include <cstddef>
+#include <cstdint>
 #include <optional>
 #include <string_view>
 #include <tuple>
@@ -29,7 +28,7 @@ struct DetectOptions {
                         "aligned portion of the read"sv};
 
     static constexpr ArithmeticParameterOption<size_t, 20,
-                                               {.lowerBound = 0, .upperBound = SIZE_T_MAX}>
+                                               {.lowerBound = 0, .upperBound = SIZE_MAX}>
         minDetectLength{{.shortName = std::nullopt, .longName = "mindetectlen"},
                         "minimum fragment length after clipping"sv};
 
