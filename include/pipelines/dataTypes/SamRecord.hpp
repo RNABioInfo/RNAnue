@@ -78,17 +78,4 @@ inline auto operator>(const SamRecord& lhs, const SamRecord& rhs) -> bool {
     return dataTypes::operator<(rhs, lhs);
 }
 
-inline constexpr auto underlyingSequence(const SamRecord& record) -> seqan3::dna5_vector {
-    const bool sequenceIsOnReverseStrand =
-        static_cast<bool>(record.flag() & seqan3::sam_flag::on_reverse_strand);
-
-    if (sequenceIsOnReverseStrand) {
-        return record.sequence();
-    }
-    auto reverseComplementView =
-        record.sequence() | std::views::reverse | seqan3::views::complement;
-
-    return {reverseComplementView.begin(), reverseComplementView.end()};
-}
-
 }  // namespace dataTypes
