@@ -10,6 +10,7 @@
 #include <boost/program_options/value_semantic.hpp>
 
 // Internal
+#include "ConstexprStringFrom.hpp"
 #include "ParameterNames.hpp"
 #include "ParameterOption.hpp"
 
@@ -44,9 +45,10 @@ class DefaultedParameterOption : public ParameterOption<T> {
      *
      * @return std::string The description including the default value.
      */
-    [[nodiscard]] constexpr auto getDescription() const -> std::string override {
+    [[nodiscard]] auto getDescription() const -> std::string override {
         // TODO: Implement default description  string_from<T, defaultValue>::value
-        return std::string{this->description} + " (default: " + ")";
+
+        return std::string{this->description} + " (default: " + std::to_string(defaultValue) + ")";
     }
 
     /**
