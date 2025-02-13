@@ -18,6 +18,7 @@
 #include <seqan3/utility/all.hpp>
 
 // Internal
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "seqan3/alphabet/nucleotide/dna5.hpp"
 #include "seqan3/alphabet/structure/dot_bracket3.hpp"

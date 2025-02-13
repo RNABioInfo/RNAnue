@@ -3,6 +3,7 @@
 // seqan3
 #include <cstdint>
 #include <optional>
+#include <ranges>
 #include <string>
 #include <vector>
 
@@ -11,11 +12,14 @@
 #include <seqan3/alphabet/composite/alphabet_tuple_base.hpp>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/quality/phred42.hpp>
+#include <seqan3/alphabet/views/complement.hpp>
 #include <seqan3/io/record.hpp>
 #include <seqan3/io/sam_file/record.hpp>
 #include <seqan3/io/sam_file/sam_flag.hpp>
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 #include <seqan3/utility/type_list/type_list.hpp>
+
+#include "UnderlyingSequence.hpp"
 
 using namespace seqan3::literals;
 
@@ -72,6 +76,19 @@ inline auto operator<(const SamRecord& lhs, const SamRecord& rhs) -> bool {
 
 inline auto operator>(const SamRecord& lhs, const SamRecord& rhs) -> bool {
     return dataTypes::operator<(rhs, lhs);
+}
+
+inline constexpr auto underlyingSequence(const SamRecord& record) -> seqan3::dna5_vector {
+    const bool sequenceIsOnReverseStrand =
+        static_cast<bool>(record.flag() & seqan3::sam_flag::on_reverse_strand);
+
+    if (sequenceIsOnReverseStrand) {
+        return record.sequence();
+    }
+    auto reverseComplementView =
+        record.sequence() | std::views::reverse | seqan3::views::complement;
+
+    return {reverseComplementView.begin(), reverseComplementView.end()};
 }
 
 }  // namespace dataTypes

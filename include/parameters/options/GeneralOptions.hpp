@@ -60,7 +60,7 @@ struct GeneralOptions {
     static constexpr DefaultedParameterOption<GenomicOrientation, GenomicOrientation::Value::BOTH>
         featureOrientation{
             {.shortName = std::nullopt, .longName = "orientation"},
-            "orientation of the features to consider in relation to reads [same, opposite, both]"sv};
+            "orientation of the reads in relation to RNA sequences (strand-specific sequencing). Non strand-specific setting (both) disables nrgmax filtering. [same, opposite, both]"sv};
 
     static constexpr ArithmeticParameterOption<int, 100000,
                                                {.lowerBound = 1, .upperBound = 1000000}>

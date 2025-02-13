@@ -37,6 +37,7 @@
 #include "DetectSample.hpp"
 #include "FeatureAnnotator.hpp"
 #include "GenomicRegion.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "SamRecord.hpp"
 #include "SplitRecords.hpp"
@@ -289,7 +290,7 @@ auto Detect::processReadRecords(const std::vector<SamRecord>& readRecords, auto&
         return 0;
     }
 
-    const auto splitRecords = getSplitRecords(readRecords);
+    const auto splitRecords = getBestSplitRecords(readRecords);
 
     if (!splitRecords.has_value()) {
         return 0;
@@ -487,7 +488,7 @@ auto Detect::constructSplitRecords(const std::vector<SamRecord>& readRecords) co
  * @return An optional containing the best evaluated split records, or an empty
  * optional if no split records were found.
  */
-auto Detect::getSplitRecords(const std::vector<SamRecord>& readRecords) const
+auto Detect::getBestSplitRecords(const std::vector<SamRecord>& readRecords) const
     -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords> {
     std::unordered_map<size_t, std::vector<SamRecord>> recordHitGroups{};
     for (const auto& record : readRecords) {

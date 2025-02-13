@@ -212,7 +212,7 @@ class AsyncSplitRecordGroupBufferView
 };
 
 template <std::ranges::viewable_range urng_t>
-AsyncSplitRecordGroupBufferView(urng_t&&, size_t const buffer_size)
+AsyncSplitRecordGroupBufferView(urng_t&&, size_t buffer_size)
     -> AsyncSplitRecordGroupBufferView<std::views::all_t<urng_t>>;
 
 struct AsyncSplitRecordGroupBufferViewFn {

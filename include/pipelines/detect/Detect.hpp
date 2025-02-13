@@ -106,7 +106,7 @@ class Detect {
         -> std::optional<SplitRecords>;
     [[nodiscard]] auto constructSplitRecords(const std::vector<SamRecord> &readRecords) const
         -> std::optional<SplitRecords>;
-    [[nodiscard]] auto getSplitRecords(const std::vector<SamRecord> &readRecords) const
+    [[nodiscard]] auto getBestSplitRecords(const std::vector<SamRecord> &readRecords) const
         -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords>;
 
     static void mergeOutputFiles(const ChunkedOutTmpDirs &tmpDirs, const DetectOutput &output);

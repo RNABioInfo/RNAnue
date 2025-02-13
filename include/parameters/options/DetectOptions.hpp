@@ -57,6 +57,6 @@ struct DetectOptions {
         "[EXPERIMENTAL] wobble base pairs are allowed in crosslinking site evaluation"sv};
 
     static constexpr auto allOptions = std::make_tuple(
-        minMappingQuality, minComplementarity, siteLengthRatio, maxEnergy, excludeSoftClipping,
-        filterSplicing, allowAltSplicing, splicingTolerance, includeWobble);
+        minMappingQuality, minComplementarity, siteLengthRatio, minDetectLength, maxEnergy,
+        excludeSoftClipping, filterSplicing, allowAltSplicing, splicingTolerance, includeWobble);
 };

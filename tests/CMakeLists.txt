@@ -25,6 +25,7 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/CrosslinkingSitesEvaluatorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/IITreeTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/GenomicFeatureTreeMergerTests.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/UnderlyingSequenceTests.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp

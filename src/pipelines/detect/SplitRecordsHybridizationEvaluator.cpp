@@ -22,6 +22,7 @@
 
 // Internal
 #include "CrosslinkingSitesEvaluator.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
@@ -33,14 +34,17 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
     const SplitRecords &splitRecords,
     const SplitRecordsEvaluationParameters::BaseParameters &parameters)
     -> std::optional<SplitRecordsHybridizationEvaluator::Result> {
-    const seqan3::dna5_vector &sequence1 = splitRecords[0].sequence();
-    const seqan3::dna5_vector &sequence2 = splitRecords[1].sequence();
+    const auto &record1 = splitRecords[0];
+    const auto &record2 = splitRecords[1];
+
+    const auto sequence1View = record1.sequence() | views::underlying_sequence(record1.flag());
+    const auto sequence2View = record2.sequence() | views::underlying_sequence(record1.flag());
 
     auto toString = [](const auto &seq) {
         return (seq | seqan3::views::to_char | seqan3::ranges::to<std::string>());
     };
 
-    std::string interactionSeq = toString(sequence1) + "&" + toString(sequence2);
+    std::string interactionSeq = toString(sequence1View) + "&" + toString(sequence2View);
 
     vrna_fold_compound_t *foldCompound = vrna_fold_compound(
         interactionSeq.c_str(), nullptr, VRNA_OPTION_DEFAULT | VRNA_OPTION_HYBRID);
@@ -60,12 +64,16 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
                               seqan3::views::char_to<seqan3::dot_bracket3> |
                               seqan3::ranges::to<std::vector>();
 
-    if (secondaryStructure.size() != (sequence1.size() + sequence2.size() + 1)) {
+    const auto combinedSequenceLength = sequence1View.size() + sequence2View.size();
+
+    if (secondaryStructure.size() != (combinedSequenceLength + 1)) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
-            "Expected size: ", (sequence1.size() + sequence2.size() + 1),
-            ", Got: ", secondaryStructure.size(), "\n", secondaryStructure, "\n",
-            std::string(result->structure));
+            "Expected size: ", (combinedSequenceLength + 1), ", Got: ", secondaryStructure.size(),
+            "\n", secondaryStructure, "\n", std::string(result->structure));
     }
+
+    const seqan3::dna5_vector sequence1{sequence1View.begin(), sequence1View.end()};
+    const seqan3::dna5_vector sequence2{sequence2View.begin(), sequence2View.end()};
 
     const auto crosslinkingResult =
         CrosslinkingSitesEvaluator::evaluate(sequence1, sequence2, secondaryStructure,

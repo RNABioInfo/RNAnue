@@ -77,7 +77,7 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath, const Fi
     -> FeatureMap {
     FeatureMap featureMap;
 
-    std::ifstream file(featureFilePath.string());
+    std::ifstream file(featureFilePath);
 
     if (!file.is_open()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",

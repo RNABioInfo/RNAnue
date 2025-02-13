@@ -5,6 +5,7 @@
 #include <optional>
 #include <ranges>
 #include <tuple>
+#include <utility>
 #include <vector>
 
 // seqan3
@@ -16,6 +17,7 @@
 #include "CoOptimalPairwiseAligner.hpp"
 #include "SplitRecords.hpp"
 #include "SplitRecordsEvaluationParameters.hpp"
+#include "UnderlyingSequence.hpp"
 
 namespace pipelines::detect {
 
@@ -23,14 +25,19 @@ auto SplitRecordsComplementarityEvaluator::evaluate(
     const SplitRecords &splitRecords,
     const SplitRecordsEvaluationParameters::BaseParameters &parameters)
     -> std::optional<SplitRecordsComplementarityEvaluator::Result> {
-    const auto &sequence1 = splitRecords[0].sequence();
-    const auto &sequence2 = splitRecords[1].sequence();
+    const auto &record1 = splitRecords[0];
+    const auto &record2 = splitRecords[1];
 
-    const auto seq1Reverse = sequence1 | std::views::reverse;
+    const auto sequence1View =
+        record1.sequence() | std::views::reverse | views::underlying_sequence(record1.flag());
+    const auto sequence2View = record2.sequence() | views::underlying_sequence(record1.flag());
+
+    const auto sequence1 = std::vector<seqan3::dna5>(sequence1View.begin(), sequence1View.end());
+    const auto sequence2 = std::vector<seqan3::dna5>(sequence2View.begin(), sequence2View.end());
 
     const auto results =
         CoOptimalPairwiseAligner{SplitRecordsComplementarityEvaluator::complementaryScoringScheme()}
-            .getLocalAlignments(std::tie(seq1Reverse, sequence2));
+            .getLocalAlignments(std::tie(sequence1, sequence2));
 
     return SplitRecordsComplementarityEvaluator::getOptimalAlignment(
         results, parameters.minComplementarity, parameters.minComplementarityFraction);
