@@ -9,6 +9,7 @@
 
 // Internal
 #include "EvaluatedInteractionCluster.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "Utility.hpp"
 
@@ -71,9 +72,9 @@ void InteractionsWriter::writeInteractions(
 
 void InteractionsWriter::writeInteractionsHeader(std::ofstream& interactionsOut) {
     interactionsOut
-        << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strd\tfst_seg_strt\tfst_seg_"
-           "end\tsec_feat_id\t"
-           "sec_seg_chr\tsec_seg_strd\tsec_seg_strt\tsec_seg_end\tno_splits\tmean_inter_"
+        << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strt\tfst_seg_"
+           "end\tfst_seg_strd\tsec_feat_id\t"
+           "sec_seg_chr\tsec_seg_strt\tsec_seg_end\tsec_seg_strd\tno_splits\tmean_inter_"
            "crosslinks\tsd_inter_crosslinks\t"
            "gcs\tghs\tp_value\tpadj_value\n";
 }
@@ -102,16 +103,16 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
     interactionOut << cluster.getFirstFeatureID() << "\t";
     interactionOut << getReferenceID(cluster.getFirstSegment().getReferenceIDIndex(), referenceIDs)
                    << "\t";
-    interactionOut << static_cast<char>(cluster.getFirstSegment().getStrand()) << "\t";
     interactionOut << cluster.getFirstSegment().getStart() << "\t";
     interactionOut << cluster.getFirstSegment().getEnd() << "\t";
+    interactionOut << static_cast<char>(cluster.getFirstSegment().getStrand()) << "\t";
 
     interactionOut << cluster.getSecondFeatureID() << "\t";
     interactionOut << getReferenceID(cluster.getSecondSegment().getReferenceIDIndex(), referenceIDs)
                    << "\t";
-    interactionOut << static_cast<char>(cluster.getSecondSegment().getStrand()) << "\t";
     interactionOut << cluster.getSecondSegment().getStart() << "\t";
     interactionOut << cluster.getSecondSegment().getEnd() << "\t";
+    interactionOut << static_cast<char>(cluster.getSecondSegment().getStrand()) << "\t";
 
     interactionOut << cluster.fragmentCount() << "\t";
     interactionOut << cluster.meanCrosslinkingSiteCount() << "\t";
