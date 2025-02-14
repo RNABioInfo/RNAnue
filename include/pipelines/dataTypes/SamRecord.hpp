@@ -3,7 +3,6 @@
 // seqan3
 #include <cstdint>
 #include <optional>
-#include <ranges>
 #include <string>
 #include <vector>
 

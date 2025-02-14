@@ -4,11 +4,9 @@
 #include <cstddef>
 #include <iterator>
 #include <ranges>
-#include <vector>
 
 // seqan3
 #include "seqan3/alphabet/nucleotide/concept.hpp"
-#include "seqan3/alphabet/nucleotide/dna5.hpp"
 #include "seqan3/core/range/detail/adaptor_from_functor.hpp"
 #include "seqan3/io/sam_file/sam_flag.hpp"
 
@@ -43,10 +41,11 @@ class UnderlyingSequenceIterator {
      */
     explicit UnderlyingSequenceIterator(urng_t &seq, const seqan3::sam_flag &recordFlags)
         : is_on_reverse{static_cast<bool>(seqan3::sam_flag::on_reverse_strand & recordFlags)} {
-        if (!is_on_reverse)
+        if (!is_on_reverse) {
             iter = std::ranges::begin(seq);
-        else
+        } else {
             iter = std::ranges::end(seq);
+        }
     }
 
     /*!
@@ -54,7 +53,8 @@ class UnderlyingSequenceIterator {
      *
      * Used by the view to create the end iterator.
      */
-    UnderlyingSequenceIterator(base_t it, bool is_reverse) : iter(it), is_on_reverse(is_reverse) {}
+    UnderlyingSequenceIterator(base_t iter, bool is_reverse)
+        : iter(iter), is_on_reverse(is_reverse) {}
 
     /*!
      * @brief Pre-increment operator.
@@ -63,10 +63,11 @@ class UnderlyingSequenceIterator {
      * In reverse mode, moves to the previous element.
      */
     inline auto operator++() -> UnderlyingSequenceIterator & {
-        if (!is_on_reverse)
+        if (!is_on_reverse) {
             ++iter;
-        else
+        } else {
             --iter;
+        }
         return *this;
     }
 
@@ -86,7 +87,10 @@ class UnderlyingSequenceIterator {
      * In reverse mode, returns the complement of the element preceding the current iterator.
      */
     inline auto operator*() const -> value_type {
-        if (!is_on_reverse) return *iter;
+        if (!is_on_reverse) {
+            return *iter;
+        }
+
         auto tmp = iter;
         --tmp;
         return seqan3::complement(*tmp);
@@ -165,12 +169,16 @@ class UnderlyingSequenceView {
      * For reverse iteration this wraps std::ranges::begin(seq).
      */
     inline auto end() -> iterator {
-        if (!is_on_reverse) return iterator{std::ranges::end(seq), false};
+        if (!is_on_reverse) {
+            return iterator{std::ranges::end(seq), false};
+        }
         return iterator{std::ranges::begin(seq), true};
     }
 
     inline auto end() const -> const_iterator {
-        if (!is_on_reverse) return const_iterator{std::ranges::end(seq), false};
+        if (!is_on_reverse) {
+            return const_iterator{std::ranges::end(seq), false};
+        }
         return const_iterator{std::ranges::begin(seq), true};
     }
 
