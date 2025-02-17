@@ -39,12 +39,12 @@ static const std::string outSamplePairedAlignedSuffix = "_paired_aligned.bam";
 
 static const std::string pipelinePrefix = "02_align";
 
-struct AlignData : public pipelines::PipelineData {
+struct AlignData : public PipelineData {
     std::vector<AlignSampleType> treatmentSamples;
     std::optional<std::vector<AlignSampleType>> controlSamples;
 
     AlignData(const fs::path& outputDir, const fs::path& treatmentDir,
-              const std::optional<fs::path> controlDir)
+              const std::optional<fs::path>& controlDir)
         : treatmentSamples(retrieveSamples(treatmentSampleGroup, treatmentDir, outputDir)),
           controlSamples(controlDir ? std::optional(retrieveSamples(controlSampleGroup,
                                                                     controlDir.value(), outputDir))

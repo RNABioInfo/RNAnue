@@ -14,6 +14,8 @@
 #include "ParameterNames.hpp"
 #include "ParameterOption.hpp"
 
+namespace po = boost::program_options;
+
 /**
  * @brief Parameter option that includes a compile-time default value.
  *

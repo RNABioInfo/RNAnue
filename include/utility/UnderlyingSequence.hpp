@@ -4,11 +4,13 @@
 #include <cstddef>
 #include <iterator>
 #include <ranges>
+#include <vector>
 
 // seqan3
-#include "seqan3/alphabet/nucleotide/concept.hpp"
-#include "seqan3/core/range/detail/adaptor_from_functor.hpp"
-#include "seqan3/io/sam_file/sam_flag.hpp"
+#include <seqan3/alphabet/nucleotide/concept.hpp>
+#include <seqan3/alphabet/nucleotide/dna5.hpp>
+#include <seqan3/core/range/detail/adaptor_from_functor.hpp>
+#include <seqan3/io/sam_file/sam_flag.hpp>
 
 /*!
  * @brief An iterator that wraps an underlying random access iterator for nucleotide sequences.
@@ -120,7 +122,7 @@ class UnderlyingSequenceIterator {
     bool is_on_reverse{false};  ///< Indicates whether reverse mode is active.
 };
 
-// static_assert(std::bidirectional_iterator<UnderlyingSequenceIterator<std::vector<seqan3::dna5>>>);
+static_assert(std::forward_iterator<UnderlyingSequenceIterator<std::vector<seqan3::dna5>>>);
 
 /*!
  * @brief A view that wraps a nucleotide sequence and exposes an iterator that can traverse it

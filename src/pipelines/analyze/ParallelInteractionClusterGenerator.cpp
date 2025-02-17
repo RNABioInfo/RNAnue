@@ -171,10 +171,14 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
                 getSupplementaryFeatureIDForSegment(partiallyAnnotatedCluster.getSecondSegment());
         }
 
+        // Same logic for supplementary annotations as for regular ones
+        // Count the feature counts only one if both segments map to the same feature
         clusteringResults.featureCounts[firstFeatureID] +=
             partiallyAnnotatedCluster.fragmentCount();
-        clusteringResults.featureCounts[secondFeatureID] +=
-            partiallyAnnotatedCluster.fragmentCount();
+        if (firstFeatureID != secondFeatureID) {
+            clusteringResults.featureCounts[secondFeatureID] +=
+                partiallyAnnotatedCluster.fragmentCount();
+        }
 
         if (partiallyAnnotatedCluster.fragmentCount() >= parameters.minimumClusterReadCount &&
             partiallyAnnotatedCluster.segmentsMaxSelfOverlapFraction() <=

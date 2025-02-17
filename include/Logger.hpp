@@ -33,9 +33,10 @@ inline constexpr auto IncludeSourceLocation = X{};
 struct SourceLocation {
     SourceLocation(const SourceLocation &) = default;
     constexpr SourceLocation(std::source_location loc = std::source_location::current()) {
-        auto input = loc.file_name();
-        for (auto out = fileName; *input++; *out++ = *input);
-        line = loc.line();
+        const auto *input = loc.file_name();
+        for (auto *out = fileName; *input++ != 0; *out++ = *input) {
+            line = loc.line();
+        }
     }
     SourceLocation(SourceLocation &&) = delete;
     auto operator=(const SourceLocation &) -> SourceLocation & = default;
@@ -45,7 +46,8 @@ struct SourceLocation {
         : SourceLocation(loc) {}
     ~SourceLocation() = default;
 
-    char fileName[256] = {};
+    static constexpr size_t FILENAME_BUFFER_SIZE = 256;
+    char fileName[FILENAME_BUFFER_SIZE] = {};
     uint_least32_t line{};
 };
 

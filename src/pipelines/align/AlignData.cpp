@@ -11,6 +11,7 @@
 
 // Internal
 #include "AlignSample.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "PreprocessData.hpp"
 #include "Utility.hpp"

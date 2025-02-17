@@ -1,6 +1,7 @@
 #pragma once
 
 // Standard
+#include <algorithm>
 #include <concepts>
 #include <cstddef>
 #include <filesystem>
@@ -9,6 +10,7 @@
 #include <vector>
 
 // Internal
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 
 namespace pipelines {
@@ -24,6 +26,21 @@ static const std::string controlSampleGroup = "control";
 
 struct PipelineData {
    protected:
+    static auto validateDirEmpty(const std::filesystem::path &path, const bool forceOverwrite) {
+        if (fs::exists(path)) {
+            Logger::log<LogLevel::WARNING>("Output directory already exists");
+
+            if (forceOverwrite) {
+                Logger::log<LogLevel::WARNING>("Force overwriting existing output");
+                fs::remove_all(path);
+            } else {
+                Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+                    "Cancelling. If you want to overwrite existing results set the -f or --force "
+                    "flag.");
+            }
+        }
+    }
+
     static auto isHidden(const std::filesystem::path &path) -> bool {
         std::string filename = path.filename().string();
         return !filename.empty() && filename[0] == '.';
@@ -39,12 +56,9 @@ struct PipelineData {
 
     template <StringContainer Container>
     static auto containsAny(const std::string &fullString, const Container &substrings) -> bool {
-        for (const auto &substring : substrings) {
-            if (contains(fullString, substring)) {
-                return true;
-            }
-        }
-        return false;
+        return std::ranges::any_of(substrings, [&fullString](const std::string &substring) {
+            return contains(fullString, substring);
+        });
     };
 
     static auto getSubDirectories(const fs::path &parentDir) -> std::vector<fs::path> {
