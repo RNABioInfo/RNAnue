@@ -95,13 +95,8 @@ auto InteractionClusterGenerator::clusterPassesFilters(
 void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &&cluster) noexcept {
     // Update counts
 
-    // Conditional update the assumption is if both segments have the same feature ID the read stems
-    // from the same transcript so it is only counted once
     featureCountsByFeatureID[cluster.getFirstFeatureID()] += cluster.fragmentCount();
-
-    if (cluster.getFirstFeatureID() != cluster.getSecondFeatureID()) {
-        featureCountsByFeatureID[cluster.getSecondFeatureID()] += cluster.fragmentCount();
-    }
+    featureCountsByFeatureID[cluster.getSecondFeatureID()] += cluster.fragmentCount();
 
     if (clusterPassesFilters(cluster)) {
         finishedClusters.emplace_back(std::move(cluster));

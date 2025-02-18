@@ -31,6 +31,7 @@ auto StatisticEvaluator::getTranscriptProbabilities(
     const std::unordered_map<std::string, size_t> &transcriptCounts,
     const size_t totalTranscriptCount) -> std::unordered_map<std::string, double> {
     std::unordered_map<std::string, double> transcriptProbabilities;
+    transcriptProbabilities.reserve(transcriptCounts.size());
 
     for (const auto &[transcriptID, count] : transcriptCounts) {
         transcriptProbabilities[transcriptID] =
