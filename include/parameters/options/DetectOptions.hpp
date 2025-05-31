@@ -15,6 +15,10 @@
 struct DetectOptions {
     static constexpr std::string_view optionsDescription = "Detect Pipeline"sv;
 
+    static constexpr ArithmeticParameterOption<size_t, 5, {.lowerBound = 1, .upperBound = SIZE_MAX}>
+        maxPrimaryAlignmentCount{{.shortName = std::nullopt, .longName = "maxprim"},
+                                 "maximum count of primary alignments per read"sv};
+
     static constexpr ArithmeticParameterOption<size_t, 0, {.lowerBound = 0, .upperBound = 100}>
         minMappingQuality{{.shortName = std::nullopt, .longName = "mapqmin"},
                           "minimum mapping quality for reads to be considered in the analysis"sv};
@@ -25,7 +29,7 @@ struct DetectOptions {
 
     static constexpr ArithmeticParameterOption<double, 0.1, {.lowerBound = 0.0, .upperBound = 1.0}>
         siteLengthRatio{{.shortName = std::nullopt, .longName = "sitelenratio"},
-                        "aligned portion of the read"sv};
+                        "fraction of shortest record match cutoff"sv};
 
     static constexpr ArithmeticParameterOption<size_t, 20,
                                                {.lowerBound = 0, .upperBound = SIZE_MAX}>
@@ -44,9 +48,9 @@ struct DetectOptions {
         {.shortName = std::nullopt, .longName = "splicing"},
         "splicing events are removed in the detection of split reads"sv};
 
-    static constexpr DefaultedParameterOption<bool, false> allowAltSplicing{
+    static constexpr DefaultedParameterOption<bool, true> allowAltSplicing{
         {.shortName = std::nullopt, .longName = "altsplice"},
-        "allow for alternative splicing events that span exons of same groupID"sv};
+        "remove alternative splicing events"sv};
 
     static constexpr DefaultedParameterOption<int, 5> splicingTolerance{
         {.shortName = std::nullopt, .longName = "spltol"}, "tolerance for splicing events"sv};
@@ -55,7 +59,13 @@ struct DetectOptions {
         {.shortName = std::nullopt, .longName = "includewobble"},
         "[EXPERIMENTAL] wobble base pairs are allowed in crosslinking site evaluation"sv};
 
+    static constexpr ArithmeticParameterOption<double, 0.1, {.lowerBound = 0, .upperBound = 1}>
+        minHitGroupContribution{
+            {.shortName = std::nullopt, .longName = "mincontr"},
+            "minimum contribution of alignment within all alignments of this read"sv};
+
     static constexpr auto allOptions = std::make_tuple(
-        minMappingQuality, minComplementarity, siteLengthRatio, minDetectLength, maxEnergy,
-        excludeSoftClipping, filterSplicing, allowAltSplicing, splicingTolerance, includeWobble);
+        maxPrimaryAlignmentCount, minMappingQuality, minComplementarity, siteLengthRatio,
+        minDetectLength, maxEnergy, excludeSoftClipping, filterSplicing, allowAltSplicing,
+        splicingTolerance, includeWobble, minHitGroupContribution);
 };

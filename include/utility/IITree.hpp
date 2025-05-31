@@ -3,10 +3,12 @@
 #pragma once
 
 // Standard
+#if __has_include(<execution>)
+#include <execution>  // IWYU pragma: keep
+#endif
 #include <algorithm>
 #include <cassert>
 #include <cstddef>
-#include <execution>
 #include <iostream>
 #include <unordered_set>
 #include <vector>
@@ -95,7 +97,13 @@ class IITree {
     }
 
     void index() {
+#ifdef __cpp_lib_execution
         std::sort(std::execution::par, intervalls.begin(), intervalls.end(), IntervalLess());
+#else
+        // Some compilers have not implemented execution policies, so don't.
+        std::sort(intervalls.begin(), intervalls.end(), IntervalLess());
+#endif
+
         max_level = index_core(intervalls);
     }
 

@@ -1,4 +1,4 @@
-#include "SplitRecordsHybridizationEvaluator.hpp"
+#include "HybridizationEvaluationStep.hpp"
 
 // Standard
 #include <cassert>
@@ -25,17 +25,14 @@
 #include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "SplitRecords.hpp"
-#include "SplitRecordsEvaluationParameters.hpp"
 #include "seqan3/alphabet/structure/dot_bracket3.hpp"
 
 namespace pipelines::detect {
 
-auto SplitRecordsHybridizationEvaluator::evaluate(
-    const SplitRecords &splitRecords,
-    const SplitRecordsEvaluationParameters::BaseParameters &parameters)
-    -> std::optional<SplitRecordsHybridizationEvaluator::Result> {
-    const auto &record1 = splitRecords[0];
-    const auto &record2 = splitRecords[1];
+auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) const
+    -> HybridizationEvaluationResult {
+    const auto &record1 = splitRecords.first();
+    const auto &record2 = splitRecords.second();
 
     const auto sequence1View = record1.sequence() | views::underlying_sequence(record1.flag());
     const auto sequence2View = record2.sequence() | views::underlying_sequence(record1.flag());
@@ -55,9 +52,9 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
     std::unique_ptr<vrna_subopt_sol_s, decltype(&free)> result{
         vrna_subopt(foldCompound, DELTA_MFE, 1, nullptr), free};
 
-    if (result == nullptr || result->energy > parameters.mfeThreshold) {
+    if (result == nullptr) {
         vrna_fold_compound_free(foldCompound);
-        return std::nullopt;
+        return {.passed = false, .energy = std::nullopt, .crosslinkingResult = std::nullopt};
     }
 
     auto secondaryStructure = std::string(result->structure) |
@@ -75,14 +72,17 @@ auto SplitRecordsHybridizationEvaluator::evaluate(
     const seqan3::dna5_vector sequence1{sequence1View.begin(), sequence1View.end()};
     const seqan3::dna5_vector sequence2{sequence2View.begin(), sequence2View.end()};
 
-    const auto crosslinkingResult =
-        CrosslinkingSitesEvaluator::evaluate(sequence1, sequence2, secondaryStructure,
-                                             parameters.includeWobbleBasePairsInCrosslinkingSites);
+    const auto crosslinkingResult = CrosslinkingSitesEvaluator::evaluate(
+        sequence1, sequence2, secondaryStructure, config.includeWobbleBasePairsInCrosslinkingSites);
 
     vrna_fold_compound_free(foldCompound);
 
-    return SplitRecordsHybridizationEvaluator::Result{.energy = result->energy,
-                                                      .crosslinkingResult = crosslinkingResult};
+    return {.passed = isPassingFilters(result->energy),
+            .energy = result->energy,
+            .crosslinkingResult = crosslinkingResult};
 }
 
+auto HybridizationEvaluationStep::isPassingFilters(double energy) const noexcept -> bool {
+    return energy <= config.mfeThreshold;
+}
 }  // namespace pipelines::detect

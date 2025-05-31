@@ -11,6 +11,8 @@ set(Boost_INSTALL ${CMAKE_BINARY_DIR}/submodules/boost-install )
 set(Boost_INCLUDE_DIR ${Boost_INSTALL}/include )
 set(Boost_LIB_DIR ${Boost_INSTALL}/lib )
 
+message(STATUS "Using Boost cxx compiler: " ${CMAKE_CXX_COMPILER} )
+
 ExternalProject_Add(
       Boost
       PREFIX ${Boost_ROOT}

@@ -26,7 +26,7 @@ class SplitRecordsConstructor {
 
    private:
     static auto constructSplitRecordsForHitGroup(const std::vector<SamRecord> &hitGroup)
-        -> SplitRecords;
+        -> MultimericRecords;
 
-    static auto constructSplitRecords(const SamRecord &record) -> SplitRecords;
+    static auto constructSplitRecords(const SamRecord &record) -> MultimericRecords;
 };

@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <optional>
 #include <ostream>
+#include <vector>
 
 // Internal
 #include "GenomicOrientation.hpp"
@@ -39,6 +40,7 @@ struct GenomicRegion {
     [[nodiscard]] constexpr auto getStrand() const { return strand; }
     [[nodiscard]] constexpr auto getStart() const { return region.startPosition; }
     [[nodiscard]] constexpr auto getEnd() const { return region.endPosition; }
+    [[nodiscard]] constexpr auto getRegion() const { return region; }
 
     // Setters
     void setReferenceIDIndex(int referenceID) noexcept { referenceIDIndex = referenceID; }
@@ -271,6 +273,24 @@ struct GenomicRegion {
             default:
                 return false;
         }
+    }
+
+    /**
+     * @brief Computes the overlap between this features genomic region and another genomic region.
+     *
+     * This function calculates the number of bases in which the two regions overlap.
+     * If there is no overlap, it returns zero.
+     *
+     * @param other The other genomic region to compute the overlap with.
+     * @return The size of the overlapping interval between the two regions.
+     */
+    [[nodiscard]] constexpr auto overlap(const GenomicRegion& otherGenomicRegion) const noexcept
+        -> size_t {
+        if (referenceIDIndex != otherGenomicRegion.referenceIDIndex) {
+            return 0;
+        }
+
+        return region.overlap(otherGenomicRegion.region);
     }
 
    private:

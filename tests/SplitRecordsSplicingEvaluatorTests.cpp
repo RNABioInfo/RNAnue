@@ -27,7 +27,7 @@ using dataTypes::FeatureMap;
 using namespace seqan3::literals;
 
 struct IsSplicedTestParam {
-    SplitRecords splitRecords;
+    MultimericRecords splitRecords;
     bool isSpliced;
     bool allowAltsplice;
     dataTypes::GenomicOrientation annotationOrientatation;

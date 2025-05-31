@@ -1,6 +1,7 @@
 #pragma once
 
 // seqan3
+#include <cstddef>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -60,6 +61,22 @@ inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t>
     }
 
     return end;
+}
+
+inline auto softClippedBaseCount(const SamRecord& record) noexcept -> size_t {
+    size_t frontSoftClipped = record.cigar_sequence().front() == 'S'_cigar_operation
+                                  ? static_cast<size_t>(get<0>(record.cigar_sequence().front()))
+                                  : 0;
+
+    size_t backSoftClipped = record.cigar_sequence().back() == 'S'_cigar_operation
+                                 ? static_cast<size_t>(get<0>(record.cigar_sequence().front()))
+                                 : 0;
+
+    return frontSoftClipped + backSoftClipped;
+}
+
+inline auto alignmentLength(const SamRecord& record) noexcept -> size_t {
+    return record.sequence().size() - softClippedBaseCount(record);
 }
 
 inline auto operator<(const SamRecord& lhs, const SamRecord& rhs) -> bool {

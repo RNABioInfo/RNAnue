@@ -29,7 +29,7 @@ struct Region {
      * @param other The other region to compute the overlap with.
      * @return The size of the overlapping interval between the two regions.
      */
-    [[nodiscard]] auto overlap(const Region& other) const noexcept -> size_t {
+    [[nodiscard]] constexpr auto overlap(const Region& other) const noexcept -> size_t {
         return std::max(0, std::min(endPosition, other.endPosition) -
                                std::max(startPosition, other.startPosition));
     }

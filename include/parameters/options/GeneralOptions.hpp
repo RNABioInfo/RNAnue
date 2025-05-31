@@ -45,8 +45,8 @@ struct GeneralOptions {
         {.shortName = std::nullopt, .longName = "loglevel"},
         "output directory to which the results are saved (required)"sv};
 
-    static constexpr DefaultedParameterOption<size_t, 2> threads{
-        {.shortName = 'p', .longName = "threads"}, "max number of threads to be used"sv};
+    static constexpr ArithmeticParameterOption<size_t, 2, {.lowerBound = 2, .upperBound = 1000}>
+        threads{{.shortName = 'p', .longName = "threads"}, "max number of threads to be used"sv};
 
     static constexpr FileParameterOption featuresPath{
         {.shortName = 'f', .longName = "features"},

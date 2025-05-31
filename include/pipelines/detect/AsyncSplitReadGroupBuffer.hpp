@@ -25,9 +25,11 @@
 using record_input_t =
     seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, dataTypes::SamFieldIDs>;
 
+/// @brief View that asynchronously splits contiguous SAM records into groups by record id using a
+/// buffered queue.
 template <std::ranges::range urng_t>
-class AsyncSplitRecordGroupBufferView
-    : public std::ranges::view_interface<AsyncSplitRecordGroupBufferView<urng_t>> {
+class AsyncSplitReadGroupBufferView
+    : public std::ranges::view_interface<AsyncSplitReadGroupBufferView<urng_t>> {
    private:
     static_assert(std::ranges::input_range<urng_t>,
                   "The range parameter to async_input_buffer_view must be at least a "
@@ -45,6 +47,8 @@ class AsyncSplitRecordGroupBufferView
         "value of its reference type.");
     static_assert(std::same_as<urng_t, std::ranges::ref_view<record_input_t>>,
                   "Range type must be sam record type");
+
+    static constexpr size_t DEFAULT_GROUP_RESERVE_SIZE = 10;
 
     using urng_iterator_type = std::ranges::iterator_t<urng_t>;
 
@@ -112,31 +116,33 @@ class AsyncSplitRecordGroupBufferView
         void operator++(int) noexcept { ++(*this); }
 
         friend constexpr auto operator==(iterator const& lhs,
-                                         std::default_sentinel_t const&) noexcept -> bool {
+                                         std::default_sentinel_t const& /*unused*/) noexcept
+            -> bool {
             return lhs.at_end;
         }
 
         //!\copydoc operator==
-        friend constexpr auto operator==(std::default_sentinel_t const&,
+        friend constexpr auto operator==(std::default_sentinel_t const& /*unused*/,
                                          iterator const& rhs) noexcept -> bool {
             return rhs == std::default_sentinel_t{};
         }
 
         //!\brief Compares for inequality with sentinel.
         friend constexpr auto operator!=(iterator const& lhs,
-                                         std::default_sentinel_t const&) noexcept -> bool {
+                                         std::default_sentinel_t const& /*unused*/) noexcept
+            -> bool {
             return !(lhs == std::default_sentinel_t{});
         }
 
         //!\copydoc operator!=
-        friend constexpr auto operator!=(std::default_sentinel_t const&,
+        friend constexpr auto operator!=(std::default_sentinel_t const& /*unused*/,
                                          iterator const& rhs) noexcept -> bool {
             return rhs != std::default_sentinel_t{};
         }
     };
 
    public:
-    AsyncSplitRecordGroupBufferView(urng_t _urng, size_t const bufferSize) {
+    AsyncSplitReadGroupBufferView(urng_t _urng, size_t const bufferSize) {
         auto deleter = [](state* pointer) {
             if (pointer != nullptr) {
                 pointer->buffer.close();
@@ -154,7 +160,8 @@ class AsyncSplitRecordGroupBufferView
 
         auto runner = [&state = *statePtr]() {
             std::vector<record_input_t::value_type> recordGroup;
-            recordGroup.reserve(10);
+
+            recordGroup.reserve(DEFAULT_GROUP_RESERVE_SIZE);
 
             std::string currentRecordGroupID;
 
@@ -192,12 +199,12 @@ class AsyncSplitRecordGroupBufferView
 
     template <typename other_urange_t>
         requires(!std::same_as<std::remove_cvref_t<other_urange_t>,
-                               AsyncSplitRecordGroupBufferView>) &&
+                               AsyncSplitReadGroupBufferView>) &&
                 std::ranges::viewable_range<other_urange_t> &&
                 std::constructible_from<
                     urng_t, std::ranges::ref_view<std::remove_reference_t<other_urange_t>>>
-    AsyncSplitRecordGroupBufferView(other_urange_t&& _urng, size_t const bufferSize)
-        : AsyncSplitRecordGroupBufferView{std::views::all(_urng), bufferSize} {}
+    AsyncSplitReadGroupBufferView(other_urange_t&& _urng, size_t const bufferSize)
+        : AsyncSplitReadGroupBufferView{std::views::all(_urng), bufferSize} {}
 
     auto begin() -> iterator {
         assert(statePtr != nullptr);
@@ -212,10 +219,10 @@ class AsyncSplitRecordGroupBufferView
 };
 
 template <std::ranges::viewable_range urng_t>
-AsyncSplitRecordGroupBufferView(urng_t&&, size_t buffer_size)
-    -> AsyncSplitRecordGroupBufferView<std::views::all_t<urng_t>>;
+AsyncSplitReadGroupBufferView(urng_t&&, size_t buffer_size)
+    -> AsyncSplitReadGroupBufferView<std::views::all_t<urng_t>>;
 
-struct AsyncSplitRecordGroupBufferViewFn {
+struct AsyncSplitReadGroupBufferViewFn {
     constexpr auto operator()(size_t const bufferSize) const {
         return seqan3::detail::adaptor_from_functor{*this, bufferSize};
     }
@@ -243,8 +250,8 @@ struct AsyncSplitRecordGroupBufferViewFn {
                 "The buffer_size parameter to views::async_input_buffer must be > 0."};
         }
 
-        return AsyncSplitRecordGroupBufferView{std::forward<urng_t>(urange), buffer_size};
+        return AsyncSplitReadGroupBufferView{std::forward<urng_t>(urange), buffer_size};
     }
 };
 
-inline constexpr auto AsyncSplitRecordGroupBuffer = AsyncSplitRecordGroupBufferViewFn{};
+inline constexpr auto AsyncSplitReadGroupBuffer = AsyncSplitReadGroupBufferViewFn{};

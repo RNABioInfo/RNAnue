@@ -16,16 +16,16 @@
 #include <seqan3/io/views/async_input_buffer.hpp>
 
 // Internal
-#include "AsyncSplitRecordGroupBuffer.hpp"
+#include "AsyncSplitReadGroupBuffer.hpp"
 #include "SamRecord.hpp"
 #include "TestFilePath.hpp"
 
 using namespace seqan3::literals;
 
-TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
+TEST(AsyncSplitReadGroupBufferTest, SingleThreaded) {
     seqan3::sam_file_input fin{getTestFilePath("splitRecords.bam"), dataTypes::SamFieldIDs{}};
 
-    auto inputBuffer = fin | AsyncSplitRecordGroupBuffer(2);
+    auto inputBuffer = fin | AsyncSplitReadGroupBuffer(2);
 
     size_t groupCount = 0;
 
@@ -52,10 +52,10 @@ TEST(AsyncSplitRecordGroupBufferTest, SingleThreaded) {
     EXPECT_EQ(groupCount, 6UL);
 };
 
-TEST(AsyncSplitRecordGroupBufferTest, Multithreaded) {
+TEST(AsyncSplitReadGroupBufferTest, Multithreaded) {
     seqan3::sam_file_input fin{getTestFilePath("splitRecords.bam"), dataTypes::SamFieldIDs{}};
 
-    auto asyncInputBuffer = fin | AsyncSplitRecordGroupBuffer(2);
+    auto asyncInputBuffer = fin | AsyncSplitReadGroupBuffer(2);
 
     auto worker = [&asyncInputBuffer]() -> size_t {
         size_t count = 0;

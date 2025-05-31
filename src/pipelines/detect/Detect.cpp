@@ -1,20 +1,20 @@
 #include "Detect.hpp"
 
-#include <algorithm>
 #include <cassert>
+#include <concepts>
 #include <cstddef>
+#include <cstdlib>
 #include <deque>
 #include <filesystem>
 #include <fstream>
 #include <functional>
 #include <future>
-#include <iterator>
+#include <ios>
+#include <iostream>
 #include <memory>
 #include <optional>
 #include <stdexcept>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -29,21 +29,32 @@
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 
 // Internal
-#include "AsyncSplitRecordGroupBuffer.hpp"
+#include "AnnotationStep.hpp"
+#include "AsyncSplitReadGroupBuffer.hpp"
+#include "ComplementarityEvaluationStep.hpp"
 #include "Constants.hpp"
-#include "CustomSamTags.hpp"
 #include "DetectData.hpp"
 #include "DetectParameters.hpp"
 #include "DetectSample.hpp"
+#include "EvaluationContextResultHandler.hpp"
 #include "FeatureAnnotator.hpp"
-#include "GenomicRegion.hpp"
+#include "HitGroupEvaluator.hpp"
+#include "HybridizationEvaluationStep.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "MetricsTrackingStep.hpp"
+#include "ReadGroupEvaluationParameters.hpp"
+#include "ReadGroupEvaluator.hpp"
+#include "ReadGroupPostScoringStep.hpp"
 #include "SamRecord.hpp"
+#include "SamReference.hpp"
+#include "SegemehlReadGroupPreprocessor.hpp"
+#include "SplicingEvaluationStep.hpp"
 #include "SplitRecords.hpp"
-#include "SplitRecordsEvaluationParameters.hpp"
-#include "SplitRecordsEvaluator.hpp"
+#include "TempOutputDirs.hpp"
 #include "Utility.hpp"
+#include "VariantOverload.hpp"
+#include "seqan3/utility/tuple/pod_tuple.hpp"
 
 using namespace dataTypes;
 
@@ -58,73 +69,76 @@ void Detect::process(const DetectData& data) {
         std::make_shared<const FeatureAnnotator>(params.featuresInPath, referenceIDToIndex,
                                                  params.featureTypes)};
 
-    splitRecordsEvaluator =
-        SplitRecordsEvaluator(getSplitRecordsEvaluatorParameters(params, featureAnnotator));
-    for (const auto& sample : data.treatmentSamples) {
-        processSample(sample, featureAnnotator);
-    }
+    const auto evaluationParameters =
+        ReadGroupEvaluationParameters::makeParams(params, featureAnnotator);
 
-    if (!data.controlSamples.has_value()) {
-        Logger::log("No control samples provided");
-        return;
-    }
+    auto processSamples = [&](const auto& evaluationParams) {
+        for (const auto& sample : data.treatmentSamples) {
+            processSample(sample, evaluationParams);
+        }
 
-    Logger::log(constants::pipelines::PROCESSING_CONTROL_MESSAGE);
+        if (!data.controlSamples.has_value()) {
+            Logger::log("No control samples provided");
+            return;
+        }
 
-    for (const auto& sample : data.controlSamples.value()) {
-        processSample(sample, featureAnnotator);
-    }
+        Logger::log(constants::pipelines::PROCESSING_CONTROL_MESSAGE);
+
+        for (const auto& sample : data.controlSamples.value()) {
+            processSample(sample, evaluationParams);
+        }
+    };
+
+    std::visit(overloaded{[&](const ReadGroupEvaluationParameters::Base& baseParams) {
+                              processSamples(baseParams);
+                          },
+                          [&](const ReadGroupEvaluationParameters::Splicing& splicingParams) {
+                              processSamples(splicingParams);
+                          }},
+               evaluationParameters);
 }
 
-void Detect::processSample(const DetectSample& sample,
-                           std::shared_ptr<const FeatureAnnotator> featureAnnotator) const {
+template <ReadGroupEvaluationParameters::Type ParamT>
+void Detect::processSample(const DetectSample& sample, const ParamT& evaluationParams) const {
     Logger::log("Processing sample: ", sample.input.sampleName);
 
-    const fs::path outputTmpDir = sample.output.outputSplitAlignmentsPath.parent_path() / "tmp";
+    // Prepare temporary dirs for chunked processing
+    const fs::path outputParentDir = sample.output.outputSplitAlignmentsPath.parent_path();
+    const fs::path outputTmpDir = outputParentDir / "tmp";
+    const TempOutputDirs outTmpDirs = prepareTmpOutputDirs(outputTmpDir);
 
-    const ChunkedOutTmpDirs outTmpDirs = prepareTmpOutputDirs(outputTmpDir);
-
-    Logger::log<LogLevel::DEBUG>("Alignments path: ", sample.input.inputAlignmentsPath);
-
+    // Get sam file input infos and buffer
     seqan3::sam_file_input alignmentsIn{sample.input.inputAlignmentsPath, SamFieldIDs{}};
-
-    std::vector<size_t> referenceLengths{};
-    std::ranges::transform(alignmentsIn.header().ref_id_info, std::back_inserter(referenceLengths),
-                           [](auto const& info) { return std::get<0>(info); });
-    const std::deque<std::string>& referenceIDs = alignmentsIn.header().ref_ids();
-
-    assert(referenceLengths.size() == referenceIDs.size());
-
+    SamReference reference{alignmentsIn.header()};
     AsyncGroupBufferType recordInputBuffer =
-        alignmentsIn | AsyncSplitRecordGroupBuffer(params.threadCount + 1);
+        alignmentsIn | AsyncSplitReadGroupBuffer(params.threadCount + 1);
 
-    std::vector<std::future<Result>> processResults;
+    // Process and store results in a chunked process
+    std::vector<std::future<Result>> results;
 
     for (size_t i = 1; i < params.threadCount; ++i) {
-        processResults.emplace_back(std::async(
-            std::launch::async, &Detect::processRecordChunk, this, std::ref(outTmpDirs),
-            std::ref(recordInputBuffer), std::ref(referenceIDs), std::ref(referenceLengths),
-            std::make_shared<const FeatureAnnotator>(*featureAnnotator)));
+        results.emplace_back(std::async(std::launch::async,
+                                        &Detect::template processRecordChunk<ParamT>, this,
+                                        std::cref(outTmpDirs), std::ref(recordInputBuffer),
+                                        std::ref(reference), std::cref(evaluationParams)));
     }
 
-    Detect::Result mergedResults;
+    Detect::Result mergedResults =
+        processRecordChunk(outTmpDirs, recordInputBuffer, reference, evaluationParams);
 
-    for (auto& resultFuture : processResults) {
+    for (auto& resultFuture : results) {
         mergedResults += resultFuture.get();
     }
 
-    Logger::log("Processed ", mergedResults.processedRecordsCount, " reads. Found ",
-                mergedResults.splitFragmentsCount, " valid split fragments and ",
-                mergedResults.singletonFragmentsCount, " singleton fragments. Removed ",
-                mergedResults.removedDueToLowMappingQuality,
-                " reads due to low mapping quality and ", mergedResults.removedDueToFragmentLength,
-                " reads due to short read length.");
+    mergedResults.createPlots(outputParentDir);
+
+    Logger::log(mergedResults.toString());
 
     writeTranscriptCountsFile(sample.output.outputContiguousAlignmentsTranscriptCountsPath,
-                              mergedResults.transcriptCounts);
+                              mergedResults.singletonTranscriptCounts);
 
     // Merge results from all processing chunks
-    mergeOutputFiles(outTmpDirs, sample.output);
+    mergeTmpFiles(outTmpDirs, sample.output);
 
     writeReadCountsSummaryFile(mergedResults, sample.input.sampleName,
                                sample.output.outputSharedReadCountsPath);
@@ -132,139 +146,70 @@ void Detect::processSample(const DetectSample& sample,
     fs::remove_all(outputTmpDir);
 }
 
-auto Detect::processRecordChunk(const ChunkedOutTmpDirs& outTmpDirs,
-                                AsyncGroupBufferType& recordInputBuffer,
-                                const std::deque<std::string>& refIDs,
-                                const std::vector<size_t>& refLengths,
-                                std::shared_ptr<const FeatureAnnotator> featureAnnotator) const
-    -> Detect::Result {
-    const std::string chunkID = helper::getUUID();
+template <ReadGroupEvaluationParameters::Type ParamT>
+auto Detect::processRecordChunk(const TempOutputDirs& outTmpDirs,
+                                AsyncGroupBufferType& recordInputBuffer, SamReference& reference,
+                                const ParamT& evaluationParams) const -> Detect::Result {
+    EvaluationContextResultHandler resultHandler{outTmpDirs, reference, params.chunkSize};
 
-    const fs::path splitsOutPath = outTmpDirs.outputTmpSplitsDir / (chunkID + ".bam");
-    const fs::path multiSplitsOutPath = outTmpDirs.outputTmpMultisplitsDir / (chunkID + ".bam");
-    const fs::path unassignedContiguousOutPath =
-        outTmpDirs.outputTmpUnassignedContiguousDir / (chunkID + ".bam");
+    SegemehlReadGroupPreprocessorConfig collationConfig{
+        .constructionParams = {.minimumMapQuality = params.minimumMapQuality,
+                               .minimumFragmentLength = params.minimumFragmentLength,
+                               .excludeSoftClipping = params.excludeSoftClipping},
+        .maxPrimaryAlignmentCount = params.maxPrimaryAlignmentCount};
+    SegemehlReadGroupPreprocessor preprocessor{collationConfig};
 
-    seqan3::sam_file_output splitsOut{splitsOutPath, refIDs, refLengths, SamFieldIDs{}};
-    seqan3::sam_file_output multiSplitsOut{multiSplitsOutPath, refIDs, refLengths, SamFieldIDs{}};
-    seqan3::sam_file_output unassignedContiguousOut{unassignedContiguousOutPath, refIDs, refLengths,
-                                                    SamFieldIDs{}};
+    ReadGroupPostScoringStep postprocessor{{static_cast<float>(params.minHitGroupContribution)}};
 
-    size_t recordsCount = 0;
-    size_t totalSplitFragmentsCount = 0;
-    size_t totalSingletonFragmentsCount = 0;
+    auto complementarityStep = ComplementarityEvaluationStep{
+        ComplementarityEvaluationStepConfig::makeConfig(evaluationParams)};
 
-    size_t removedDueToLowMapQuality = 0;
-    size_t removedDueToReadLength = 0;
+    auto hybridizationStep = HybridizationEvaluationStep{
+        HybridizationEvaluationStepConfig::makeConfig(evaluationParams)};
 
-    TranscriptCounts singletonTranscriptCounts;
+    auto annotationStep = AnnotationStep{AnnotationStepConfig::makeConfig(evaluationParams)};
 
-    auto assignSingletonTranscriptCount = [&](SamRecord& record) {
-        if (!record.reference_id() || !record.reference_position()) [[unlikely]] {
-            return;
-        }
+    auto metricTrackingStep = MetricsTrackingStep{};
 
-        const auto region = GenomicRegion::fromSamRecord(record);
+    if constexpr (std::same_as<ParamT, ReadGroupEvaluationParameters::Base>) {
+        auto evaluator = ReadGroupEvaluator(
+            std::ref(preprocessor), std::ref(postprocessor), std::ref(complementarityStep),
+            std::ref(hybridizationStep), std::ref(annotationStep), std::ref(metricTrackingStep));
 
-        if (!region) [[unlikely]] {
-            return;
-        }
+        for (ReadGroup readGroup : recordInputBuffer) {
+            auto res = evaluator.evaluate(std::move(readGroup));
 
-        const auto bestFeature =
-            featureAnnotator->getBestOverlappingFeature(region.value(), params.featureOrientation);
-
-        if (bestFeature) {
-            singletonTranscriptCounts[bestFeature->getAnnotationID()]++;
-        } else {
-            unassignedContiguousOut.push_back(record);
-        }
-    };
-
-    for (std::vector<SamRecord>& recordGroup : recordInputBuffer) {
-        recordsCount += recordGroup.size();
-
-        std::unordered_set<size_t> invalidRecordHitGroups;
-        std::vector<SamRecord> validRecordsGroup;
-
-        auto isInvalid = [&params = params](SamRecord& record) {
-            return static_cast<bool>(record.flag() & seqan3::sam_flag::unmapped) ||
-                   record.mapping_quality() < params.minimumMapQuality ||
-                   record.sequence().size() < params.minimumFragmentLength;
-        };
-
-        for (SamRecord& record : recordGroup) {
-            if (isInvalid(record)) {
-                invalidRecordHitGroups.insert(record.tags().get<"HI"_tag>());
-
-                if (record.mapping_quality() < params.minimumMapQuality) {
-                    removedDueToLowMapQuality++;
-                } else {
-                    removedDueToReadLength++;
-                }
-
-                continue;
+            for (const auto& context : res.successes) {
+                std::visit(resultHandler, context);
             }
-
-            // Read is singleton and does not contain any split information ->
-            // Counted for total fragments
-            if (!record.tags().contains("XJ"_tag) || record.tags().get<"XJ"_tag>() < 2) {
-                if (static_cast<bool>(record.flag() & seqan3::sam_flag::secondary_alignment)) {
-                    continue;
-                }
-
-                assignSingletonTranscriptCount(record);
-                totalSingletonFragmentsCount++;
-
-                continue;
-            }
-
-            // Read is part of a split read and valid but a previous record with the
-            // same hit group was invalid -> Skip
-            if (invalidRecordHitGroups.contains(record.tags().get<"HI"_tag>())) {
-                continue;
-            }
-
-            validRecordsGroup.push_back(std::move(record));
         }
 
-        std::erase_if(validRecordsGroup, [&](const SamRecord& record) {
-            return invalidRecordHitGroups.contains(record.tags().get<"HI"_tag>());
-        });
+        Logger::log("Finished batch with metrics: ", metricTrackingStep);
+    } else {
+        auto splicingStep =
+            SplicingEvaluationStep{SplicingEvaluationStepConfig::makeConfig(evaluationParams)};
 
-        size_t fragmentsCount = processReadRecords(validRecordsGroup, splitsOut, multiSplitsOut);
-        totalSplitFragmentsCount += fragmentsCount;
+        auto evaluator = ReadGroupEvaluator(std::ref(preprocessor), std::ref(postprocessor),
+                                            std::ref(splicingStep), std::ref(complementarityStep),
+                                            std::ref(hybridizationStep), std::ref(annotationStep),
+                                            std::ref(metricTrackingStep));
+
+        for (ReadGroup readGroup : recordInputBuffer) {
+            auto res = evaluator.evaluate(std::move(readGroup));
+
+            for (const auto& context : res.successes) {
+                std::visit(resultHandler, context);
+            }
+        }
     }
 
-    return {.processedRecordsCount = recordsCount,
-            .transcriptCounts = singletonTranscriptCounts,
-            .splitFragmentsCount = totalSplitFragmentsCount,
-            .singletonFragmentsCount = totalSingletonFragmentsCount,
-            .removedDueToLowMappingQuality = removedDueToLowMapQuality,
-            .removedDueToFragmentLength = removedDueToReadLength};
-}
+    resultHandler.save();
 
-auto Detect::getSplitRecordsEvaluatorParameters(
-    const DetectParameters& params, std::shared_ptr<const FeatureAnnotator> featureAnnotator)
-    -> SplitRecordsEvaluationParameters::ParameterVariant {
-    if (params.removeSplicingEvents) {
-        return SplitRecordsEvaluationParameters::SplicingParameters{
-            .baseParameters = {.minComplementarity = params.minimumComplementarity,
-                               .minComplementarityFraction = params.minimumSiteLengthRatio,
-                               .mfeThreshold = params.maxHybridizationEnergy,
-                               .includeWobbleBasePairsInCrosslinkingSites =
-                                   params.includeWobbleBasePairsInCrosslinkingSites},
-            .orientation = params.featureOrientation,
-            .splicingTolerance = params.splicingTolerance,
-            .allowAlternativeSplicing = params.allowAlternativeSplicing,
-            .featureAnnotator = std::move(featureAnnotator)};
-    }
-
-    return SplitRecordsEvaluationParameters::BaseParameters{
-        .minComplementarity = params.minimumComplementarity,
-        .minComplementarityFraction = params.minimumSiteLengthRatio,
-        .mfeThreshold = params.maxHybridizationEnergy,
-        .includeWobbleBasePairsInCrosslinkingSites =
-            params.includeWobbleBasePairsInCrosslinkingSites};
+    return {.preprocessMetrics = preprocessor.getMetrics(),
+            .complementarityMetrics = complementarityStep.getMetrics(),
+            .hybridizationMetrics = hybridizationStep.getMetrics(),
+            .postprocessMetrics = postprocessor.getMetrics(),
+            .singletonTranscriptCounts = resultHandler.getSingletonTranscriptCounts()};
 }
 
 auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::string> {
@@ -273,267 +218,7 @@ auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::
     return alignmentsIn.header().ref_ids();
 }
 
-/**
- * Retrieves the final optimal split records and returns the count of fragments
- * for a specific record id. Expects read records to stem exactly from one
- * record id.
- *
- * @param readRecords The vector of SamRecord objects representing the read
- * records.
- * @param splitsOut The output stream for split records.
- * @param multiSplitsOut The output stream for multi split records.
- * @return The count of fragments for a specific record id.
- */
-auto Detect::processReadRecords(const std::vector<SamRecord>& readRecords, auto& splitsOut,
-                                auto& multiSplitsOut [[maybe_unused]]) const -> size_t {
-    if (readRecords.empty()) {
-        return 0;
-    }
-
-    const auto splitRecords = getBestSplitRecords(readRecords);
-
-    if (!splitRecords.has_value()) {
-        return 0;
-    }
-
-    // TODO Implement multi split writing
-    writeSamFile(splitsOut, splitRecords.value().splitRecords);
-
-    return splitRecords.value().splitRecords.size();
-}
-
-auto Detect::constructSplitRecords(const SamRecord& readRecord) const
-    -> std::optional<SplitRecords> {
-    // Number of expected split records for within the record
-    const size_t expectedSplitRecords = readRecord.tags().get<"XH"_tag>();
-
-    SplitRecords splitRecords{};
-    splitRecords.reserve(expectedSplitRecords);
-
-    std::vector<seqan3::cigar> currentCigar{};
-    constexpr size_t initialCigarCapacity = 10;
-    splitRecords.reserve(initialCigarCapacity);
-
-    size_t referencePosition = readRecord.reference_position().value_or(0);
-    size_t startPosRead{};
-    size_t endPosRead{};  // absolute position in read/alignment (e.g., 1 to end)
-    size_t startPosSplit{};
-    size_t endPosSplit{};  // position in split read (e.g., XX:i to XY:i / 14 to 20)
-
-    bool isValid = true;
-    int nextSplitReferenceShift = 0;
-
-    auto const addSplitRecord = [&]() {
-        const auto splitSeq =
-            readRecord.sequence() | seqan3::views::slice(static_cast<ptrdiff_t>(startPosRead),
-                                                         static_cast<ptrdiff_t>(endPosRead));
-        const auto splitQual =
-            readRecord.base_qualities() | seqan3::views::slice(static_cast<ptrdiff_t>(startPosRead),
-                                                               static_cast<ptrdiff_t>(endPosRead));
-
-        if (splitSeq.size() < params.minimumFragmentLength) {
-            isValid = false;
-            return;
-        }
-
-        seqan3::sam_tag_dictionary tags{};
-        tags.get<"XX"_tag>() = static_cast<int>(startPosSplit);
-        tags.get<"XY"_tag>() = static_cast<int>(endPosSplit);
-        tags.get<"XN"_tag>() = static_cast<float>(splitRecords.size());
-
-        splitRecords.emplace_back(readRecord.id(), readRecord.flag(), readRecord.reference_id(),
-                                  referencePosition, readRecord.mapping_quality(), currentCigar,
-                                  seqan3::dna5_vector(splitSeq.begin(), splitSeq.end()),
-                                  std::vector<seqan3::phred42>(splitQual.begin(), splitQual.end()),
-                                  std::move(tags));
-    };
-
-    auto const addOtherCigar = [&](const auto& cigar) {
-        const auto cigarValue = get<0>(cigar);
-        endPosRead += cigarValue;
-        endPosSplit += cigarValue;
-        currentCigar.push_back(cigar);
-    };
-
-    auto const addInsertionCigar = [&](const auto& cigar) {
-        const auto cigarValue = get<0>(cigar);
-        endPosRead += cigarValue;
-        endPosSplit += cigarValue;
-        nextSplitReferenceShift -= cigarValue;
-        currentCigar.push_back(cigar);
-    };
-
-    auto const addDeletionCigar = [&](const auto& cigar) {
-        currentCigar.push_back(cigar);
-        nextSplitReferenceShift += get<0>(cigar);
-    };
-
-    auto const addSoftClipCigar = [&](const auto& cigar) {
-        const auto cigarValue = get<0>(cigar);
-        if (!params.excludeSoftClipping) {
-            nextSplitReferenceShift -= cigarValue;
-            addOtherCigar(cigar);
-            return;
-        }
-
-        /* If current cigar is empty, we are at the beginning of the read in case
-        of soft clipping at the end of the read it is just ignored */
-        if (currentCigar.empty()) {
-            nextSplitReferenceShift -= cigarValue;
-            startPosRead += cigarValue;
-            endPosRead += cigarValue;
-            startPosSplit += cigarValue;
-            endPosSplit += cigarValue;
-        }
-    };
-
-    auto const addSkipCigar = [&](const auto& cigar) {
-        if (currentCigar.empty()) {
-            return;
-        }
-
-        addSplitRecord();
-
-        // Set up positions for the next split
-        const auto cigarValue = get<0>(cigar);
-        assert((cigarValue + endPosRead + nextSplitReferenceShift) >= 0);
-        referencePosition += cigarValue + endPosRead + nextSplitReferenceShift;
-        startPosSplit = endPosSplit;
-        startPosRead = endPosRead;
-        nextSplitReferenceShift = 0;
-        currentCigar.clear();
-    };
-
-    for (const auto& cigar : readRecord.cigar_sequence()) {
-        if (cigar == 'M'_cigar_operation || cigar == '='_cigar_operation ||
-            cigar == 'X'_cigar_operation) {
-            addOtherCigar(cigar);
-        } else if (cigar == 'I'_cigar_operation) {
-            addInsertionCigar(cigar);
-        } else if (cigar == 'D'_cigar_operation) {
-            addDeletionCigar(cigar);
-        } else if (cigar == 'S'_cigar_operation) {
-            addSoftClipCigar(cigar);
-        } else if (cigar == 'N'_cigar_operation) {
-            addSkipCigar(cigar);
-        }
-    }
-
-    addSplitRecord();
-
-    if (!isValid) {
-        return std::nullopt;
-    }
-
-    if (splitRecords.size() != expectedSplitRecords) {
-        Logger::log<LogLevel::WARNING>("Expected ", expectedSplitRecords,
-                                       " split fragments within record, but got ",
-                                       splitRecords.size(), ". Record ID: ", readRecord.id());
-
-        return std::nullopt;
-    }
-
-    return splitRecords;
-}
-
-/**
- * Constructs split records for a list of records with one or more elements
- * that comprise a splitted read.
- *
- * @param readRecords The vector of read records.
- * @return An optional containing the split records if construction is
- * successful, otherwise std::nullopt.
- */
-auto Detect::constructSplitRecords(const std::vector<SamRecord>& readRecords) const
-    -> std::optional<SplitRecords> {
-    // Number of expected split records for whole read
-    const size_t expectedSplitRecords = readRecords.front().tags().get<"XJ"_tag>();
-
-    SplitRecords splitRecords{};
-    splitRecords.reserve(expectedSplitRecords);
-
-    for (const auto& record : readRecords) {
-        auto splitRecord = constructSplitRecords(record);
-
-        if (!splitRecord.has_value()) {
-            return std::nullopt;
-        }
-
-        splitRecords.insert(splitRecords.end(), splitRecord->begin(), splitRecord->end());
-    }
-
-    if (splitRecords.size() != expectedSplitRecords) {
-        if (static_cast<bool>(splitRecords.front().flag() & seqan3::sam_flag::paired)) {
-            Logger::log<LogLevel::DEBUG>("Non supported paired record split case: ",
-                                         splitRecords.front().id());
-        } else {
-            Logger::log<LogLevel::WARNING>("Expected ", expectedSplitRecords,
-                                           " records for read, but got ", splitRecords.size(),
-                                           ". Record ID: ", readRecords.front().id());
-        }
-        return std::nullopt;
-    }
-
-    return splitRecords;
-}
-
-/**
- * Retrieves the split records from the given vector of read records.
- *
- * This function groups the read records based on their "HI" tag and constructs
- * split records for each group. It then evaluates the split records and
- * returns the best evaluated split records.
- *
- * @param readRecords The vector of read records.
- * @return An optional containing the best evaluated split records, or an empty
- * optional if no split records were found.
- */
-auto Detect::getBestSplitRecords(const std::vector<SamRecord>& readRecords) const
-    -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords> {
-    std::unordered_map<size_t, std::vector<SamRecord>> recordHitGroups{};
-    for (const auto& record : readRecords) {
-        recordHitGroups[record.tags().get<"HI"_tag>()].push_back(record);
-    }
-
-    std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords> bestSplitRecords{};
-
-    const auto insertBestSplitRecords = [&](SplitRecords& splitRecords) {
-        const auto evaluationResult = splitRecordsEvaluator->evaluate(splitRecords);
-
-        if (std::holds_alternative<SplitRecordsEvaluator::EvaluatedSplitRecords>(
-                evaluationResult)) {
-            const auto& evaluatedSplitRecords =
-                std::get<SplitRecordsEvaluator::EvaluatedSplitRecords>(evaluationResult);
-
-            if (!bestSplitRecords.has_value() || evaluatedSplitRecords > bestSplitRecords.value()) {
-                bestSplitRecords.emplace(evaluatedSplitRecords);
-            }
-        } else {
-            Logger::log<LogLevel::DEBUG>(
-                "Split records failed evaluation. Reason: ",
-                std::get<SplitRecordsEvaluator::FilterReason>(evaluationResult));
-        }
-    };
-
-    for (const auto& [_, hitGroup] : recordHitGroups) {
-        auto splitRecords = constructSplitRecords(hitGroup);
-
-        if (splitRecords.has_value()) {
-            insertBestSplitRecords(splitRecords.value());
-        }
-    }
-
-    return bestSplitRecords;
-}
-
-void Detect::writeSamFile(auto& samOut, const std::vector<SamRecord>& splitRecords) {
-    for (auto&& record : splitRecords) {
-        auto [id, flag, ref_id, ref_offset, mapq, cigar, seq, qual, tags] = record;
-        samOut.emplace_back(id, flag, ref_id, ref_offset, mapq, cigar, seq, qual, tags);
-    }
-}
-
-auto Detect::prepareTmpOutputDirs(const fs::path& tmpOutDir) -> Detect::ChunkedOutTmpDirs {
+auto Detect::prepareTmpOutputDirs(const fs::path& tmpOutDir) -> TempOutputDirs {
     const fs::path outputTmpSplitsDir = tmpOutDir / "tmp_splits";
     const fs::path outputTmpMultisplitsDir = tmpOutDir / "tmp_multisplits";
     const fs::path outputTmpUnassignedContiguousRecordsDir =
@@ -545,7 +230,7 @@ auto Detect::prepareTmpOutputDirs(const fs::path& tmpOutDir) -> Detect::ChunkedO
 
     return {.outputTmpSplitsDir = outputTmpSplitsDir,
             .outputTmpMultisplitsDir = outputTmpMultisplitsDir,
-            .outputTmpUnassignedContiguousDir = outputTmpUnassignedContiguousRecordsDir};
+            .outputTmpUnassignedSingletonDir = outputTmpUnassignedContiguousRecordsDir};
 }
 
 void Detect::writeReadCountsSummaryFile(const Result& results, const std::string& sampleName,
@@ -556,18 +241,28 @@ void Detect::writeReadCountsSummaryFile(const Result& results, const std::string
         throw std::runtime_error("Could not open the stats file.");
     }
 
+    const auto& contributionScoreByRecordType =
+        results.postprocessMetrics.getContributionScoreByRecordType();
+
+    if (!contributionScoreByRecordType.contains(SplitRecordType::SINGLETON) ||
+        !contributionScoreByRecordType.contains(SplitRecordType::CHIMERIC)) {
+        Logger::log<SourceLocation{}, LogLevel::ERROR>(
+            "Could not retrieve contribution scores for hit group types.");
+    }
+
     statsFileStream << "sample\tsplits\tsingletons\n";
-    statsFileStream << sampleName << "\t" << results.splitFragmentsCount << "\t"
-                    << results.singletonFragmentsCount << "\n";
+    statsFileStream << sampleName << "\t" << std::fixed
+                    << contributionScoreByRecordType.at(SplitRecordType::CHIMERIC) << "\t"
+                    << contributionScoreByRecordType.at(SplitRecordType::SINGLETON) << "\n";
 }
 
-void Detect::mergeOutputFiles(const ChunkedOutTmpDirs& tmpDirs, const DetectOutput& output) {
+void Detect::mergeTmpFiles(const TempOutputDirs& tmpDirs, const DetectOutput& output) {
     std::vector<fs::path> splitsOutFilePaths =
         helper::getValidFilePaths(tmpDirs.outputTmpSplitsDir, {".bam"});
     std::vector<fs::path> multisplitsOutFilePaths =
         helper::getValidFilePaths(tmpDirs.outputTmpMultisplitsDir, {".bam"});
     std::vector<fs::path> unassignedContiguousRecordsOutFilePaths =
-        helper::getValidFilePaths(tmpDirs.outputTmpUnassignedContiguousDir, {".bam"});
+        helper::getValidFilePaths(tmpDirs.outputTmpUnassignedSingletonDir, {".bam"});
 
     helper::mergeSamFiles(splitsOutFilePaths, output.outputSplitAlignmentsPath);
     helper::mergeSamFiles(multisplitsOutFilePaths, output.outputMultisplitAlignmentsPath);

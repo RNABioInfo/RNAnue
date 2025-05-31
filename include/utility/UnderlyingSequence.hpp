@@ -64,7 +64,7 @@ class UnderlyingSequenceIterator {
      * In forward mode, advances to the next element.
      * In reverse mode, moves to the previous element.
      */
-    inline auto operator++() -> UnderlyingSequenceIterator & {
+    auto operator++() -> UnderlyingSequenceIterator & {
         if (!is_on_reverse) {
             ++iter;
         } else {
@@ -76,7 +76,7 @@ class UnderlyingSequenceIterator {
     /*!
      * @brief Post-increment operator.
      */
-    inline auto operator++(int) -> UnderlyingSequenceIterator {
+    auto operator++(int) -> UnderlyingSequenceIterator {
         UnderlyingSequenceIterator tmp = *this;
         ++(*this);
         return tmp;
@@ -88,7 +88,7 @@ class UnderlyingSequenceIterator {
      * In forward mode, returns the current element.
      * In reverse mode, returns the complement of the element preceding the current iterator.
      */
-    inline auto operator*() const -> value_type {
+    auto operator*() const -> value_type {
         if (!is_on_reverse) {
             return *iter;
         }
@@ -104,15 +104,13 @@ class UnderlyingSequenceIterator {
      * Two iterators compare equal if they have the same reverse-mode flag and their underlying
      * iterators are equal.
      */
-    inline auto operator==(UnderlyingSequenceIterator const &rhs) const -> bool {
+    auto operator==(UnderlyingSequenceIterator const &rhs) const -> bool {
         return (is_on_reverse == rhs.is_on_reverse) && (iter == rhs.iter);
     }
-    inline auto operator!=(UnderlyingSequenceIterator const &rhs) const -> bool {
-        return !(*this == rhs);
-    }
+    auto operator!=(UnderlyingSequenceIterator const &rhs) const -> bool { return !(*this == rhs); }
 
     /// Returns the underlying base iterator.
-    [[nodiscard]] inline auto base() const -> base_t { return iter; }
+    [[nodiscard]] auto base() const -> base_t { return iter; }
 
     /// Queries whether the iterator is in reverse mode.
     [[nodiscard]] constexpr auto is_reverse() const -> bool { return is_on_reverse; }
@@ -152,17 +150,17 @@ class UnderlyingSequenceView {
      * In forward mode, this is the first element.
      * In reverse mode, the iterator is initialized to the container's end.
      */
-    inline auto begin() -> iterator {
+    auto begin() -> iterator {
         return iterator{seq,
                         is_on_reverse ? seqan3::sam_flag::on_reverse_strand : seqan3::sam_flag{}};
     }
 
-    inline auto begin() const -> const_iterator {
+    auto begin() const -> const_iterator {
         return const_iterator{
             seq, is_on_reverse ? seqan3::sam_flag::on_reverse_strand : seqan3::sam_flag{}};
     }
 
-    inline auto cbegin() const -> const_iterator { return begin(); }
+    auto cbegin() const -> const_iterator { return begin(); }
 
     /*!
      * @brief Returns an iterator representing the end of the sequence.
@@ -170,23 +168,23 @@ class UnderlyingSequenceView {
      * For forward iteration this wraps std::ranges::end(seq);
      * For reverse iteration this wraps std::ranges::begin(seq).
      */
-    inline auto end() -> iterator {
+    auto end() -> iterator {
         if (!is_on_reverse) {
             return iterator{std::ranges::end(seq), false};
         }
         return iterator{std::ranges::begin(seq), true};
     }
 
-    inline auto end() const -> const_iterator {
+    auto end() const -> const_iterator {
         if (!is_on_reverse) {
             return const_iterator{std::ranges::end(seq), false};
         }
         return const_iterator{std::ranges::begin(seq), true};
     }
 
-    inline auto cend() const -> const_iterator { return end(); }
+    auto cend() const -> const_iterator { return end(); }
 
-    [[nodiscard]] inline constexpr auto size() const -> size_t { return std::ranges::size(seq); }
+    [[nodiscard]] constexpr auto size() const -> size_t { return std::ranges::size(seq); }
 
    private:
     decltype(std::views::all(std::declval<urng_t>())) seq;  ///< The underlying nucleotide sequence.

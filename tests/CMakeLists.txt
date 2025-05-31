@@ -19,7 +19,7 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/DetectTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsSplicingEvaluatorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/AsyncSplitRecordGroupBufferTests.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/AsyncSplitReadGroupBufferTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/DeduplicatorTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/CrosslinkingSitesEvaluatorTests.cpp
@@ -47,8 +47,8 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/Detect.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/DetectData.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/HitGroupEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsComplementarityEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsHybridizationEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsSplicingEvaluator.cpp
 

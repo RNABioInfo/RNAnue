@@ -12,6 +12,8 @@
 #include <utility>
 #include <vector>
 
+#include "Utility.hpp"
+
 // seqan3
 #include <seqan3/alignment/configuration/align_config_debug.hpp>
 #include <seqan3/alignment/configuration/align_config_gap_cost_affine.hpp>
@@ -42,10 +44,22 @@ class CoOptimalPairwiseAligner {
 
     struct Result {
         int score;
-        double complementarity;
-        double fraction;
+        float complementarity;
+        float fraction;
         std::pair<std::size_t, std::size_t> beginPositions;
         std::pair<std::size_t, std::size_t> endPositions;
+
+        auto operator>(const Result &other) const noexcept -> bool {
+            return complementarity > other.complementarity ||
+                   (helper::isApproxEqual(complementarity, other.complementarity) &&
+                    fraction > other.fraction);
+        }
+
+        auto operator<(const Result &other) const noexcept -> bool {
+            return complementarity < other.complementarity ||
+                   (helper::isApproxEqual(complementarity, other.complementarity) &&
+                    fraction < other.fraction);
+        }
     };
 
     template <typename sequence_pair_t>
@@ -164,17 +178,19 @@ class CoOptimalPairwiseAligner {
 
         assert(alignmentSize == get<1>(alignmentResult).size());
 
+        // Calculation of complementarity score
         // TODO The number to add depends on the scoring scheme and gap penalties
         const size_t matchingCount = gapCount > 0 ? ((score + alignmentSize + gapCount + 2) / 2)
                                                   : ((score + alignmentSize) / 2);
-        double complementarity = 0.0;
+        float complementarity = 0.0;
         if (alignmentSize != 0) {
             complementarity = (static_cast<double>(matchingCount) / alignmentSize);
         }
 
+        // Fraction of shortest record
         const int matchCount = alignmentSize - gapCount;
-        const double fraction = static_cast<double>(matchCount) /
-                                std::min(get<0>(sequencePair).size(), get<1>(sequencePair).size());
+        const float fraction = static_cast<float>(matchCount) /
+                               std::min(get<0>(sequencePair).size(), get<1>(sequencePair).size());
 
         return {score, complementarity, fraction,
                 std::make_pair(traceResult.first_sequence_slice_positions.first,

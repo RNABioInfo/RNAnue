@@ -97,8 +97,8 @@ else()
         BUILD_IN_SOURCE 1
         UPDATE_COMMAND ""
         CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} ${LOCAL_ZLIB_CONFIG}
-        BUILD_COMMAND ${MAKE_COMMAND} lib-static CXX=$ENV{CXX} CC=$ENV{CC}
-        INSTALL_COMMAND ${MAKE_COMMAND} install prefix=${htslib_INSTALL}
+        BUILD_COMMAND ${MAKE_COMMAND} CXX=$ENV{CXX} CC=$ENV{CC} lib-static
+        INSTALL_COMMAND ${MAKE_COMMAND} install CXX=$ENV{CXX} CC=$ENV{CC} prefix=${htslib_INSTALL}
   )
 
     if (ZLIB_BUILD)

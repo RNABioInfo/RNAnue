@@ -4,8 +4,7 @@
 #include <cstddef>
 #include <deque>
 #include <filesystem>
-#include <memory>
-#include <optional>
+#include <format>
 #include <ranges>
 #include <string>
 #include <unordered_map>
@@ -19,15 +18,18 @@
 #include <seqan3/io/sam_file/input.hpp>
 
 // Internal
-#include "AsyncSplitRecordGroupBuffer.hpp"
+#include "AsyncSplitReadGroupBuffer.hpp"
+#include "ComplementarityEvaluationStep.hpp"
 #include "DetectData.hpp"
 #include "DetectParameters.hpp"
 #include "DetectSample.hpp"
-#include "FeatureAnnotator.hpp"
+#include "HybridizationEvaluationStep.hpp"
+#include "ReadGroupEvaluationParameters.hpp"
+#include "ReadGroupPostScoringStep.hpp"
 #include "SamRecord.hpp"
-#include "SplitRecords.hpp"
-#include "SplitRecordsEvaluationParameters.hpp"
-#include "SplitRecordsEvaluator.hpp"
+#include "SamReference.hpp"
+#include "SegemehlReadGroupPreprocessor.hpp"
+#include "TempOutputDirs.hpp"
 
 using namespace dataTypes;
 
@@ -49,75 +51,76 @@ class Detect {
     void process(const DetectData &data);
 
    private:
-    using AsyncGroupBufferType = AsyncSplitRecordGroupBufferView<std::ranges::ref_view<
+    using AsyncGroupBufferType = AsyncSplitReadGroupBufferView<std::ranges::ref_view<
         seqan3::sam_file_input<seqan3::sam_file_input_default_traits<>, SamFieldIDs>>>;
 
-    struct ChunkedOutTmpDirs {
-        fs::path outputTmpSplitsDir;
-        fs::path outputTmpMultisplitsDir;
-        fs::path outputTmpUnassignedContiguousDir;
-    };
+    using ReadGroup = std::vector<SamRecord>;
 
-    using TranscriptCounts = std::unordered_map<std::string, size_t>;
+    using TranscriptCounts = std::unordered_map<std::string, double>;
 
     struct Result {
-        size_t processedRecordsCount{0};
-        TranscriptCounts transcriptCounts;
-        size_t splitFragmentsCount{0};
-        size_t singletonFragmentsCount{0};
-        size_t removedDueToLowMappingQuality{0};
-        size_t removedDueToFragmentLength{0};
+        SegemehlReadGroupPreprocessorMetrics preprocessMetrics;
+        ComplementarityEvaluationStepMetrics complementarityMetrics;
+        HybridizationEvaluationStepMetrics hybridizationMetrics;
+        ReadGroupPostScoringStepMetrics postprocessMetrics;
+
+        TranscriptCounts singletonTranscriptCounts;
+
+        void createPlots(const fs::path &outDir) const noexcept {
+            preprocessMetrics.createPlots(outDir);
+            complementarityMetrics.createPlots(outDir);
+            hybridizationMetrics.createPlots(outDir);
+            postprocessMetrics.createPlots(outDir);
+        }
+
+        [[nodiscard]] auto toString() const -> std::string {
+            return std::format(
+                "\n\tPreprocessed {} read groups. Of which {} had at least one passed hit group "
+                "and {} failed completely. \n\tComplementarity evaluation resulted in {} passed "
+                "split hit groups and {} failed split hit groups. \n\tHybridization evalutaion "
+                "resulted in {} passed split hit groups and {} failed split hit groups. "
+                "\n\tPostprocessed {} read groups with a total contribution score of {}.",
+                preprocessMetrics.getTotalReadGroupCount(),
+                preprocessMetrics.getSuccesReadGroupCount(),
+                preprocessMetrics.getTotalFailedReadGroupCount(),
+                complementarityMetrics.getPassedCount(), complementarityMetrics.getFailedCount(),
+                hybridizationMetrics.getPassedCount(), hybridizationMetrics.getFailedCount(),
+                postprocessMetrics.getReadGroupCount(),
+                postprocessMetrics.getContributionScoreSum());
+        }
 
         void operator+=(const Result &other) {
-            processedRecordsCount += other.processedRecordsCount;
-            splitFragmentsCount += other.splitFragmentsCount;
-            singletonFragmentsCount += other.singletonFragmentsCount;
-            removedDueToLowMappingQuality += other.removedDueToLowMappingQuality;
-            removedDueToFragmentLength += other.removedDueToFragmentLength;
+            preprocessMetrics += other.preprocessMetrics;
+            complementarityMetrics += other.complementarityMetrics;
+            hybridizationMetrics += other.hybridizationMetrics;
+            postprocessMetrics += other.postprocessMetrics;
 
-            for (const auto &[transcript, count] : other.transcriptCounts) {
-                transcriptCounts[transcript] += count;
+            for (const auto &[transcript, count] : other.singletonTranscriptCounts) {
+                singletonTranscriptCounts[transcript] += count;
             }
         }
     };
 
     DetectParameters params;
 
-    std::optional<SplitRecordsEvaluator> splitRecordsEvaluator;
-
-    [[nodiscard]] static auto getSplitRecordsEvaluatorParameters(
-        const DetectParameters &params, std::shared_ptr<const FeatureAnnotator> featureAnnotator)
-        -> SplitRecordsEvaluationParameters::ParameterVariant;
-
     static auto getReferenceIDs(const fs::path &mappingsInPath) -> std::deque<std::string>;
 
-    void processSample(const DetectSample &sample, std::shared_ptr<const FeatureAnnotator>) const;
+    template <ReadGroupEvaluationParameters::Type ParamT>
+    void processSample(const DetectSample &sample, const ParamT &evaluationParams) const;
 
-    auto processRecordChunk(const ChunkedOutTmpDirs &outTmpDirs,
-                            AsyncGroupBufferType &recordInputBuffer,
-                            const std::deque<std::string> &refIDs,
-                            const std::vector<size_t> &refLengths,
-                            std::shared_ptr<const FeatureAnnotator> featureAnnotator) const
-        -> Result;
-    auto processReadRecords(const std::vector<SamRecord> &readRecords, auto &splitsOut,
-                            [[maybe_unused]] auto &multiSplitsOut) const -> size_t;
+    template <ReadGroupEvaluationParameters::Type ParamT>
+    auto processRecordChunk(const TempOutputDirs &outTmpDirs,
+                            AsyncGroupBufferType &recordInputBuffer, SamReference &reference,
+                            const ParamT &evaluationParams) const -> Result;
 
-    [[nodiscard]] auto constructSplitRecords(const SamRecord &readRecord) const
-        -> std::optional<SplitRecords>;
-    [[nodiscard]] auto constructSplitRecords(const std::vector<SamRecord> &readRecords) const
-        -> std::optional<SplitRecords>;
-    [[nodiscard]] auto getBestSplitRecords(const std::vector<SamRecord> &readRecords) const
-        -> std::optional<SplitRecordsEvaluator::EvaluatedSplitRecords>;
-
-    static void mergeOutputFiles(const ChunkedOutTmpDirs &tmpDirs, const DetectOutput &output);
-    static void writeSamFile(auto &samOut, const std::vector<SamRecord> &splitRecords);
+    static void mergeTmpFiles(const TempOutputDirs &tmpDirs, const DetectOutput &output);
 
     static void writeTranscriptCountsFile(const fs::path &transcriptCountsFilePath,
                                           const TranscriptCounts &transcriptCounts);
     static void writeReadCountsSummaryFile(const Result &results, const std::string &sampleName,
                                            const fs::path &statsFilePath);
 
-    [[nodiscard]] static auto prepareTmpOutputDirs(const fs::path &tmpOutDir) -> ChunkedOutTmpDirs;
+    [[nodiscard]] static auto prepareTmpOutputDirs(const fs::path &tmpOutDir) -> TempOutputDirs;
 };
 
 }  // namespace pipelines::detect

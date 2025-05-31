@@ -1,6 +1,7 @@
 #pragma once
 
 // Standard
+#include <cstddef>
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 #include <string>
 
@@ -38,7 +39,7 @@ struct seqan3::sam_tag_type<"XL"_tag> {
 
 template <>
 struct seqan3::sam_tag_type<"XN"_tag> {
-    using type = float;
+    using type = int32_t;
 };
 
 template <>
@@ -80,3 +81,13 @@ template <>
 struct seqan3::sam_tag_type<"XD"_tag> {
     using type = std::string;
 };  // Secondary structure
+
+template <>
+struct seqan3::sam_tag_type<"XF"_tag> {
+    using type = std::string;
+};  // Feature ID
+
+template <>
+struct seqan3::sam_tag_type<"XB"_tag> {
+    using type = float;
+};  // Contribution Score

@@ -7,6 +7,7 @@
 #include <cassert>
 #include <cstddef>
 #include <filesystem>
+#include <functional>
 #include <future>
 #include <ranges>
 #include <string>
@@ -95,10 +96,10 @@ void PairedEndPreprocessor::process(const PreprocessSamplePaired& sample) const 
     auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
 
     auto isValidRecord = [&deduplicatedResults](const auto& records) {
-        assert(helper::splitString(records.first.id(), ' ')[0] ==
-                   helper::splitString(records.second.id(), ' ')[0] &&
+        assert(helper::splitString(std::get<0>(records).id(), ' ')[0] ==
+                   helper::splitString(std::get<1>(records).id(), ' ')[0] &&
                "The record ids of the paired end files do not match.");
-        return deduplicatedResults.validRecordIDs.contains(records.first.id());
+        return deduplicatedResults.validRecordIDs.contains(std::get<0>(records).id());
     };
 
     seqan3::sequence_file_input recForwardIn{sample.input.inputForwardFastqPath};

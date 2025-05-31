@@ -18,6 +18,7 @@ namespace pipelines::detect {
 
 struct DetectParameters : public GeneralParameters {
    public:
+    size_t maxPrimaryAlignmentCount;
     size_t minimumFragmentLength;
     size_t minimumMapQuality;
     double minimumComplementarity;
@@ -25,12 +26,14 @@ struct DetectParameters : public GeneralParameters {
     double maxHybridizationEnergy;
     bool excludeSoftClipping;
     bool removeSplicingEvents;
-    bool allowAlternativeSplicing;
+    bool removeAlternativeSplicing;
     int splicingTolerance;
     bool includeWobbleBasePairsInCrosslinkingSites;
+    double minHitGroupContribution;
 
     DetectParameters(const po::variables_map& params)
         : GeneralParameters(params),
+          maxPrimaryAlignmentCount(DetectOptions::maxPrimaryAlignmentCount.extractValue(params)),
           minimumFragmentLength(DetectOptions::minDetectLength.extractValue(params)),
           minimumMapQuality(DetectOptions::minMappingQuality.extractValue(params)),
           minimumComplementarity(DetectOptions::minComplementarity.extractValue(params)),
@@ -38,10 +41,11 @@ struct DetectParameters : public GeneralParameters {
           maxHybridizationEnergy(DetectOptions::maxEnergy.extractValue(params)),
           excludeSoftClipping(DetectOptions::excludeSoftClipping.extractValue(params)),
           removeSplicingEvents(DetectOptions::filterSplicing.extractValue(params)),
-          allowAlternativeSplicing(DetectOptions::allowAltSplicing.extractValue(params)),
+          removeAlternativeSplicing(DetectOptions::allowAltSplicing.extractValue(params)),
           splicingTolerance(DetectOptions::splicingTolerance.extractValue(params)),
           includeWobbleBasePairsInCrosslinkingSites(
-              DetectOptions::includeWobble.extractValue(params)) {};
+              DetectOptions::includeWobble.extractValue(params)),
+          minHitGroupContribution(DetectOptions::minHitGroupContribution.extractValue(params)) {};
 };
 
 }  // namespace pipelines::detect

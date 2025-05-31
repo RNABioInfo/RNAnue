@@ -35,6 +35,7 @@
 
 // Internal
 #include "Config.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 
 namespace helper {

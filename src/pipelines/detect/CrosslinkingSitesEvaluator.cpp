@@ -6,7 +6,6 @@
 #include <cstddef>
 #include <cstdint>
 #include <optional>
-#include <ostream>
 #include <span>
 #include <string>
 #include <utility>
@@ -20,6 +19,7 @@
 // Internal
 #include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "NucleotidePositions.hpp"
 #include "seqan3/alphabet/nucleotide/dna5.hpp"
 #include "seqan3/alphabet/structure/dot_bracket3.hpp"
 
@@ -93,13 +93,8 @@ auto CrosslinkingSitesEvaluator::evaluate(std::span<const seqan3::dna5> sequence
         }
     }
 
-    std::string dotbracketString =
-        dotbracket | seqan3::views::to_char | seqan3::ranges::to<std::string>();
-
-    // Dotbracket cannot represent cofolds & fragment intersection -> needs to be reintroduced
-    dotbracketString[sequence1.size()] = '&';
-
-    return Result{{intraFirstSequence, intraSecondSequence}, interSequences, dotbracketString};
+    return Result{
+        {intraFirstSequence, intraSecondSequence}, interSequences, dotbracket, sequence1.size()};
 }
 
 auto CrosslinkingSitesEvaluator::getPairedNucleotidePositions(
@@ -208,60 +203,6 @@ auto CrosslinkingSitesEvaluator::getNucleotideWindows(std::span<const seqan3::dn
     // Due to sorting of base pairs first pair in second sequence and second pair in first
     // sequence is not possible
     return std::nullopt;
-}
-
-[[nodiscard]] auto CrosslinkingSitesEvaluator::Result::getTotalCrosslinkingCount() const -> size_t {
-    size_t intraCrosslinkingCount = 0;
-    for (const auto &intraCrosslinking : intraCrosslinkingSites) {
-        intraCrosslinkingCount += intraCrosslinking.size();
-    }
-    return intraCrosslinkingCount + interCrosslinkingSites.size();
-}
-
-[[nodiscard]] auto CrosslinkingSitesEvaluator::Result::getIntraSequenceCrosslinking(
-    const size_t fragmentIndex) const -> std::string {
-    std::string crosslinkingString;
-    for (const auto &crosslinking : intraCrosslinkingSites[fragmentIndex]) {
-        crosslinkingString += "[" + std::to_string(crosslinking.first) + "," +
-                              std::to_string(crosslinking.second) + "]";
-    }
-    return crosslinkingString;
-}
-
-[[nodiscard]] auto CrosslinkingSitesEvaluator::Result::getInterSequenceCrosslinking(
-    const size_t fragmentIndex) const -> std::string {
-    std::string crosslinkingString;
-    for (const auto &crosslinking : interCrosslinkingSites) {
-        crosslinkingString += "[" +
-                              (fragmentIndex == 0UL ? std::to_string(crosslinking.first)
-                                                    : std::to_string(crosslinking.second)) +
-                              "]";
-    }
-    return crosslinkingString;
-}
-
-[[nodiscard]] auto CrosslinkingSitesEvaluator::Result::operator==(
-    const CrosslinkingSitesEvaluator::Result &other) const -> bool {
-    return this->interCrosslinkingSites == other.interCrosslinkingSites &&
-           this->intraCrosslinkingSites == other.intraCrosslinkingSites &&
-           this->dotbracket == other.dotbracket;
-}
-
-auto operator<<(std::ostream &outputStream, const CrosslinkingSitesEvaluator::Result &result)
-    -> std::ostream & {
-    outputStream << "Intra-sequence crosslinking: ";
-    for (size_t i = 0; i < result.intraCrosslinkingSites.size(); ++i) {
-        outputStream << "Fragment " << i << ": " << result.getIntraSequenceCrosslinking(i) << " ";
-    }
-    outputStream << "\n";
-    outputStream << "Inter-sequence crosslinking: ";
-
-    outputStream << result.getInterSequenceCrosslinking(0) << ";";
-    outputStream << result.getInterSequenceCrosslinking(1);
-
-    outputStream << "\n";
-    outputStream << "Dot-bracket: " << result.dotbracket;
-    return outputStream;
 }
 
 }  // namespace pipelines::detect

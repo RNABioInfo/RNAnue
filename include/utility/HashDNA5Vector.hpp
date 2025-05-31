@@ -9,7 +9,7 @@
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 
 struct HashDNA5Vector {
-    constexpr auto operator()(std::vector<seqan3::dna5> const& vec) const -> std::size_t {
+    constexpr auto operator()(const std::vector<seqan3::dna5>& vec) const -> std::size_t {
         constexpr size_t SHIFT_RIGHT = 16;
         constexpr size_t HASH_CONSTANT_1 = 0x45d9f3b;
         constexpr size_t HASH_CONSTANT_2 = 0x9e3779b9;

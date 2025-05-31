@@ -8,6 +8,7 @@
 
 // Internal
 #include "DetectSample.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "Utility.hpp"
 
@@ -25,7 +26,8 @@ auto DetectData::retrieveSamples(const std::string& sampleGroup, const fs::path&
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
 
     if (fs::exists(outputDirPipeline)) {
-        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+        Logger::log<LogLevel::WARNING>(
+            "Output directory already exists. Results will be overwritten.");
     }
 
     for (const DetectInput& inputSample : inputSamples) {

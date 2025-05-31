@@ -28,7 +28,8 @@ struct PipelineData {
    protected:
     static auto validateDirEmpty(const std::filesystem::path &path, const bool forceOverwrite) {
         if (fs::exists(path)) {
-            Logger::log<LogLevel::WARNING>("Output directory already exists");
+            Logger::log<LogLevel::WARNING>(
+                "Output directory already exists. Results will be overwritten.");
 
             if (forceOverwrite) {
                 Logger::log<LogLevel::WARNING>("Force overwriting existing output");

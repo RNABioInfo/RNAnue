@@ -1,5 +1,8 @@
 #pragma once
 
+// Note this constexpr implementation is only supported by the non standard pow implementation of
+// gcc. See: https://github.com/llvm/llvm-project/issues/62049
+
 // Standard
 #include <array>
 #include <cmath>
@@ -31,8 +34,9 @@ consteval auto getPhredToProbabilityTable() -> PhredToProbabilityTable {
     PhredToProbabilityTable table{};
 
     for (unsigned char phred = 0; phred < seqan3::phred42::alphabet_size; ++phred) {
-        table[phred] = pow(PHRED_SCALE_BASE, -static_cast<double>(phred) / PHRED_SCALE_BASE);
+        table[phred] = std::pow(PHRED_SCALE_BASE, -static_cast<double>(phred) / PHRED_SCALE_BASE);
     }
+
     return table;
 };
 

@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.24)
 
 project(RNAnue VERSION 1.0.0)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 if(NOT CMAKE_BUILD_TYPE)
@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-psabi -Wno-interference-size")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -fconcepts-diagnostics-depth=2")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Configure header file to pass the version number to the source code
@@ -45,6 +45,7 @@ add_subdirectory(submodules/segemehl)
 include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/concepts
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/utility
+                    ${CMAKE_CURRENT_SOURCE_DIR}/include/plotting
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters/options
                     ${CMAKE_CURRENT_SOURCE_DIR}/include/parameters/options/optionTypes
@@ -90,10 +91,10 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/Detect.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/DetectData.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplitRecordsComplementarityEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplitRecordsEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplitRecordsHybridizationEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplitRecordsSplicingEvaluator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/ComplementarityEvaluationStep.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/HitGroupEvaluator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/HybridizationEvaluationStep.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/SplicingEvaluationStep.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/Analyze.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/analyze/AnalyzeData.cpp
@@ -145,6 +146,10 @@ endif()
 include(boost)
 add_dependencies(RNAnue Boost)
 
+# # # Matplotlib
+include(matplotplusplus)
+add_dependencies(RNAnue matplot)
+
 # # # Dependency Include Directories
 target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
                                                     ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
@@ -155,6 +160,8 @@ target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
                                         segemehl
                                         ${VIENNA_RNA_LIBRARY}
                                         ${Boost_LIBRARIES})
+
+target_link_libraries (RNAnue PUBLIC matplot)
 
 # ----------------------------------------------------------------------------
 # Testing

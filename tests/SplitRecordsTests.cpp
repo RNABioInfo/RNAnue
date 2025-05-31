@@ -15,11 +15,11 @@
 using namespace dataTypes;
 
 struct SplitRecordsTestParams {
-    SplitRecordsTestParams(std::vector<SplitRecords> splitRecords,
+    SplitRecordsTestParams(std::vector<MultimericRecords> splitRecords,
                            std::vector<std::string> expectedBackRecordIDOrder)
         : splitRecords(std::move(splitRecords)),
           expectedBackRecordIDOrder(std::move(expectedBackRecordIDOrder)) {}
-    const std::vector<SplitRecords> splitRecords;
+    const std::vector<MultimericRecords> splitRecords;
     const std::vector<std::string> expectedBackRecordIDOrder;
 };
 
@@ -27,7 +27,7 @@ class SplitRecordsTests : public ::testing::TestWithParam<SplitRecordsTestParams
 
 TEST_P(SplitRecordsTests, IsSortedFromBackToFront) {
     const SplitRecordsTestParams& param = GetParam();
-    std::vector<SplitRecords> splitRecordGroups = param.splitRecords;
+    std::vector<MultimericRecords> splitRecordGroups = param.splitRecords;
     const std::vector<std::string>& expectedBackRecordIDOrder = param.expectedBackRecordIDOrder;
 
     EXPECT_EQ(expectedBackRecordIDOrder.size(), splitRecordGroups.size());

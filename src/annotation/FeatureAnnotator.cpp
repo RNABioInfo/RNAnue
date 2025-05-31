@@ -9,7 +9,6 @@
 #include <cstdlib>
 #include <deque>
 #include <filesystem>
-#include <functional>
 #include <iostream>
 #include <iterator>
 #include <numeric>
@@ -189,25 +188,31 @@ auto FeatureAnnotator::overlappingFeatureIt(const GenomicRegion &region,
 
 auto FeatureAnnotator::getBestOverlappingFeature(const GenomicRegion &region,
                                                  const GenomicOrientation orientation) const
-    -> std::optional<dataTypes::GenomicFeature> {
-    auto overlapSizeWithRegion = [region](const GenomicFeature &feature) -> size_t {
-        return std::min(region.getEnd(), feature.getGenomicRegion().getEnd()) -
-               std::max(region.getStart(), feature.getGenomicRegion().getStart());
-    };
-
+    -> std::optional<GenomicFeature> {
     auto featureIterator = overlappingFeatureIt(region, orientation);
 
     auto maxOverlapSizeElement = std::max_element(
         featureIterator.begin(), featureIterator.end(),
-        [&overlapSizeWithRegion](const GenomicFeature &lhs, const GenomicFeature &rhs) {
-            return std::invoke(overlapSizeWithRegion, lhs) <
-                   std::invoke(overlapSizeWithRegion, rhs);
+        [&region](const GenomicFeature &lhs, const GenomicFeature &rhs) {
+            return lhs.getGenomicRegion().overlap(region) < rhs.getGenomicRegion().overlap(region);
         });
 
     if (maxOverlapSizeElement != featureIterator.end()) {
         return *maxOverlapSizeElement;
     }
     return std::nullopt;
+}
+
+auto FeatureAnnotator::getBestOverlappingFeature(const SamRecord &record,
+                                                 const GenomicOrientation orientation) const
+    -> std::optional<GenomicFeature> {
+    auto region = GenomicRegion::fromSamRecord(record);
+
+    if (!region.has_value()) {
+        return std::nullopt;
+    }
+
+    return getBestOverlappingFeature(region.value(), orientation);
 }
 
 auto FeatureAnnotator::getFeatureTreeMap() const -> const FeatureTreeMap & {
@@ -221,18 +226,6 @@ void FeatureAnnotator::mergeAllOverlappingFeatures(FeatureMergingParameters merg
         tree.index();
         merger.merge(tree);
     }
-}
-
-auto FeatureAnnotator::getBestOverlappingFeature(const SamRecord &record,
-                                                 const GenomicOrientation orientation) const
-    -> std::optional<dataTypes::GenomicFeature> {
-    auto region = GenomicRegion::fromSamRecord(record);
-
-    if (!region.has_value()) {
-        return std::nullopt;
-    }
-
-    return getBestOverlappingFeature(region.value(), orientation);
 }
 
 void FeatureAnnotator::debugOutputAllFeatures() const {

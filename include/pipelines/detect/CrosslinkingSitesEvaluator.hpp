@@ -4,11 +4,8 @@
 #include <cstddef>
 #include <cstdint>
 #include <map>
-#include <numeric>
 #include <optional>
-#include <ostream>
 #include <span>
-#include <string>
 #include <utility>
 #include <vector>
 
@@ -18,16 +15,18 @@
 #include <seqan3/alphabet/views/char_to.hpp>
 #include <seqan3/alphabet/views/to_char.hpp>
 
+// Internal
+#include "HitGroupEvaluationResult.hpp"
+#include "NucleotidePositions.hpp"
+
 namespace pipelines::detect {
 
 using namespace seqan3::literals;
+using namespace dataTypes;
 
 class CrosslinkingSitesEvaluator {
    public:
-    using NucleotidePairPositions = std::pair<size_t, size_t>;
-    using NucleotidePositionsWindow = std::pair<NucleotidePairPositions, NucleotidePairPositions>;
-
-    struct Result;
+    using Result = HitGroupEvaluation::CrosslinkingResult;
 
     static auto evaluate(std::span<const seqan3::dna5> sequence1,
                          std::span<const seqan3::dna5> sequence2,
@@ -74,45 +73,6 @@ class CrosslinkingSitesEvaluator {
                                      std::span<const seqan3::dna5> sequence2,
                                      NucleotidePositionsWindow positionsPair)
         -> std::optional<InteractionWindow>;
-};
-
-struct CrosslinkingSitesEvaluator::Result {
-    Result(const std::vector<std::vector<NucleotidePairPositions>> &intraCrosslinkingSites,
-           const std::vector<NucleotidePairPositions> &interCrosslinkingSites,
-           std::string dotbracket)
-        : intraCrosslinkingSites(intraCrosslinkingSites),
-          interCrosslinkingSites(interCrosslinkingSites),
-          dotbracket(std::move(dotbracket)) {}
-
-    Result() = default;
-
-    [[nodiscard]] constexpr auto getInterCrosslinkingCount() const noexcept -> size_t {
-        return interCrosslinkingSites.size();
-    };
-
-    [[nodiscard]] constexpr auto getIntraCrosslinkingCount() const noexcept -> size_t {
-        return std::accumulate(intraCrosslinkingSites.begin(), intraCrosslinkingSites.end(), 0,
-                               [](size_t sum, const auto &crosslinkingSites) {
-                                   return sum + crosslinkingSites.size();
-                               });
-    }
-
-    [[nodiscard]] auto getTotalCrosslinkingCount() const -> size_t;
-
-    [[nodiscard]] auto getIntraSequenceCrosslinking(size_t fragmentIndex) const -> std::string;
-
-    [[nodiscard]] auto getInterSequenceCrosslinking(size_t fragmentIndex) const -> std::string;
-
-    [[nodiscard]] auto getDotbracket() const -> const std::string & { return dotbracket; }
-
-    [[nodiscard]] auto operator==(const Result &other) const -> bool;
-
-    friend auto operator<<(std::ostream &outputStream, const Result &result) -> std::ostream &;
-
-   private:
-    std::vector<std::vector<NucleotidePairPositions>> intraCrosslinkingSites;
-    std::vector<NucleotidePairPositions> interCrosslinkingSites;
-    std::string dotbracket;
 };
 
 }  // namespace pipelines::detect

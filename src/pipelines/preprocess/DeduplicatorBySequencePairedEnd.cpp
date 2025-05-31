@@ -39,7 +39,7 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
 
         auto key = std::make_pair(record1.sequence(), record2.sequence());
 
-        if (validRecordIDsBySequencePair.find(key) == validRecordIDsBySequencePair.end()) {
+        if (!validRecordIDsBySequencePair.contains(key)) {
             validRecordIDsBySequencePair.emplace(
                 key,
                 DeduplicationRecordPairedEnd{.recordID = record1.id(), .meanQuality = meanQuality});

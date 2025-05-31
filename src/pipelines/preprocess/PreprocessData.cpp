@@ -10,6 +10,7 @@
 #include <vector>
 
 // Internal
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "PreprocessSample.hpp"
 #include "Utility.hpp"
@@ -29,7 +30,8 @@ auto PreprocessData::retrieveSamples(const std::string& sampleGroup, const fs::p
     const fs::path outputDirPipeline = outputDir / pipelinePrefix / sampleGroup;
 
     if (fs::exists(outputDirPipeline)) {
-        Logger::log<LogLevel::WARNING>("Output directory already exists.");
+        Logger::log<LogLevel::WARNING>(
+            "Output directory already exists. Results will be overwritten.");
     }
 
     for (const InputSampleType& inputSample : inputSamples) {

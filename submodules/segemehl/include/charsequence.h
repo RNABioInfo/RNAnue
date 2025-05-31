@@ -80,7 +80,7 @@ CharSequence *loadSequence(void *space, char *filename);
 char *printAlignment(void *, int *, Uint, CharSequence *, CharSequence *, Uint);
 CharSequence **createSequenceHash(void *, Uint);
 
-static inline char *charDNAcomplement(void *space, char *s, Uint len) {
+static inline char *charDNAcomplement([[maybe_unused]] void *space, char *s, Uint len) {
     Uint i, k = 0;
     char *buffer;
 
@@ -167,7 +167,7 @@ static inline char charComplementChar(char ch) {
     return ch;
 }
 
-static inline char *charIUPACcomplement(void *space, char *s, Uint len) {
+static inline char *charIUPACcomplement([[maybe_unused]] void *space, char *s, Uint len) {
     Uint i, k = 0;
     char *buffer;
 

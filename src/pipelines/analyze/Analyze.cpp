@@ -189,6 +189,7 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> si
         for (std::string token; std::getline(iss, token, '\t');) {
             if (column != 0) {
                 totalTranscriptCount += std::stoul(token);
+                Logger::log("Total Transcript Count: ", totalTranscriptCount);
             }
             ++column;
         }
