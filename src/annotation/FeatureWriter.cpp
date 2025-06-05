@@ -4,14 +4,18 @@
 #include "FileType.hpp"
 
 // Standard
+#include <cassert>
+#include <cstddef>
+#include <deque>
 #include <fstream>
 #include <stdexcept>
 #include <string>
 
 namespace annotation {
 
-void FeatureWriter::write(const FeatureTreeMap &featureTreeMap, const std::string &outputPath,
-                          const FileType::Value fileType) {
+void FeatureWriter::write(const FeatureTreeMap &featureTreeMap,
+                          const std::deque<std::string> &sortedReferenceIDs,
+                          const std::string &outputPath, const FileType::Value fileType) {
     std::ofstream outputFile(outputPath);
     if (!outputFile.is_open()) {
         throw std::runtime_error("Could not open file for writing: " + outputPath);
@@ -24,9 +28,12 @@ void FeatureWriter::write(const FeatureTreeMap &featureTreeMap, const std::strin
         outputFile << "##gtf-version 2.2\n";
     }
 
-    for (const auto &[referenceID, tree] : featureTreeMap) {
+    for (const auto &[referenceIndex, tree] : featureTreeMap) {
+        assert(sortedReferenceIDs.size() > size_t(referenceIndex));
+
         for (const auto &interval : tree.intervals()) {
             const auto &feature = interval.data;
+            const auto &referenceID = sortedReferenceIDs[referenceIndex];
             outputFile << referenceID << '\t' << "." << '\t' << feature.getType() << '\t'
                        << feature.getGenomicRegion().getStart() + 1 << '\t'
                        << feature.getGenomicRegion().getEnd() << '\t' << "." << '\t'

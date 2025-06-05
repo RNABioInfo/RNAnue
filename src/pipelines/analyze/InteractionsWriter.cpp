@@ -114,7 +114,7 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
     interactionOut << cluster.getSecondSegment().getEnd() << "\t";
     interactionOut << static_cast<char>(cluster.getSecondSegment().getStrand()) << "\t";
 
-    interactionOut << cluster.fragmentCount() << "\t";
+    interactionOut << cluster.getTranscriptContribution() << "\t";
     interactionOut << cluster.meanCrosslinkingSiteCount() << "\t";
     interactionOut << cluster.standardDeviationCrosslinkingSiteCount() << "\t";
     interactionOut << cluster.complementarityStatistics() << "\t";

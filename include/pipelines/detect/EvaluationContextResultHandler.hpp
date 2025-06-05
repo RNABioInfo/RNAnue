@@ -1,7 +1,6 @@
 #pragma once
 
 // Standard
-#include <concepts>
 #include <cstddef>
 #include <cstdlib>
 #include <deque>

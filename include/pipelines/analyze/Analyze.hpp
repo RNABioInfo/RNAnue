@@ -4,8 +4,6 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
-#include <string>
-#include <unordered_map>
 
 // Boost
 #include <boost/math/distributions/binomial.hpp>
@@ -21,6 +19,7 @@
 #include "AnalyzeParameters.hpp"
 #include "AnalyzeSample.hpp"
 #include "FeatureAnnotator.hpp"
+#include "TranscriptContributionsByID.hpp"
 
 namespace pipelines::analyze {
 
@@ -42,14 +41,14 @@ class Analyze {
 
     static void assignAnnotatedContiguousFragmentCountsToTranscripts(
         const fs::path &contiguousTranscriptCountsInPath,
-        std::unordered_map<std::string, size_t> &transcriptCounts);
+        TranscriptContributionsByID &transcriptCounts);
 
     void assignNonAnnotatedContiguousToSupplementaryFeatures(
         const fs::path &unassignedSingletonsInPath, annotation::FeatureAnnotator &featureAnnotator,
-        std::unordered_map<std::string, size_t> &transcriptCounts);
-    static auto parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> size_t;
+        TranscriptContributionsByID &transcriptCounts);
+    static auto parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> float;
 
-    static void writeTranscriptCounts(const std::unordered_map<std::string, size_t> &featureCounts,
+    static void writeTranscriptCounts(const TranscriptContributionsByID &featureCounts,
                                       const fs::path &transcriptCountsOutPath);
 };
 

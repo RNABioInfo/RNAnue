@@ -38,11 +38,12 @@ struct AnalyzeOptions {
         {.shortName = std::nullopt, .longName = "padj"},
         "adjusted p-value threshold for outputting an interaction"sv};
 
-    static constexpr DefaultedParameterOption<size_t, 1> minReadClusterCount{
-        {.shortName = std::nullopt, .longName = "mincount"},
-        "minimum number of reads assigned to an interaction"sv};
+    static constexpr DefaultedParameterOption<float, float{1.0}>
+        minimumClusterTranscriptContribution{
+            {.shortName = std::nullopt, .longName = "mincount"},
+            "minimum number of scored transcripts assigned to an interaction"sv};
 
     static constexpr auto allOptions =
         std::make_tuple(maxSelfOverlap, clusteringStrandSpecificity, clusteringDistanceTolerance,
-                        clusterFractionOverlap, maxPadjValue, minReadClusterCount);
+                        clusterFractionOverlap, maxPadjValue, minimumClusterTranscriptContribution);
 };

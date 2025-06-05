@@ -22,7 +22,7 @@ namespace pipelines::analyze {
 
 using AnnotatedInteractionClusters = std::vector<AnnotatedInteractionCluster>;
 using PartiallyAnnotatedClusters = std::vector<PartiallyAnnotatedInteractionCluster>;
-using FeatureCountsByFeatureID = std::unordered_map<std::string, size_t>;
+using FeatureCountsByFeatureID = std::unordered_map<std::string, float>;
 
 using namespace annotation;
 

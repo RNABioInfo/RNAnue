@@ -12,6 +12,7 @@
 // Internal
 #include "AnnotatedInteractionCluster.hpp"
 #include "EvaluatedInteractionCluster.hpp"
+#include "TranscriptContributionsByID.hpp"
 
 namespace math = boost::math;
 
@@ -22,20 +23,20 @@ class StatisticEvaluator {
     StatisticEvaluator() = delete;
 
     static auto evaluate(std::vector<AnnotatedInteractionCluster> &clusters,
-                         const std::unordered_map<std::string, size_t> &transcriptCounts,
-                         size_t totalTranscriptCount, double padjThreshold)
+                         const TranscriptContributionsByID &transcriptCounts,
+                         float totalTranscriptContribution, double padjThreshold)
         -> std::vector<EvaluatedInteractionCluster>;
 
    private:
     double padjThreshold;
 
-    static auto getTranscriptProbabilities(
-        const std::unordered_map<std::string, size_t> &transcriptCounts,
-        size_t totalTranscriptCount) -> std::unordered_map<std::string, double>;
+    static auto getTranscriptProbabilities(const TranscriptContributionsByID &transcriptCounts,
+                                           float totalTranscriptContribution)
+        -> std::unordered_map<std::string, float>;
 
     static auto evaluatePValues(std::vector<AnnotatedInteractionCluster> &clusters,
-                                const std::unordered_map<std::string, size_t> &transcriptCounts,
-                                size_t totalTranscriptCount)
+                                const TranscriptContributionsByID &transcriptCounts,
+                                float totalTranscriptContribution)
         -> std::vector<EvaluatedInteractionCluster>;
 
     static auto evaluatePAdjValues(std::vector<EvaluatedInteractionCluster> &clusters,

@@ -27,25 +27,28 @@ class InteractionCluster {
                                  std::vector<std::string> recordIDs,
                                  std::vector<double> complementarityScores,
                                  std::vector<double> hybridizationEnergies,
-                                 std::vector<int32_t> crosslinkingSiteCounts)
+                                 std::vector<int32_t> crosslinkingSiteCounts,
+                                 float transcriptContribution)
         : sortedSegments(sortedSegments),
           recordIDs(std::move(recordIDs)),
           complementarityScores(std::move(complementarityScores)),
           maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
           hybridizationEnergies(std::move(hybridizationEnergies)),
           minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
-          crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)) {};
+          crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)),
+          transcriptContribution(transcriptContribution) {};
 
     constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
                                  double complementarityScore, double hybridizationEnergy,
-                                 int crosslinkingSiteCount)
+                                 int crosslinkingSiteCount, float transcriptContribution)
         : sortedSegments(sortedSegments),
           recordIDs({std::move(recordID)}),
           complementarityScores({complementarityScore}),
           maxComplementarityScore(complementarityScore),
           hybridizationEnergies({hybridizationEnergy}),
           minHybridizationEnergy(hybridizationEnergy),
-          crosslinkingSiteCounts({crosslinkingSiteCount}) {};
+          crosslinkingSiteCounts({crosslinkingSiteCount}),
+          transcriptContribution(transcriptContribution) {};
 
     InteractionCluster() = delete;
 
@@ -56,13 +59,15 @@ class InteractionCluster {
                (firstFragment.complementarityScore == secondFragment.complementarityScore) &&
                (firstFragment.hybridizationEnergy == secondFragment.hybridizationEnergy) &&
                (firstFragment.interCrosslinkingSiteCount ==
-                secondFragment.interCrosslinkingSiteCount));
+                secondFragment.interCrosslinkingSiteCount) &&
+               (firstFragment.transcriptContribution == secondFragment.transcriptContribution));
 
         return {{firstFragment.genomicRegion, secondFragment.genomicRegion},
                 firstFragment.recordID,
                 firstFragment.complementarityScore,
                 firstFragment.hybridizationEnergy,
-                firstFragment.interCrosslinkingSiteCount};
+                firstFragment.interCrosslinkingSiteCount,
+                firstFragment.transcriptContribution};
     };
 
     // Getters
@@ -102,7 +107,7 @@ class InteractionCluster {
 
     [[nodiscard]] auto standardDeviationCrosslinkingSiteCount() const -> double;
 
-    [[nodiscard]] auto fragmentCount() const -> size_t { return recordIDs.size(); }
+    [[nodiscard]] auto getTranscriptContribution() const -> float { return transcriptContribution; }
 
     // Comparisons
     /**
@@ -160,6 +165,7 @@ class InteractionCluster {
     std::vector<double> hybridizationEnergies;
     double minHybridizationEnergy;
     std::vector<int32_t> crosslinkingSiteCounts;
+    float transcriptContribution;
 
     [[nodiscard]] static constexpr auto overlapOrientation(
         const GenomicStrandSpecificity strandSpecificity) -> GenomicOrientation {

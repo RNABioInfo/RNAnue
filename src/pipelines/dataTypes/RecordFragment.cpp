@@ -12,7 +12,7 @@
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 
 // Include
-#include "CustomSamTags.hpp"
+#include "CustomSamTags.hpp"  // IWYU pragma: keep
 #include "GenomicFeature.hpp"
 #include "GenomicRegion.hpp"
 #include "SamRecord.hpp"
@@ -30,12 +30,14 @@ auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<Rec
     const double hybridizationEnergy = record.tags().get<"XE"_tag>();
     const double complementarityScore = record.tags().get<"XC"_tag>();
     const int32_t interCrosslinkingSiteCount = record.tags().get<"XO"_tag>();
+    const float transcriptContribution = record.tags().get<"XB"_tag>();
 
     return RecordFragment{.recordID = record.id(),
                           .genomicRegion = *genomicRegion,
                           .complementarityScore = complementarityScore,
                           .hybridizationEnergy = hybridizationEnergy,
-                          .interCrosslinkingSiteCount = interCrosslinkingSiteCount};
+                          .interCrosslinkingSiteCount = interCrosslinkingSiteCount,
+                          .transcriptContribution = transcriptContribution};
 }
 
 auto RecordFragment::toFeature(const std::string &featureID, const std::string &featureType) const

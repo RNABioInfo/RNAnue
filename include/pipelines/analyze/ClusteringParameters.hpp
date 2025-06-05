@@ -32,7 +32,7 @@ struct ClusteringParameters {
     ClusteringMergeParameterVariant clusterMergeParameter;
     GenomicStrandSpecificity clusterMergingStrandSpecificity;
     double maxClusterSelfOverlapFraction;
-    size_t minimumClusterReadCount;
+    float minimumClusterTrascriptContribution;
     GenomicOrientation featureOrientation;
 };
 

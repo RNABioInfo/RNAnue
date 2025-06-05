@@ -1,6 +1,7 @@
 #pragma once
 
 // Standard
+#include <deque>
 #include <string>
 
 // Internal
@@ -18,8 +19,9 @@ class FeatureWriter {
     auto operator=(FeatureWriter &&) -> FeatureWriter & = delete;
     ~FeatureWriter() = delete;
 
-    static void write(const FeatureTreeMap &featureTreeMap, const std::string &outputPath,
-                      FileType::Value fileType);
+    static void write(const FeatureTreeMap &featureTreeMap,
+                      const std::deque<std::string> &sortedReferenceIDs,
+                      const std::string &outputPath, FileType::Value fileType);
 };
 
 }  // namespace annotation

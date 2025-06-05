@@ -6,6 +6,7 @@
 #include <cmath>
 #include <cstdint>
 #include <cstdlib>
+#include <ios>
 #include <numeric>
 #include <ostream>
 #include <vector>
@@ -13,6 +14,7 @@
 // Internal
 #include "GenomicOrientation.hpp"
 #include "GenomicStrandSpecificity.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "SortedGenomicRegionPair.hpp"
 #include "Utility.hpp"
@@ -117,6 +119,10 @@ auto InteractionCluster::merge(const InteractionCluster &other,
                           crosslinkingSiteCounts.begin() + static_cast<long>(oldSize));
     }
 
+    {
+        transcriptContribution += other.transcriptContribution;
+    }
+
     return true;
 }
 
@@ -152,7 +158,8 @@ auto operator<<(std::ostream &outputStream, const InteractionCluster &interactio
     outputStream << "InteractionCluster:\n"
                  << "First segment: " << interactionCluster.getFirstSegment()
                  << "Second segment: " << interactionCluster.getSecondSegment()
-                 << "Count: " << interactionCluster.fragmentCount() << "\n";
+                 << "Count: " << std::fixed << interactionCluster.getTranscriptContribution()
+                 << "\n";
 
     for (const auto &recordID : interactionCluster.getRecordIDs()) {
         outputStream << recordID << ", ";

@@ -23,7 +23,7 @@ class AnalyzeParameters : public GeneralParameters {
     GenomicStrandSpecificity clusterMergingStrandSpecificity;
     double maxClusterSelfOverlapFraction;
     double padjThreshold;
-    size_t minimumClusterReadCount;
+    float minimumClusterTranscriptContribution;
 
     AnalyzeParameters(const po::variables_map& params)
         : GeneralParameters(params),
@@ -32,7 +32,8 @@ class AnalyzeParameters : public GeneralParameters {
               AnalyzeOptions::clusteringStrandSpecificity.extractValue(params)),
           maxClusterSelfOverlapFraction(AnalyzeOptions::maxSelfOverlap.extractValue(params)),
           padjThreshold(AnalyzeOptions::maxPadjValue.extractValue(params)),
-          minimumClusterReadCount(AnalyzeOptions::minReadClusterCount.extractValue(params)) {};
+          minimumClusterTranscriptContribution(
+              AnalyzeOptions::minimumClusterTranscriptContribution.extractValue(params)) {};
 
     static auto validateClusteringOrientation(const po::variables_map& params)
         -> GenomicStrandSpecificity {
@@ -44,7 +45,7 @@ class AnalyzeParameters : public GeneralParameters {
             .clusterMergeParameter = clusteringParameters,
             .clusterMergingStrandSpecificity = clusterMergingStrandSpecificity,
             .maxClusterSelfOverlapFraction = maxClusterSelfOverlapFraction,
-            .minimumClusterReadCount = minimumClusterReadCount,
+            .minimumClusterTrascriptContribution = minimumClusterTranscriptContribution,
             .featureOrientation = featureOrientation};
     }
 

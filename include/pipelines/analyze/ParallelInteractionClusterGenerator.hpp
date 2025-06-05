@@ -11,7 +11,6 @@
 #include "FeatureAnnotator.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
-#include "PartiallyAnnotatedInteractionCluster.hpp"
 
 namespace pipelines::analyze {
 

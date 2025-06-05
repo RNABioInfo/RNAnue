@@ -145,7 +145,7 @@ struct ReadGroupPostScoringStepMetrics {
                                        .legendLabels = labels,
                                        .groupLabels = std::nullopt});
 
-        plotter.addHistogram<size_t>({.title = "Hit Groups Per Read Pre Contribution Filter",
+        plotter.addHistogram<size_t>({.title = "Hit Groups / Read Pre Contribution Filter",
                                       .xlabel = "Hit Groups In Read",
                                       .ylabel = "Count"},
                                      plotting::HistogramData{.data = hitGroupsPreFilter,
@@ -153,7 +153,7 @@ struct ReadGroupPostScoringStepMetrics {
                                                              .cutoffLabel = std::nullopt,
                                                              .cutoffValue = std::nullopt});
 
-        plotter.addHistogram<size_t>({.title = "Hit Groups Per Read Post Contribution Filter",
+        plotter.addHistogram<size_t>({.title = "Hit Groups / Read Post Contribution Filter",
                                       .xlabel = "Hit Groups In Read",
                                       .ylabel = "Count"},
                                      plotting::HistogramData{.data = hitGroupsPostFilter,

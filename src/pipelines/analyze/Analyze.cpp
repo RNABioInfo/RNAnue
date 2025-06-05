@@ -13,17 +13,18 @@
 #include <memory>
 #include <sstream>
 #include <string>
-#include <unordered_map>
 #include <utility>
 #include <vector>
 
 // seqan3
 #include <seqan3/io/sam_file/input.hpp>
+#include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
 
 // Internal
 #include "AnalyzeData.hpp"
 #include "AnalyzeSample.hpp"
 #include "Constants.hpp"
+#include "CustomSamTags.hpp"  // IWYU pragma: keep
 #include "FeatureAnnotator.hpp"
 #include "FeatureWriter.hpp"
 #include "FileType.hpp"
@@ -36,6 +37,7 @@
 #include "SamRecord.hpp"
 #include "SplitRecordsParser.hpp"
 #include "StatisticEvaluator.hpp"
+#include "TranscriptContributionsByID.hpp"
 
 namespace pipelines::analyze {
 
@@ -90,7 +92,7 @@ void Analyze::processSample(const AnalyzeSample &sample,
     assignAnnotatedContiguousFragmentCountsToTranscripts(
         sample.input.contiguousAlignmentsTranscriptCountsPath, mergingResult.featureCounts);
 
-    const size_t totalFragmentCount =
+    const float totalFragmentCount =
         parseSampleFragmentCount(sample.input.sampleFragmentCountsPath);
     const auto evaluatedClusters =
         StatisticEvaluator::evaluate(mergingResult.annotatedClusters, mergingResult.featureCounts,
@@ -100,7 +102,7 @@ void Analyze::processSample(const AnalyzeSample &sample,
                           sample.output.interactionsTranscriptCountsPath);
 
     annotation::FeatureWriter::write(
-        mergingResult.supplementaryFeatureAnnotator.getFeatureTreeMap(),
+        mergingResult.supplementaryFeatureAnnotator.getFeatureTreeMap(), referenceIDs,
         sample.output.supplementaryFeaturesPath, FileType::GFF);
 
     const InteractionsWriter::OutputPaths outputPaths{
@@ -114,7 +116,7 @@ void Analyze::processSample(const AnalyzeSample &sample,
 
 void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
     const fs::path &contiguousTranscriptCountsInPath,
-    std::unordered_map<std::string, size_t> &transcriptCounts) {
+    TranscriptContributionsByID &transcriptCounts) {
     std::ifstream transcriptCountsIn(contiguousTranscriptCountsInPath);
 
     if (!transcriptCountsIn.is_open()) {
@@ -132,7 +134,7 @@ void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
             if (column == 0) {
                 transcriptID = token;
             } else if (column == 1) {
-                transcriptCounts[transcriptID] += std::stoul(token);
+                transcriptCounts[transcriptID] += std::stof(token);
             }
             ++column;
         }
@@ -143,7 +145,7 @@ void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
 
 void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
     const fs::path &unassignedSingletonsInPath, annotation::FeatureAnnotator &featureAnnotator,
-    std::unordered_map<std::string, size_t> &transcriptCounts) {
+    TranscriptContributionsByID &transcriptCounts) {
     seqan3::sam_file_input unassignedSingletonsIn{unassignedSingletonsInPath.string(),
                                                   SamFieldIDs{}};
 
@@ -164,13 +166,14 @@ void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
         }
 
         const std::string &transcriptID = bestFeature->getAnnotationID();
+        const float contributionScore = records.tags().get<"XB"_tag>();
 
         assert(transcriptCounts.contains(transcriptID));
-        ++transcriptCounts[transcriptID];
+        transcriptCounts[transcriptID] += contributionScore;
     }
 }
 
-auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> size_t {
+auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> float {
     std::ifstream sampleCountsIn(sampleCountsInPath);
 
     if (!sampleCountsIn.is_open()) {
@@ -180,7 +183,7 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> si
 
     sampleCountsIn.ignore(std::numeric_limits<std::streamsize>::max(), '\n');  // skip header
 
-    size_t totalTranscriptCount = 0;
+    float totalTranscriptCount = 0;
     std::string line;
     while (std::getline(sampleCountsIn, line)) {
         std::istringstream iss(line);
@@ -188,8 +191,7 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> si
         size_t column = 0;
         for (std::string token; std::getline(iss, token, '\t');) {
             if (column != 0) {
-                totalTranscriptCount += std::stoul(token);
-                Logger::log("Total Transcript Count: ", totalTranscriptCount);
+                totalTranscriptCount += std::stof(token);
             }
             ++column;
         }
@@ -200,7 +202,7 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> si
     return totalTranscriptCount;
 }
 
-void Analyze::writeTranscriptCounts(const std::unordered_map<std::string, size_t> &featureCounts,
+void Analyze::writeTranscriptCounts(const TranscriptContributionsByID &featureCounts,
                                     const fs::path &transcriptCountsOutPath) {
     std::ofstream transcriptCountsOut(transcriptCountsOutPath);
 

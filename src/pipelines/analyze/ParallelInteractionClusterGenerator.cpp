@@ -172,11 +172,12 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
         }
 
         clusteringResults.featureCounts[firstFeatureID] +=
-            partiallyAnnotatedCluster.fragmentCount();
+            partiallyAnnotatedCluster.getTranscriptContribution();
         clusteringResults.featureCounts[secondFeatureID] +=
-            partiallyAnnotatedCluster.fragmentCount();
+            partiallyAnnotatedCluster.getTranscriptContribution();
 
-        if (partiallyAnnotatedCluster.fragmentCount() >= parameters.minimumClusterReadCount &&
+        if (partiallyAnnotatedCluster.getTranscriptContribution() >=
+                parameters.minimumClusterTrascriptContribution &&
             partiallyAnnotatedCluster.segmentsMaxSelfOverlapFraction() <=
                 parameters.maxClusterSelfOverlapFraction) {
             clusteringResults.finishedClusters.emplace_back(partiallyAnnotatedCluster,

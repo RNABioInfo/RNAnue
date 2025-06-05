@@ -88,15 +88,15 @@ auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) 
 
 auto InteractionClusterGenerator::clusterPassesFilters(
     const InteractionCluster &cluster) const noexcept -> bool {
-    return cluster.fragmentCount() >= parameters.minimumClusterReadCount &&
+    return cluster.getTranscriptContribution() >= parameters.minimumClusterTrascriptContribution &&
            cluster.segmentsMaxSelfOverlapFraction() <= parameters.maxClusterSelfOverlapFraction;
 };
 
 void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &&cluster) noexcept {
     // Update counts
 
-    featureCountsByFeatureID[cluster.getFirstFeatureID()] += cluster.fragmentCount();
-    featureCountsByFeatureID[cluster.getSecondFeatureID()] += cluster.fragmentCount();
+    featureCountsByFeatureID[cluster.getFirstFeatureID()] += cluster.getTranscriptContribution();
+    featureCountsByFeatureID[cluster.getSecondFeatureID()] += cluster.getTranscriptContribution();
 
     if (clusterPassesFilters(cluster)) {
         finishedClusters.emplace_back(std::move(cluster));

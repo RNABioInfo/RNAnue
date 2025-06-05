@@ -15,38 +15,40 @@
 // Internal
 #include "AnnotatedInteractionCluster.hpp"
 #include "EvaluatedInteractionCluster.hpp"
+#include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "TranscriptContributionsByID.hpp"
 
 namespace pipelines::analyze {
 
 auto StatisticEvaluator::evaluate(std::vector<AnnotatedInteractionCluster> &clusters,
-                                  const std::unordered_map<std::string, size_t> &transcriptCounts,
-                                  size_t totalTranscriptCount, double padjThreshold)
+                                  const TranscriptContributionsByID &transcriptCounts,
+                                  float totalTranscriptContribution, double padjThreshold)
     -> std::vector<EvaluatedInteractionCluster> {
-    auto evaluatedClusters = evaluatePValues(clusters, transcriptCounts, totalTranscriptCount);
+    auto evaluatedClusters =
+        evaluatePValues(clusters, transcriptCounts, totalTranscriptContribution);
     return evaluatePAdjValues(evaluatedClusters, padjThreshold);
 }
 
 auto StatisticEvaluator::getTranscriptProbabilities(
-    const std::unordered_map<std::string, size_t> &transcriptCounts,
-    const size_t totalTranscriptCount) -> std::unordered_map<std::string, double> {
-    std::unordered_map<std::string, double> transcriptProbabilities;
+    const TranscriptContributionsByID &transcriptCounts, const float totalTranscriptContribution)
+    -> std::unordered_map<std::string, float> {
+    std::unordered_map<std::string, float> transcriptProbabilities;
     transcriptProbabilities.reserve(transcriptCounts.size());
 
     for (const auto &[transcriptID, count] : transcriptCounts) {
-        transcriptProbabilities[transcriptID] =
-            static_cast<double>(count) / static_cast<double>(totalTranscriptCount);
+        transcriptProbabilities[transcriptID] = count / totalTranscriptContribution;
     }
 
     return transcriptProbabilities;
 }
 
-auto StatisticEvaluator::evaluatePValues(
-    std::vector<AnnotatedInteractionCluster> &clusters,
-    const std::unordered_map<std::string, size_t> &transcriptCounts,
-    const size_t totalTranscriptCount) -> std::vector<EvaluatedInteractionCluster> {
-    const std::unordered_map<std::string, double> transcriptProbabilities =
-        getTranscriptProbabilities(transcriptCounts, totalTranscriptCount);
+auto StatisticEvaluator::evaluatePValues(std::vector<AnnotatedInteractionCluster> &clusters,
+                                         const TranscriptContributionsByID &transcriptCounts,
+                                         const float totalTranscriptContribution)
+    -> std::vector<EvaluatedInteractionCluster> {
+    const std::unordered_map<std::string, float> transcriptProbabilities =
+        getTranscriptProbabilities(transcriptCounts, totalTranscriptContribution);
 
     std::vector<EvaluatedInteractionCluster> evaluatedClusters;
     evaluatedClusters.reserve(clusters.size());
@@ -90,10 +92,12 @@ auto StatisticEvaluator::evaluatePValues(
         double normalizedLigationByChanceProbability =
             ligationByChanceProbabilities[i] / combinedProbability;
 
-        const auto binomialDistribution = math::binomial_distribution(
-            static_cast<double>(totalTranscriptCount), normalizedLigationByChanceProbability);
+        const auto binomialDistribution =
+            math::binomial_distribution(static_cast<double>(totalTranscriptContribution),
+                                        normalizedLigationByChanceProbability);
 
-        const double pValue = 1 - math::cdf(binomialDistribution, cluster.fragmentCount() - 1);
+        const double pValue =
+            1 - math::cdf(binomialDistribution, cluster.getTranscriptContribution() - 1);
 
         evaluatedClusters.emplace_back(std::move(cluster), pValue);
     }

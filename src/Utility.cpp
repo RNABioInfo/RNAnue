@@ -37,6 +37,7 @@
 #include "Config.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "seqan3/io/exception.hpp"
 
 namespace helper {
 
@@ -117,8 +118,13 @@ void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& ou
             Logger::log<LogLevel::DEBUG>(inputPath);
             continue;
         }
-        seqan3::sequence_file_input inputFile{inputPath};
-        inputFile | outputFile;
+
+        try {
+            seqan3::sequence_file_input inputFile{inputPath};
+            inputFile | outputFile;
+        } catch (seqan3::unexpected_end_of_input const& e) {
+            Logger::log<LogLevel::DEBUG>("Error while reading file: ", inputPath, " ", e.what());
+        }
     }
 }
 
