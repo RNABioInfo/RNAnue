@@ -52,7 +52,7 @@ auto Closing::retrieveQuotes() -> std::vector<std::string> {
     quotes.insert(quotes.end(), ("\"Hechtschenkel..?\" - Randy"));
     quotes.insert(quotes.end(), ("\"I am a freaking genius\" - Fikrat - always"));
     quotes.insert(quotes.end(), ("\"Change da world – my final message – goodbye\" - Marius"));
-
+    quotes.insert(quotes.end(), ("\"Einem geschauten Gaul schenkt man nicht ins Maul\" - Marius"));
     return quotes;
 }
 

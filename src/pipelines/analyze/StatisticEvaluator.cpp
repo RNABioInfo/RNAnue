@@ -2,6 +2,7 @@
 
 // Standard
 #include <algorithm>
+#include <cmath>
 #include <cstddef>
 #include <string>
 #include <unordered_map>
@@ -91,6 +92,12 @@ auto StatisticEvaluator::evaluatePValues(std::vector<AnnotatedInteractionCluster
 
         double normalizedLigationByChanceProbability =
             ligationByChanceProbabilities[i] / combinedProbability;
+
+        if (std::isnan(normalizedLigationByChanceProbability) ||
+            normalizedLigationByChanceProbability < 0.0 ||
+            normalizedLigationByChanceProbability > 1.0) {
+            Logger::log<LogLevel::DEBUG>("Skipping record due ligation by chance prob invalid.");
+        }
 
         const auto binomialDistribution =
             math::binomial_distribution(static_cast<double>(totalTranscriptContribution),
