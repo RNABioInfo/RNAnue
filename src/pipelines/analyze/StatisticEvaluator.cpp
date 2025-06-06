@@ -97,6 +97,8 @@ auto StatisticEvaluator::evaluatePValues(std::vector<AnnotatedInteractionCluster
             normalizedLigationByChanceProbability < 0.0 ||
             normalizedLigationByChanceProbability > 1.0) {
             Logger::log<LogLevel::DEBUG>("Skipping record due ligation by chance prob invalid.");
+
+            continue;
         }
 
         const auto binomialDistribution =
