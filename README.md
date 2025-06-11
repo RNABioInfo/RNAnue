@@ -13,9 +13,13 @@ If your operating system is not supported, you can use RNAnue via Docker or buil
 
 ### Installer
 
-Download OS-specific installers for macOS and Debian here: [Latest Release](https://github.com/ChristopherAdelmann/RNAnue/releases/latest).
+_Not available yet_
+
+Download OS-specific installers for macOS and Debian here: [Latest Release](https://github.com/RNABioInfo/RNAnue/releases/latest).
 
 ### Docker
+
+_Not available yet_
 
 We provide a ready-to-use [Docker container](https://hub.docker.com/repository/docker/cobirna/rnanue) with RNAnue pre-configured.
 
@@ -25,6 +29,8 @@ docker run -ti  cobirna/rnanue
 ```
 
 ### Singularity
+
+_Not available yet_
 
 The Docker container can also be used with Singularity.
 
@@ -48,6 +54,9 @@ Clone the repository and its submodules:
 git clone --recurse-submodules <git-repo-here>
 ```
 
+> **Information**
+> If you'd like to clone a specific branch, use the `--branch <branch-name>` flag.
+
 #### Building and Installing
 
 Build and install RNAnue with the following commands:
@@ -61,7 +70,7 @@ cmake --install .
 ```
 
 > **IMPORTANT**
-> RNAnue can only be compiled with [gcc](https://gcc.gnu.org) (tested with v13.2.0)
+> RNAnue can only be compiled with [gcc](https://gcc.gnu.org) (tested with v14.2.0; needs to support **C++23**)
 
 > **IMPORTANT – MacOS**
 > When building on macOS, you need to specify the GCC compiler to avoid using AppleClang:
