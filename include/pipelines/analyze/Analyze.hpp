@@ -39,12 +39,13 @@ class Analyze {
     void processSample(const AnalyzeSample &sample,
                        std::shared_ptr<const FeatureAnnotator> featureAnnotator);
 
-    static void assignAnnotatedContiguousFragmentCountsToTranscripts(
+    static void parseAnnotatedContiguousFragmentCountsToTranscripts(
         const fs::path &contiguousTranscriptCountsInPath,
         TranscriptContributionsByID &transcriptCounts);
 
-    void assignNonAnnotatedContiguousToSupplementaryFeatures(
-        const fs::path &unassignedSingletonsInPath, annotation::FeatureAnnotator &featureAnnotator,
+    void parseNonAnnotatedContiguousToSupplementaryFeatures(
+        const fs::path &unassignedSingletonsInPath,
+        const annotation::FeatureAnnotator &featureAnnotator,
         TranscriptContributionsByID &transcriptCounts);
     static auto parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> float;
 

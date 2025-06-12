@@ -28,7 +28,6 @@
 #include "FeatureAnnotator.hpp"
 #include "FeatureWriter.hpp"
 #include "FileType.hpp"
-#include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionsWriter.hpp"
 #include "LogLevel.hpp"
@@ -85,11 +84,11 @@ void Analyze::processSample(const AnalyzeSample &sample,
     auto mergingResult = clusterGenerator.mergeClusters(std::move(clusters), parameters.threadCount,
                                                         parameters.chunkSize);
 
-    assignNonAnnotatedContiguousToSupplementaryFeatures(
+    parseNonAnnotatedContiguousToSupplementaryFeatures(
         sample.input.unassignedContiguousAlignmentsPath,
         mergingResult.supplementaryFeatureAnnotator, mergingResult.featureCounts);
 
-    assignAnnotatedContiguousFragmentCountsToTranscripts(
+    parseAnnotatedContiguousFragmentCountsToTranscripts(
         sample.input.contiguousAlignmentsTranscriptCountsPath, mergingResult.featureCounts);
 
     const float totalFragmentCount =
@@ -114,7 +113,7 @@ void Analyze::processSample(const AnalyzeSample &sample,
                                           evaluatedClusters);
 }
 
-void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
+void Analyze::parseAnnotatedContiguousFragmentCountsToTranscripts(
     const fs::path &contiguousTranscriptCountsInPath,
     TranscriptContributionsByID &transcriptCounts) {
     std::ifstream transcriptCountsIn(contiguousTranscriptCountsInPath);
@@ -143,30 +142,25 @@ void Analyze::assignAnnotatedContiguousFragmentCountsToTranscripts(
     }
 }
 
-void Analyze::assignNonAnnotatedContiguousToSupplementaryFeatures(
-    const fs::path &unassignedSingletonsInPath, annotation::FeatureAnnotator &featureAnnotator,
+void Analyze::parseNonAnnotatedContiguousToSupplementaryFeatures(
+    const fs::path &unassignedSingletonsInPath,
+    const annotation::FeatureAnnotator &featureAnnotator,
     TranscriptContributionsByID &transcriptCounts) {
     seqan3::sam_file_input unassignedSingletonsIn{unassignedSingletonsInPath.string(),
                                                   SamFieldIDs{}};
 
     const auto annotationOrientation = parameters.featureOrientation;
 
-    for (auto &&records : unassignedSingletonsIn) {
-        const auto region = GenomicRegion::fromSamRecord(records);
-
-        if (!region) {
-            continue;
-        }
-
+    for (const auto &record : unassignedSingletonsIn) {
         const auto bestFeature =
-            featureAnnotator.getBestOverlappingFeature(region.value(), annotationOrientation);
+            featureAnnotator.getBestOverlappingFeature(record, annotationOrientation);
 
         if (!bestFeature) {
             continue;
         }
 
         const std::string &transcriptID = bestFeature->getAnnotationID();
-        const float contributionScore = records.tags().get<"XB"_tag>();
+        const float contributionScore = record.tags().get<"XB"_tag>();
 
         assert(transcriptCounts.contains(transcriptID));
         transcriptCounts[transcriptID] += contributionScore;
@@ -190,7 +184,7 @@ auto Analyze::parseSampleFragmentCount(const fs::path &sampleCountsInPath) -> fl
 
         size_t column = 0;
         for (std::string token; std::getline(iss, token, '\t');) {
-            if (column != 0) {
+            if (column != 0) {  // Skip name column
                 totalTranscriptCount += std::stof(token);
             }
             ++column;
