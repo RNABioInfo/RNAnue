@@ -20,8 +20,9 @@
 #include <matplot/util/handle_types.h>
 
 // Internal
-#include "FileFormat.hpp"
 #include "Logger.hpp"
+#include "NumericConcept.hpp"
+#include "PlottingDefaults.hpp"
 #include "Subsampling.hpp"
 #include "matplot/core/figure_registry.h"
 #include "matplot/freestanding/axes_functions.h"
@@ -41,17 +42,12 @@ struct FigureConfig {
     std::string_view fileFormat;
     fs::path outDirPath;
 
-    static constexpr size_t defaultWidthPixel = 1920;
-    static constexpr size_t defaultHeightPixel = 1080;
-    static constexpr size_t defaultMaxDatapointsPerPlot = 50000;
-    static constexpr std::string_view defaultFileFormat = FileFormat::svg;
-
     static auto makeDefault(const std::string& title, const fs::path& outDirPath) -> FigureConfig {
         return FigureConfig{.title = title,
-                            .widthPixel = defaultWidthPixel,
-                            .heightPixel = defaultHeightPixel,
-                            .maxDatapointsPerPlot = defaultMaxDatapointsPerPlot,
-                            .fileFormat = defaultFileFormat,
+                            .widthPixel = defaults::widthPixel,
+                            .heightPixel = defaults::heightPixel,
+                            .maxDatapointsPerPlot = defaults::maxDatapointsPerPlot,
+                            .fileFormat = defaults::fileFormat,
                             .outDirPath = outDirPath};
     }
 };
@@ -62,9 +58,6 @@ struct PlotConfig {
     std::string xlabel;
     std::string ylabel;
 };
-
-template <typename T>
-concept NumericType = std::integral<T> || std::floating_point<T>;
 
 template <NumericType T>
 struct StackedBarData {
