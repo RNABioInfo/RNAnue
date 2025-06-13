@@ -7,8 +7,8 @@
 #include <utility>
 #include <vector>
 
+#include "PipelineData.hpp"
 #include "PreprocessSample.hpp"
-#include "pipelines/PipelineData.hpp"
 
 namespace pipelines::preprocess {
 

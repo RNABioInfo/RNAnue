@@ -3,8 +3,10 @@
 // Standard
 #include <cstddef>
 #include <deque>
+#include <format>
 #include <fstream>
 #include <string>
+#include <string_view>
 #include <vector>
 
 // Internal
@@ -20,29 +22,33 @@ void InteractionsWriter::writeInteractions(
     const std::deque<std::string>& referenceIDs,
     const std::vector<EvaluatedInteractionCluster>& evaluatedClusters) {
     std::ofstream interactionsOutput(outputPaths.interactionsOutputPath);
-
     if (!interactionsOutput.is_open()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
                                                             outputPaths.interactionsOutputPath);
     }
 
     std::ofstream interactionsBEDOutput(outputPaths.interactionsBEDOutputPath);
-
     if (!interactionsBEDOutput.is_open()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
                                                             outputPaths.interactionsBEDOutputPath);
     }
 
     std::ofstream interactionsBEDArcOutput(outputPaths.interactionsBEDArcOutputPath);
-
     if (!interactionsBEDArcOutput.is_open()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
             "Could not open file: ", outputPaths.interactionsBEDArcOutputPath);
     }
 
+    std::ofstream interactionReadIDsOutput(outputPaths.interactionReadIDsOutputPath);
+    if (!interactionReadIDsOutput.is_open()) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Could not open file: ", outputPaths.interactionReadIDsOutputPath);
+    }
+
     writeInteractionsHeader(interactionsOutput);
     writeInteractionsBEDHeader(interactionsBEDOutput, sampleName);
     writeInteractionsBEDArcHeader(interactionsBEDArcOutput, sampleName);
+    writeInteractionReadIDsHeader(interactionReadIDsOutput);
 
     size_t intramolecularCount = 0;
     size_t intermolecularCount = 0;
@@ -55,11 +61,12 @@ void InteractionsWriter::writeInteractions(
             ++intermolecularCount;
         }
 
-        writeInteraction(cluster, std::to_string(clusterID), referenceIDs, interactionsOutput);
-        writeInteractionBED(cluster, std::to_string(clusterID), referenceIDs,
-                            interactionsBEDOutput);
-        writeInteractionBEDArc(cluster, std::to_string(clusterID), referenceIDs,
-                               interactionsBEDArcOutput);
+        const std::string clusterIDString = std::to_string(clusterID);
+
+        writeInteraction(cluster, clusterIDString, referenceIDs, interactionsOutput);
+        writeInteractionBED(cluster, clusterIDString, referenceIDs, interactionsBEDOutput);
+        writeInteractionBEDArc(cluster, clusterIDString, referenceIDs, interactionsBEDArcOutput);
+        writeInteractionReadIDs(cluster, clusterIDString, interactionReadIDsOutput);
 
         ++clusterID;
     }
@@ -94,6 +101,10 @@ void InteractionsWriter::writeInteractionsBEDArcHeader(std::ofstream& interactio
            "clusters derived from DDD-Experiment\" itemRgb=\"On\"\n";
 }
 
+void InteractionsWriter::writeInteractionReadIDsHeader(std::ofstream& interactionReadIDsOut) {
+    interactionReadIDsOut << "cluster_ID\tread_IDs\n";
+}
+
 void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& cluster,
                                           const std::string& clusterID,
                                           const std::deque<std::string>& referenceIDs,
@@ -114,13 +125,14 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
     interactionOut << cluster.getSecondSegment().getEnd() << "\t";
     interactionOut << static_cast<char>(cluster.getSecondSegment().getStrand()) << "\t";
 
-    interactionOut << cluster.getTranscriptContribution() << "\t";
-    interactionOut << cluster.meanCrosslinkingSiteCount() << "\t";
-    interactionOut << cluster.standardDeviationCrosslinkingSiteCount() << "\t";
-    interactionOut << cluster.complementarityStatistics() << "\t";
-    interactionOut << cluster.hybridizationEnergyStatistics() << "\t";
-    interactionOut << cluster.getPValue() << "\t";
-    interactionOut << cluster.getPadj();
+    interactionOut << std::format("{:.2f}", cluster.getTranscriptContribution()) << "\t";
+    interactionOut << std::format("{:.2f}", cluster.meanCrosslinkingSiteCount()) << "\t";
+    interactionOut << std::format("{:.2f}", cluster.standardDeviationCrosslinkingSiteCount())
+                   << "\t";
+    interactionOut << std::format("{:.2f}", cluster.complementarityStatistics()) << "\t";
+    interactionOut << std::format("{:.2f}", cluster.hybridizationEnergyStatistics()) << "\t";
+    interactionOut << std::format("{:.4f}", cluster.getPValue()) << "\t";
+    interactionOut << std::format("{:.4f}", cluster.getPadj());
     interactionOut << "\n";
 }
 
@@ -165,4 +177,18 @@ void InteractionsWriter::writeInteractionBEDArc(const EvaluatedInteractionCluste
     bedArcOut << "cluster" << clusterID << "\n";
 }
 
+void InteractionsWriter::writeInteractionReadIDs(const EvaluatedInteractionCluster& cluster,
+                                                 const std::string& clusterID,
+                                                 std::ofstream& interactionReadIDsOut) {
+    interactionReadIDsOut << "cluster" << clusterID << "\t";
+    constexpr std::string_view seperator = ",";
+
+    std::string_view curSeperator{};
+    for (const auto& readID : cluster.getRecordIDs()) {
+        interactionReadIDsOut << std::format("{}{}", curSeperator, readID);
+        curSeperator = seperator;
+    }
+
+    interactionReadIDsOut << "\n";
+}
 }  // namespace pipelines::analyze

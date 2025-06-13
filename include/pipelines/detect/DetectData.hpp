@@ -9,7 +9,7 @@
 // Internal
 #include "AlignData.hpp"
 #include "DetectSample.hpp"
-#include "pipelines/PipelineData.hpp"
+#include "PipelineData.hpp"
 
 namespace pipelines::detect {
 namespace fs = std::filesystem;

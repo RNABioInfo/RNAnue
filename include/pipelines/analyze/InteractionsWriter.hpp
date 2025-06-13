@@ -1,9 +1,12 @@
 #pragma once
 
 // Standard
+#include <cstdint>
 #include <deque>
 #include <filesystem>
+#include <fstream>
 #include <string>
+#include <vector>
 
 // Internal
 #include "EvaluatedInteractionCluster.hpp"
@@ -35,6 +38,7 @@ class InteractionsWriter {
                                            const std::string& sampleName);
     static void writeInteractionsBEDArcHeader(std::ofstream& interactionsBEDArcOut,
                                               const std::string& sampleName);
+    static void writeInteractionReadIDsHeader(std::ofstream& interactionReadIDsOut);
 
     static void writeInteraction(const EvaluatedInteractionCluster& cluster,
                                  const std::string& clusterID,
@@ -48,10 +52,14 @@ class InteractionsWriter {
                                        const std::string& clusterID,
                                        const std::deque<std::string>& referenceIDs,
                                        std::ofstream& bedArcOut);
+    static void writeInteractionReadIDs(const EvaluatedInteractionCluster& cluster,
+                                        const std::string& clusterID,
+                                        std::ofstream& interactionReadIDsOut);
 };
 
 struct InteractionsWriter::OutputPaths {
     fs::path interactionsOutputPath;
+    fs::path interactionReadIDsOutputPath;
     fs::path interactionsBEDOutputPath;
     fs::path interactionsBEDArcOutputPath;
 };

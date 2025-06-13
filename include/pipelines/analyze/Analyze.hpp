@@ -23,9 +23,9 @@
 
 namespace pipelines::analyze {
 
+using namespace annotation;
 namespace math = boost::math;
 using seqan3::operator""_tag;
-using namespace annotation;
 
 class Analyze {
    public:
@@ -35,7 +35,6 @@ class Analyze {
 
    private:
     AnalyzeParameters parameters;
-
     void processSample(const AnalyzeSample &sample,
                        std::shared_ptr<const FeatureAnnotator> featureAnnotator);
 

@@ -9,8 +9,8 @@
 
 // Internal
 #include "AlignSample.hpp"
+#include "PipelineData.hpp"
 #include "PreprocessData.hpp"
-#include "pipelines/PipelineData.hpp"
 
 namespace pipelines::align {
 

@@ -38,6 +38,8 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
 
         const fs::path interactionsPath =
             outputDirSample / (inputSample.sampleName + outInteractionsSuffix);
+        const fs::path interactionReadIDsPath =
+            outputDirSample / (inputSample.sampleName + outInteractionReadIDsSuffix);
         const fs::path interactionsTranscriptCountsPath =
             outputDirSample / (inputSample.sampleName + outInteractionsTranscrptCountsSuffix);
         const fs::path interactionsBEDPath =
@@ -50,6 +52,7 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
         samples.push_back(AnalyzeSample(
             inputSample,
             AnalyzeOutput{.interactionsPath = interactionsPath,
+                          .interactionsReadIDsPath = interactionReadIDsPath,
                           .interactionsTranscriptCountsPath = interactionsTranscriptCountsPath,
                           .interactionsBEDPath = interactionsBEDPath,
                           .interactionsBEDARCPath = interactionsBEDARCPath,

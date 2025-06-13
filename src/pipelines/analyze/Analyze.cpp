@@ -22,6 +22,7 @@
 
 // Internal
 #include "AnalyzeData.hpp"
+#include "AnalyzeParameters.hpp"
 #include "AnalyzeSample.hpp"
 #include "Constants.hpp"
 #include "CustomSamTags.hpp"  // IWYU pragma: keep
@@ -106,6 +107,7 @@ void Analyze::processSample(const AnalyzeSample &sample,
 
     const InteractionsWriter::OutputPaths outputPaths{
         .interactionsOutputPath = sample.output.interactionsPath,
+        .interactionReadIDsOutputPath = sample.output.interactionsReadIDsPath,
         .interactionsBEDOutputPath = sample.output.interactionsBEDPath,
         .interactionsBEDArcOutputPath = sample.output.interactionsBEDARCPath};
 

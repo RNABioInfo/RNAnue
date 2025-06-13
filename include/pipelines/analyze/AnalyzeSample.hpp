@@ -4,8 +4,7 @@
 #include <filesystem>
 #include <string>
 
-namespace pipelines {
-namespace analyze {
+namespace pipelines::analyze {
 namespace fs = std::filesystem;
 
 struct AnalyzeInput {
@@ -22,6 +21,7 @@ struct AnalyzeInput {
 
 struct AnalyzeOutput {
     fs::path interactionsPath;
+    fs::path interactionsReadIDsPath;
     fs::path interactionsTranscriptCountsPath;
 
     fs::path interactionsBEDPath;
@@ -35,5 +35,4 @@ struct AnalyzeSample {
     AnalyzeOutput output;
 };
 
-}  // namespace analyze
-}  // namespace pipelines
+}  // namespace pipelines::analyze

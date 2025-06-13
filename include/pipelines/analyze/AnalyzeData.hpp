@@ -10,7 +10,7 @@
 // Internal
 #include "AnalyzeSample.hpp"
 #include "DetectData.hpp"
-#include "pipelines/PipelineData.hpp"
+#include "PipelineData.hpp"
 
 namespace pipelines::analyze {
 namespace fs = std::filesystem;
@@ -30,6 +30,7 @@ static const std::array<std::string, 5> validSuffices = {
     validInputContiguousAlignmentsTranscriptCountsSuffix, validSharedReadCountsSuffix};
 
 static const std::string outInteractionsSuffix = "_interactions.tsv";
+static const std::string outInteractionReadIDsSuffix = "_interactions_readIDs.tsv";
 static const std::string outInteractionsTranscrptCountsSuffix =
     "_interaction_transcript_counts.tsv";
 static const std::string outInteractionsBEDSuffix = "_interaction_regions.bed";
