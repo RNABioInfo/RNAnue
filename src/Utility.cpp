@@ -78,26 +78,49 @@ auto getUUID() -> std::string {
     return boost::uuids::to_string(uuidGenerator());
 }
 
+auto looks_like_bam(const fs::path& path) -> bool {
+    // 1) Exists and non-empty
+    if (!fs::exists(path) || fs::file_size(path) < 4) {
+        return false;
+    }
+
+    try {
+        seqan3::sam_file_input inputFile{path};
+        inputFile.front();
+    } catch (...) {
+        return false;
+    }
+
+    return true;
+}
+
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
     if (inputPaths.empty()) {
         Logger::log<LogLevel::WARNING>("No input files to merge");
         return;
     }
 
-    seqan3::sam_file_output outputFile{outputPath};
+    try {
+        seqan3::sam_file_output outputFile{outputPath};
 
-    for (const auto& inputPath : inputPaths) {
-        if (!fs::exists(inputPath) || fs::file_size(inputPath) == 0) {
-            continue;
+        for (const auto& inputPath : inputPaths) {
+            if (!looks_like_bam(inputPath)) {
+                Logger::log<LogLevel::INFO>("Skipping empty or invalid BAM: " + inputPath.string());
+                continue;
+            }
+
+            // Now it’s safe to construct the reader
+            seqan3::sam_file_input inputFile{inputPath};
+
+            // If there are truly no records, this is just a quick skip
+            if (inputFile.begin() == inputFile.end()) {
+                continue;
+            }
+
+            inputFile | outputFile;
         }
-
-        seqan3::sam_file_input inputFile{inputPath};
-
-        if (inputFile.begin() == inputFile.end()) {
-            continue;
-        }
-
-        inputFile | outputFile;
+    } catch (...) {
+        Logger::log("Could not write sam file: ", outputPath);
     }
 }
 

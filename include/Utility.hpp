@@ -160,7 +160,7 @@ auto getValidFilePaths(const fs::path &directory,
 auto getDirIfExists(const fs::path &path) -> std::optional<fs::path>;
 
 auto getUUID() -> std::string;
-
+auto looks_like_bam(const fs::path &path) -> bool;
 void mergeSamFiles(const std::vector<fs::path> &inputPaths, const fs::path &outputPath);
 void mergeFastqFiles(const std::vector<fs::path> &inputPaths, const fs::path &outputPath);
 
