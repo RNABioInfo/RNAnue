@@ -3,7 +3,9 @@
 // Standard
 #include <cstdlib>
 #include <cstring>
+#include <filesystem>
 #include <optional>
+#include <string>
 #include <vector>
 
 // Boost
@@ -57,7 +59,7 @@ class Align {
     void processSingleEnd(const AlignSampleSingle &sample);
     void processMergedPairedEnd(const AlignSampleMergedPaired &sample);
 
-    std::optional<fs::path> findIndex(const fs::path &referenceGenomePath) const;
+    auto findIndex(const fs::path &referenceGenomePath) const -> std::optional<fs::path>;
 
     void buildIndex();
 

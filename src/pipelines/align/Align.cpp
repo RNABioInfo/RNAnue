@@ -92,21 +92,21 @@ void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
 auto Align::findIndex(const fs::path &referenceGenomePath) const -> std::optional<fs::path> {
     // Check if index exists in the same directory as the reference genome
     fs::path indexFileName = referenceGenomePath.filename().replace_extension(".idx");
-    fs::path indexPath = referenceGenomePath.parent_path() / indexFileName;
+    fs::path indexFilePath = referenceGenomePath.parent_path() / indexFileName;
 
-    Logger::log("Searching for reference index at: ", indexPath);
+    Logger::log("Searching for reference index at: ", indexFilePath);
 
-    if (fs::exists(indexPath)) {
-        return indexPath;
+    if (fs::exists(indexFilePath)) {
+        return indexFilePath;
     }
 
     // Check if index exists in the output directory
-    indexPath = parameters.outputDir / indexFileName;
+    indexFilePath = parameters.outputDir / indexFileName;
 
-    Logger::log("Searching for reference index at: ", indexPath);
+    Logger::log("Searching for reference index at: ", indexFilePath);
 
-    if (fs::exists(indexPath)) {
-        return indexPath;
+    if (fs::exists(indexFilePath)) {
+        return indexFilePath;
     }
 
     Logger::log("Did not find reference index");
@@ -121,7 +121,7 @@ void Align::buildIndex() {
     const auto indexFilePath = findIndex(referencePath);
 
     if (indexFilePath.has_value()) {
-        Logger::log("Existing index found: ", indexPath);
+        Logger::log("Existing index found: ", indexFilePath);
         indexPath = *indexFilePath;
         return;
     }
