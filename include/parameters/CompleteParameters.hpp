@@ -8,6 +8,7 @@
 #include "AlignParameters.hpp"
 #include "AnalyzeParameters.hpp"
 #include "DetectParameters.hpp"
+#include "PostprocessParameters.hpp"
 #include "PreprocessParameters.hpp"
 
 namespace po = boost::program_options;
@@ -19,12 +20,14 @@ struct CompleteParameters {
     align::AlignParameters alignParameters;
     detect::DetectParameters detectParameters;
     analyze::AnalyzeParameters analyzeParameters;
+    postprocess::PostprocessParameters postprocessParameters;
 
     CompleteParameters(const po::variables_map &params)
         : preprocessParameters(params),
           alignParameters(params),
           detectParameters(params),
-          analyzeParameters(params) {};
+          analyzeParameters(params),
+          postprocessParameters(params) {};
 };
 
 }  // namespace pipelines

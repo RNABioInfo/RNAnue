@@ -6,9 +6,6 @@
 #include <string_view>
 #include <tuple>
 
-// Boost
-#include <boost/program_options/options_description.hpp>
-
 // Internal
 #include "ArithmeticParameterOption.hpp"
 #include "DefaultedParameterOption.hpp"

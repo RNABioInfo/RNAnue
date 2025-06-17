@@ -15,7 +15,7 @@ struct SubcallOptions {
 
     static constexpr ParameterOption<std::string> subcall{
         {.shortName = std::nullopt, .longName = "subcall"},
-        "The subcall to execute. The following subcalls are available: preprocess, align, detect, analyze, complete."sv};
+        "The subcall to execute. The following subcalls are available: preprocess, align, detect, analyze, postprocess, complete."sv};
 
     static constexpr auto allOptions = std::make_tuple(subcall);
 };

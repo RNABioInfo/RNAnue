@@ -17,6 +17,7 @@
 #include "DetectParameters.hpp"
 #include "Logger.hpp"
 #include "ParameterParser.hpp"
+#include "PostprocessParameters.hpp"
 #include "Preprocess.hpp"
 #include "PreprocessData.hpp"
 #include "PreprocessParameters.hpp"
@@ -80,6 +81,12 @@ void Runner::runAnalyzePipeline(const analyze::AnalyzeParameters &parameters) {
     pipeline.process(data);
 }
 
+void Runner::runPostprocessPipeline(const postprocess::PostprocessParameters &parameters) {
+    Logger::log("Running postprocess pipeline");
+
+    const auto inputDirs = InputDirectories(parameters.outputDir, analyze::pipelinePrefix);
+}
+
 void Runner::runCompletePipeline(const CompleteParameters &parameters) {
     Logger::log("Running complete pipeline");
 
@@ -87,6 +94,7 @@ void Runner::runCompletePipeline(const CompleteParameters &parameters) {
     runAlignPipeline(parameters.alignParameters);
     runDetectPipeline(parameters.detectParameters);
     runAnalyzePipeline(parameters.analyzeParameters);
+    runPostprocessPipeline(parameters.postprocessParameters);
 }
 
 void Runner::Pipeline::operator()(const preprocess::PreprocessParameters &params) {
@@ -101,6 +109,10 @@ void Runner::Pipeline::operator()(const detect::DetectParameters &params) {
 void Runner::Pipeline::operator()(const analyze::AnalyzeParameters &params) {
     Runner::runAnalyzePipeline(params);
 };
+void Runner::Pipeline::operator()(const postprocess::PostprocessParameters &params) {
+    Runner::runPostprocessPipeline(params);
+}
+
 void Runner::Pipeline::operator()(const CompleteParameters &params) {
     Runner::runCompletePipeline(params);
 };

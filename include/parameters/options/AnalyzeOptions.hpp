@@ -14,7 +14,7 @@
 using namespace dataTypes;
 
 struct AnalyzeOptions {
-    static constexpr std::string_view optionsDescription = "Analyze Pipeline"sv;
+    static constexpr std::string_view optionsDescription = "Analyze Pipeline";
 
     static constexpr DefaultedParameterOption<double, 0.1> maxSelfOverlap{
         {.shortName = std::nullopt, .longName = "maxselfoverlap"},

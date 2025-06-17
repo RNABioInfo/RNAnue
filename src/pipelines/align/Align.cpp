@@ -96,16 +96,24 @@ auto Align::findIndex(const fs::path &referenceGenomePath) const -> std::optiona
     fs::path indexFileName = referenceGenomePath.filename().replace_extension(".idx");
     fs::path indexPath = referenceGenomePath.parent_path() / indexFileName;
 
+    Logger::log("Searching for reference index at: ", indexPath);
+
     if (fs::exists(indexPath)) {
+        Logger::log("Found reference index");
         return indexPath;
     }
 
     // Check if index exists in the output directory
     indexPath = parameters.outputDir / indexFileName;
 
+    Logger::log("Searching for reference index at: ", indexPath);
+
     if (fs::exists(indexPath)) {
+        Logger::log("Found reference index");
         return indexPath;
     }
+
+    Logger::log("Did not find reference index");
 
     return std::nullopt;
 }

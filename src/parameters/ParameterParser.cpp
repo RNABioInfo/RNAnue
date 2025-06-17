@@ -53,8 +53,9 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
     if (subcall == constants::pipelines::ANALYZE) {
         return analyze::AnalyzeParameters{params};
     }
+    if (subcall == const)
 
-    Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Unknown subcall: " + subcall);
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Unknown subcall: " + subcall);
     exit(EXIT_FAILURE);
 }
 
