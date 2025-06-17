@@ -99,7 +99,6 @@ auto Align::findIndex(const fs::path &referenceGenomePath) const -> std::optiona
     Logger::log("Searching for reference index at: ", indexPath);
 
     if (fs::exists(indexPath)) {
-        Logger::log("Found reference index");
         return indexPath;
     }
 
@@ -109,7 +108,6 @@ auto Align::findIndex(const fs::path &referenceGenomePath) const -> std::optiona
     Logger::log("Searching for reference index at: ", indexPath);
 
     if (fs::exists(indexPath)) {
-        Logger::log("Found reference index");
         return indexPath;
     }
 
@@ -124,7 +122,7 @@ void Align::buildIndex() {
 
     const auto indexFilePath = findIndex(referencePath);
 
-    if (indexFilePath.has_value() && !indexFilePath.value().has_filename()) {
+    if (indexFilePath.has_value()) {
         Logger::log("Existing index found: ", indexPath);
         indexPath = *indexFilePath;
         return;
