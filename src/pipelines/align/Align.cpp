@@ -25,8 +25,6 @@
 namespace pipelines::align {
 
 void Align::process(const AlignData &data) {
-    buildIndex();
-
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
     for (const auto &sample : data.treatmentSamples) {
