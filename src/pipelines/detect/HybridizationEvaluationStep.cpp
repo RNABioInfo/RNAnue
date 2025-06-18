@@ -49,12 +49,9 @@ auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) 
     std::unique_ptr<char[]> structure(new char[interactionSeq.size() + 1]);  // NOLINT
 
     constexpr int DELTA_MFE = 0;
-    std::unique_ptr<vrna_subopt_sol_s, decltype(&free)> result{nullptr, free};
-    try {
-        result.reset(vrna_subopt(foldCompound, DELTA_MFE, 1, nullptr));
-    } catch (...) {
-        result.reset(nullptr);
-    }
+
+    std::unique_ptr<vrna_subopt_sol_s, decltype(&free)> result{
+        vrna_subopt(foldCompound, DELTA_MFE, 1, nullptr), free};
 
     if (result == nullptr) {
         vrna_fold_compound_free(foldCompound);

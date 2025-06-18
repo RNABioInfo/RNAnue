@@ -48,6 +48,10 @@ struct CrosslinkingResult {
     };
 
     [[nodiscard]] auto getIntraSequenceCrosslinking(size_t fragmentIndex) const -> std::string {
+        if (fragmentIndex >= intraCrosslinkingSites.size()) {
+            return {"[]"};
+        }
+
         std::string crosslinkingString;
         for (const auto &crosslinking : intraCrosslinkingSites[fragmentIndex]) {
             crosslinkingString += "[" + std::to_string(crosslinking.first) + "," +
@@ -57,6 +61,9 @@ struct CrosslinkingResult {
     };
 
     [[nodiscard]] auto getInterSequenceCrosslinking(size_t fragmentIndex) const -> std::string {
+        if (fragmentIndex >= intraCrosslinkingSites.size()) {
+            return {"[]"};
+        }
         std::string crosslinkingString;
         for (const auto &crosslinking : interCrosslinkingSites) {
             crosslinkingString += "[" +
