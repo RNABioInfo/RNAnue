@@ -4,6 +4,7 @@
 #include <execinfo.h>
 #include <unistd.h>
 
+#include <algorithm>
 #include <array>
 #include <chrono>
 #include <cstdint>
@@ -86,12 +87,11 @@ auto looks_like_bam(const fs::path& path) -> bool {
 
     try {
         seqan3::sam_file_input inputFile{path};
-        inputFile.front();
+
+        return std::next(inputFile.begin()) != inputFile.end();
     } catch (...) {
         return false;
     }
-
-    return true;
 }
 
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
@@ -100,22 +100,24 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
         return;
     }
 
+    std::vector<fs::path> filteredPaths;
+    std::ranges::copy_if(inputPaths, std::back_inserter(filteredPaths), looks_like_bam);
+
+    if (filteredPaths.empty()) {
+        Logger::log<LogLevel::INFO>("Skipping empty or invalid BAMs with output: ", outputPath);
+        return;
+    }
+
     try {
         seqan3::sam_file_output outputFile{outputPath};
 
-        for (const auto& inputPath : inputPaths) {
+        for (const auto& inputPath : filteredPaths) {
             if (!looks_like_bam(inputPath)) {
                 Logger::log<LogLevel::INFO>("Skipping empty or invalid BAM: " + inputPath.string());
                 continue;
             }
 
-            // Now it’s safe to construct the reader
             seqan3::sam_file_input inputFile{inputPath};
-
-            // If there are truly no records, this is just a quick skip
-            if (inputFile.begin() == inputFile.end()) {
-                continue;
-            }
 
             inputFile | outputFile;
         }
