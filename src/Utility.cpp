@@ -95,6 +95,8 @@ auto looks_like_bam(const fs::path& path) -> bool {
 }
 
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
+    Logger::log("Merging files into: ", outputPath);
+
     if (inputPaths.empty()) {
         Logger::log<LogLevel::WARNING>("No input files to merge");
         return;
@@ -116,6 +118,8 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
                 Logger::log<LogLevel::INFO>("Skipping empty or invalid BAM: " + inputPath.string());
                 continue;
             }
+
+            Logger::log("Merging: ", inputPath);
 
             seqan3::sam_file_input inputFile{inputPath};
 
