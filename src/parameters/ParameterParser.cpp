@@ -27,6 +27,7 @@
 #include "Logger.hpp"
 #include "OtherOptions.hpp"
 #include "ParameterOptions.hpp"
+#include "PostprocessOptions.hpp"
 #include "PreprocessOptions.hpp"
 #include "PreprocessParameters.hpp"
 #include "SubcallOptions.hpp"
@@ -87,7 +88,7 @@ auto ParameterParser::parseParameters(int argc,
         exit(EXIT_SUCCESS);
     }
 
-    if (params.count("subcall") == 0U) {
+    if (!params.contains("subcall")) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
@@ -99,7 +100,7 @@ auto ParameterParser::parseParameters(int argc,
 }
 
 void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
-    if (params.count("config") == 0) {
+    if (!params.contains("config")) {
         return;
     }
 
@@ -125,6 +126,8 @@ auto ParameterParser::getCommandLineOptions() -> po::options_description {
     const po::options_description alignOptions{ParameterOptions::getOptions<AlignOptions>()};
     const po::options_description detectOptions{ParameterOptions::getOptions<DetectOptions>()};
     const po::options_description analyzeOptions{ParameterOptions::getOptions<AnalyzeOptions>()};
+    const po::options_description postprocessOptions{
+        ParameterOptions::getOptions<PostprocessOptions>()};
     const po::options_description otherOptions{ParameterOptions::getOptions<OtherOptions>()};
     const po::options_description subcallOptions{ParameterOptions::getOptions<SubcallOptions>()};
 
@@ -135,6 +138,7 @@ auto ParameterParser::getCommandLineOptions() -> po::options_description {
         .add(alignOptions)
         .add(detectOptions)
         .add(analyzeOptions)
+        .add(postprocessOptions)
         .add(otherOptions)
         .add(subcallOptions);
 
