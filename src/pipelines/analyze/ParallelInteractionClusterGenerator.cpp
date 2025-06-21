@@ -152,7 +152,14 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
         // TODO: Fix this sometimes not working with strand specific
         if (features.empty()) {
             Logger::log<LogLevel::WARNING>("Could not find supplementary annotation for region: ",
-                                           segment);
+                                           segment, "Found following features: ");
+
+            const auto features = supplementaryFeatureAnnotator.getOverlappingFeatures(
+                segment, GenomicOrientation::BOTH);
+
+            for (const auto& feature : features) {
+                Logger::log<LogLevel::WARNING>(feature);
+            }
         }
         assert((features.size() == 1) &&
                "All segments should be annotated and should have a unique feature associated");
