@@ -149,9 +149,7 @@ auto FeatureAnnotator::getOverlappingFeatures(const GenomicRegion &region,
         for (const auto &index : indices) {
             const auto &feature = iterator->second.getData(index);
 
-            // TODO Fix the genomic strand being none for case supplementary annotation
             if ((orientation == GenomicOrientation::BOTH) ||
-                (region.getStrand() == GenomicStrand::NONE) ||
                 (orientation == GenomicOrientation::OPPOSITE &&
                  feature.getGenomicRegion().getStrand() == !region.getStrand()) ||
                 (orientation == GenomicOrientation::SAME &&
