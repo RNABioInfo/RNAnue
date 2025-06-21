@@ -22,7 +22,6 @@
 #include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
-#include "LogLevel.hpp"
 #include "Logger.hpp"
 
 namespace pipelines::analyze {
@@ -149,11 +148,8 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
             segment,
             GenomicOrientation::fromStrandSpecificity(parameters.clusterMergingStrandSpecificity));
 
-        // TODO: Fix this sometimes not working with strand specific
-        Logger::log<LogLevel::WARNING>("Could not find supplementary annotation for region: ",
-                                       segment);
-        // assert((features.size() == 1) &&
-        //        "All segments should be annotated and should have a unique feature associated");
+        assert((features.size() == 1) &&
+               "All segments should be annotated and should have a unique feature associated");
 
         return features.front().getAnnotationID();
     };

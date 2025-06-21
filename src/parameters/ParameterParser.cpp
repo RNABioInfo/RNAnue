@@ -87,7 +87,7 @@ auto ParameterParser::parseParameters(int argc,
         exit(EXIT_SUCCESS);
     }
 
-    if (!params.contains("subcall")) {
+    if (params.count("subcall") == 0U) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
@@ -99,7 +99,7 @@ auto ParameterParser::parseParameters(int argc,
 }
 
 void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
-    if (!params.contains("config")) {
+    if (params.count("config") == 0) {
         return;
     }
 
