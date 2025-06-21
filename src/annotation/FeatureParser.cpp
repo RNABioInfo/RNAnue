@@ -105,7 +105,7 @@ auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath, const Fi
         if (!referenceToIndex.contains(referenceID)) {
             Logger::log<LogLevel::WARNING>(
                 "Feature reference id not found: ", referenceID,
-                ", ensure the annotion and reference genome use the same reference IDs.");
+                ", ensure the annotation and reference genome use the same reference IDs.");
 
             continue;
         }

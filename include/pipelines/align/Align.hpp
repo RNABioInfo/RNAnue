@@ -34,10 +34,10 @@ using SamOrder = enum {
     MinHash,
     TemplateCoordinate
 };
-int bam_sort_core_ext(SamOrder sam_order, char *sort_tag, int minimiser_kmer, bool try_rev,
-                      bool no_squash, const char *fn, const char *prefix, const char *fnout,
-                      const char *modeout, size_t _max_mem, int n_threads, const htsFormat *in_fmt,
-                      const htsFormat *out_fmt, char *arg_list, int no_pg, int write_index);
+auto bam_sort_core_ext(SamOrder sam_order, char *sort_tag, int minimiser_kmer, bool try_rev,
+                       bool no_squash, const char *fn, const char *prefix, const char *fnout,
+                       const char *modeout, size_t _max_mem, int n_threads, const htsFormat *in_fmt,
+                       const htsFormat *out_fmt, char *arg_list, int no_pg, int write_index) -> int;
 }
 
 namespace pipelines::align {
