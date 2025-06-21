@@ -38,6 +38,7 @@
 #include "Config.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "SamReference.hpp"
 #include "seqan3/io/exception.hpp"
 
 namespace helper {
@@ -94,7 +95,8 @@ auto looks_like_bam(const fs::path& path) -> bool {
     }
 }
 
-void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {
+void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath,
+                   const std::optional<dataTypes::SamReference>& reference) {
     Logger::log("Merging files into: ", outputPath);
 
     if (inputPaths.empty()) {
@@ -107,6 +109,12 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
 
     if (filteredPaths.empty()) {
         Logger::log<LogLevel::INFO>("Skipping empty or invalid BAMs with output: ", outputPath);
+
+        if (reference) {
+            seqan3::sam_file_output out{outputPath, reference->referenceIDs,
+                                        reference->referenceLengths};
+        }
+
         return;
     }
 

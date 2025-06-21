@@ -113,7 +113,8 @@ class Detect {
                             AsyncGroupBufferType &recordInputBuffer, SamReference &reference,
                             const ParamT &evaluationParams) const -> Result;
 
-    static void mergeTmpFiles(const TempOutputDirs &tmpDirs, const DetectOutput &output);
+    static void mergeTmpFiles(const TempOutputDirs &tmpDirs, const DetectOutput &output,
+                              const SamReference &reference);
 
     static void writeTranscriptCountsFile(const fs::path &transcriptCountsFilePath,
                                           const TranscriptCounts &transcriptCounts);

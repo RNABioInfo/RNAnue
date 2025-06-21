@@ -83,7 +83,7 @@ void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
 
     Logger::log("Merging alignment files");
 
-    helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath);
+    helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath, std::nullopt);
 
     sortAlignmentsByQueryName(sample.output.outputAlignmentsPath,
                               sample.output.outputAlignmentsPath);

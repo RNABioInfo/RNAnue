@@ -9,7 +9,7 @@
 #include <string>
 #include <vector>
 
-namespace pipelines::detect {
+namespace dataTypes {
 
 struct SamReference {
     explicit SamReference(auto samFileHeader)
@@ -30,4 +30,4 @@ struct SamReference {
     }
 };
 
-}  // namespace pipelines::detect
+}  // namespace dataTypes

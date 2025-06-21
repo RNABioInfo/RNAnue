@@ -138,7 +138,7 @@ void Detect::processSample(const DetectSample& sample, const ParamT& evaluationP
                               mergedResults.singletonTranscriptCounts);
 
     // Merge results from all processing chunks
-    mergeTmpFiles(outTmpDirs, sample.output);
+    mergeTmpFiles(outTmpDirs, sample.output, reference);
 
     writeReadCountsSummaryFile(mergedResults, sample.input.sampleName,
                                sample.output.outputSharedReadCountsPath);
@@ -256,7 +256,8 @@ void Detect::writeReadCountsSummaryFile(const Result& results, const std::string
                     << contributionScoreByRecordType.at(SplitRecordType::SINGLETON) << "\n";
 }
 
-void Detect::mergeTmpFiles(const TempOutputDirs& tmpDirs, const DetectOutput& output) {
+void Detect::mergeTmpFiles(const TempOutputDirs& tmpDirs, const DetectOutput& output,
+                           const SamReference& reference) {
     std::vector<fs::path> splitsOutFilePaths =
         helper::getValidFilePaths(tmpDirs.outputTmpSplitsDir, {".bam"});
     std::vector<fs::path> multisplitsOutFilePaths =
@@ -264,10 +265,11 @@ void Detect::mergeTmpFiles(const TempOutputDirs& tmpDirs, const DetectOutput& ou
     std::vector<fs::path> unassignedContiguousRecordsOutFilePaths =
         helper::getValidFilePaths(tmpDirs.outputTmpUnassignedSingletonDir, {".bam"});
 
-    helper::mergeSamFiles(splitsOutFilePaths, output.outputSplitAlignmentsPath);
-    helper::mergeSamFiles(multisplitsOutFilePaths, output.outputMultisplitAlignmentsPath);
+    helper::mergeSamFiles(splitsOutFilePaths, output.outputSplitAlignmentsPath, reference);
+    helper::mergeSamFiles(multisplitsOutFilePaths, output.outputMultisplitAlignmentsPath,
+                          reference);
     helper::mergeSamFiles(unassignedContiguousRecordsOutFilePaths,
-                          output.outputUnassignedContiguousAlignmentsPath);
+                          output.outputUnassignedContiguousAlignmentsPath, reference);
 }
 
 void Detect::writeTranscriptCountsFile(const fs::path& transcriptCountsFilePath,

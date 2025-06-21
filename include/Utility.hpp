@@ -28,6 +28,7 @@
 
 // Internal
 #include "Logger.hpp"
+#include "SamReference.hpp"
 
 namespace helper {
 
@@ -161,7 +162,19 @@ auto getDirIfExists(const fs::path &path) -> std::optional<fs::path>;
 
 auto getUUID() -> std::string;
 auto looks_like_bam(const fs::path &path) -> bool;
-void mergeSamFiles(const std::vector<fs::path> &inputPaths, const fs::path &outputPath);
+/**
+ * Merges valid SAM/BAM input files into a single output file.
+ *
+ * Filters out any non-BAM files and streams each valid file into the output using SeqAn3.
+ * If no valid files are found, logs an info message and creates an empty output file if a reference
+ * is provided.
+ *
+ * @param inputPaths Vector of input file paths.
+ * @param outputPath Destination file path.
+ * @param reference Optional SAM reference for output header information.
+ */
+void mergeSamFiles(const std::vector<fs::path> &inputPaths, const fs::path &outputPath,
+                   const std::optional<dataTypes::SamReference> &reference);
 void mergeFastqFiles(const std::vector<fs::path> &inputPaths, const fs::path &outputPath);
 
 auto getFilePathsInDir(const fs::path &dir) -> std::vector<fs::path>;
