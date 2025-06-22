@@ -130,6 +130,13 @@ struct GenomicRegion {
             return false;
         }
 
+        // If either of both regions have NONE as strand only check if overlaps
+        // This could happen if unspecific clustering is selected but a specific feature orientation
+        // Supplementary features are merged by feature orientation but derived from clusters
+        if (strand == GenomicStrand::NONE || other.strand == GenomicStrand::NONE) {
+            return region.overlapsWithTolerance(other.region, tolerance);
+        }
+
         switch (orientation) {
             case dataTypes::GenomicOrientation::SAME:
                 return strand == other.strand &&

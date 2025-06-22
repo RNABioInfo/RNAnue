@@ -127,14 +127,13 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
                 continue;
             }
 
-            Logger::log("Merging: ", inputPath);
+            Logger::log<LogLevel::DEBUG>("Merging: ", inputPath);
 
             seqan3::sam_file_input inputFile{inputPath};
-
             inputFile | outputFile;
         }
     } catch (...) {
-        Logger::log("Could not write sam file: ", outputPath);
+        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write sam file: ", outputPath);
     }
 }
 
