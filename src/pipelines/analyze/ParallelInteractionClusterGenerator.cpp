@@ -168,6 +168,15 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
             for (const auto& feature : features) {
                 Logger::log<LogLevel::WARNING>(feature);
             }
+
+            auto otherFeatures = supplementaryFeatureAnnotator.getOverlappingFeatures(
+                segment, GenomicOrientation::BOTH);
+
+            Logger::log<LogLevel::WARNING>("Region is: ", segment,
+                                           ", Other features in region are: ");
+            for (const auto& feature : otherFeatures) {
+                Logger::log<LogLevel::WARNING>(feature);
+            }
         }
 
         // Ensure the invariant with an assert.
