@@ -26,6 +26,9 @@ auto StatisticEvaluator::evaluate(std::vector<AnnotatedInteractionCluster> &clus
                                   const TranscriptContributionsByID &transcriptCounts,
                                   float totalTranscriptContribution, double padjThreshold)
     -> std::vector<EvaluatedInteractionCluster> {
+    Logger::log("Evaluating ", clusters.size(),
+                " clusters with total transcript contribution: ", totalTranscriptContribution,
+                " and p-adj threshold: ", padjThreshold);
     auto evaluatedClusters =
         evaluatePValues(clusters, transcriptCounts, totalTranscriptContribution);
     return evaluatePAdjValues(evaluatedClusters, padjThreshold);

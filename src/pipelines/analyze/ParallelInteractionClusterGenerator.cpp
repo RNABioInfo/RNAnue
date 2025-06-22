@@ -137,7 +137,8 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
 
     annotatePartiallyAnnotatedClusters(supplementaryFeatureAnnotator);
 
-    Logger::log("Finished clustering");
+    Logger::log("Finished clustering. Total clusters after cluster contributions score filtering: ",
+                clusteringResults.finishedClusters.size());
 
     return {.annotatedClusters = std::move(clusteringResults.finishedClusters),
             .featureCounts = std::move(clusteringResults.featureCounts),

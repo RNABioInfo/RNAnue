@@ -3,6 +3,7 @@
 // Standard
 #include <algorithm>
 #include <cassert>
+#include <cmath>
 #include <concepts>
 #include <cstddef>
 #include <filesystem>
@@ -104,7 +105,10 @@ struct ReadGroupPostScoringStepMetrics {
 
                     const ReadGroupPostScoringResult& result =
                         context.template get<ReadGroupPostScoringResult>();
-                    contributionScoreByRecordType[splitRecordType] += result.contributionScore;
+
+                    if (!std::isnan(result.contributionScore)) {
+                        contributionScoreByRecordType[splitRecordType] += result.contributionScore;
+                    }
                 },
                 contextVariant);
         }
@@ -352,12 +356,20 @@ struct ReadGroupPostScoringStep {
         size_t index{0};
 
         for (const auto& elems : std::ranges::zip_view(scores...)) {
-            double totalScore = std::apply([](auto... vals) { return (vals + ...); }, elems);
+            // First, check if any score in the tuple is NaN. If so, skip this group.
+            bool anyNan =
+                std::apply([](auto... vals) { return ((std::isnan(vals)) || ...); }, elems);
+            if (anyNan) {
+                ++index;
+                continue;
+            }
 
+            double totalScore = std::apply([](auto... vals) { return (vals + ...); }, elems);
             double rescaledScore = totalScore / sizeof...(scores);
 
-            // Score does not satisfy min contribution
-            if (rescaledScore < config.minContribution) {
+            // Ensure the score meets the minimum and isn't NaN (should never be due to our earlier
+            // check)
+            if (rescaledScore < config.minContribution || std::isnan(rescaledScore)) {
                 ++index;
                 continue;
             }
@@ -368,7 +380,7 @@ struct ReadGroupPostScoringStep {
             ++index;
         }
 
-        if (helper::isApproxEqual(0.0, sumOfValidScores)) {
+        if (helper::isApproxEqual(0.0, sumOfValidScores) || sumOfValidScores < 0.0) {
             return {};
         }
 
