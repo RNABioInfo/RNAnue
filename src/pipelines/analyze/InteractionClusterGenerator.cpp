@@ -22,6 +22,59 @@
 
 namespace pipelines::analyze {
 
+auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> &&clusters)
+    -> Result {
+    std::vector<InteractionCluster> localClusters = std::move(clusters);
+
+    // Process from the end to the beginning
+    for (auto &cluster : localClusters | std::views::reverse) {
+        if (openClusterQueue.empty()) {
+            openClusterQueue.emplace_front(std::move(cluster));
+            continue;
+        }
+
+        bool clusterMerged = false;
+        auto prevIter = openClusterQueue.before_begin();
+
+        // Try merging with clusters in the open queue
+        for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+            if (clustersOverlap(*iter, cluster, parameters) &&
+                iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
+                clusterMerged = true;
+                break;
+            }
+
+            if (cluster.isBefore(*iter)) {
+                finalizeCluster(std::move(*iter));
+                iter = openClusterQueue.erase_after(prevIter);
+                continue;
+            }
+
+            prevIter = iter;
+            ++iter;
+        }
+
+        // If not merged, insert new cluster into the queue
+        if (!clusterMerged) {
+            openClusterQueue.emplace_after(prevIter, std::move(cluster));
+        }
+    }
+
+    // Finalize remaining clusters
+    for (auto &cluster : openClusterQueue) {
+        finalizeCluster(std::move(cluster));
+    }
+
+    openClusterQueue.clear();
+
+    return {.finishedClusters = std::move(finishedClusters),
+            .partiallyAnnotatedClusters = std::move(partiallyAnnotatedClusters),
+            .supplementaryFeatureMap = std::move(supplementaryFeatureRegions),
+            .featureCounts = std::move(featureCountsByFeatureID),
+            .includedClusterCount = includedClusterCount,
+            .excludedClusterCount = excludedClusterCount};
+};
+
 auto InteractionClusterGenerator::clustersOverlap(const InteractionCluster &cluster1,
                                                   const InteractionCluster &cluster2,
                                                   const ClusteringParameters &parameters) noexcept
@@ -136,58 +189,6 @@ void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) 
             attributeCluster(std::forward<decltype(resultingCluster)>(resultingCluster));
         },
         annotateCluster(std::forward<InteractionCluster>(cluster)));
-};
-auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> &&clusters)
-    -> Result {
-    std::vector<InteractionCluster> localClusters = std::move(clusters);
-
-    // Process from the end to the beginning
-    for (auto &cluster : localClusters | std::views::reverse) {
-        if (openClusterQueue.empty()) {
-            openClusterQueue.emplace_front(std::move(cluster));
-            continue;
-        }
-
-        bool clusterMerged = false;
-        auto prevIter = openClusterQueue.before_begin();
-
-        // Try merging with clusters in the open queue
-        for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
-            if (clustersOverlap(*iter, cluster, parameters) &&
-                iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
-                clusterMerged = true;
-                break;
-            }
-
-            if (cluster.isBefore(*iter)) {
-                finalizeCluster(std::move(*iter));
-                iter = openClusterQueue.erase_after(prevIter);
-                continue;
-            }
-
-            prevIter = iter;
-            ++iter;
-        }
-
-        // If not merged, insert new cluster into the queue
-        if (!clusterMerged) {
-            openClusterQueue.emplace_after(prevIter, std::move(cluster));
-        }
-    }
-
-    // Finalize remaining clusters
-    for (auto &cluster : openClusterQueue) {
-        finalizeCluster(std::move(cluster));
-    }
-
-    openClusterQueue.clear();
-
-    return {.finishedClusters = std::move(finishedClusters),
-            .partiallyAnnotatedClusters = std::move(partiallyAnnotatedClusters),
-            .supplementaryFeatureMap = std::move(supplementaryFeatureRegions),
-            .featureCounts = std::move(featureCountsByFeatureID),
-            .includedClusterCount = includedClusterCount,
-            .excludedClusterCount = excludedClusterCount};
 };
 
 void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {

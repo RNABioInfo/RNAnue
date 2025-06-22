@@ -53,6 +53,17 @@ struct GenomicFeature {
         return groupID.value_or(featureID);
     }
 
+    // Operators
+    auto operator<(const GenomicFeature& other) const -> bool {
+        return genomicRegion < other.getGenomicRegion();
+    }
+
+    auto operator>(const GenomicFeature& other) const -> bool { return other < *this; }
+
+    auto operator==(const GenomicFeature& other) const -> bool {
+        return genomicRegion == other.getGenomicRegion();
+    }
+
    private:
     std::string type;
     GenomicRegion genomicRegion;

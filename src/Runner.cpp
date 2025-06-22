@@ -21,6 +21,8 @@
 #include "Preprocess.hpp"
 #include "PreprocessData.hpp"
 #include "PreprocessParameters.hpp"
+#include "postprocess/Postprocess.hpp"
+#include "postprocess/PostprocessData.hpp"
 
 void Runner::runPipeline(int argc, const char *const argv[]) {  // NOLINT
     const auto parameters = ParameterParser::getParameters(argc, argv);
@@ -85,6 +87,12 @@ void Runner::runPostprocessPipeline(const postprocess::PostprocessParameters &pa
     Logger::log("Running postprocess pipeline");
 
     const auto inputDirs = InputDirectories(parameters.outputDir, analyze::pipelinePrefix);
+
+    const auto data = postprocess::PostprocessData(
+        parameters.outputDir, inputDirs.treatmentInputDir, inputDirs.controlInputDir);
+
+    auto pipeline = postprocess::Postprocess(parameters);
+    pipeline.process(data);
 }
 
 void Runner::runCompletePipeline(const CompleteParameters &parameters) {

@@ -17,8 +17,10 @@ using namespace helper;
 
 namespace pipelines::analyze {
 
-auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path& parentDir,
-                                  const fs::path& outputDir) -> std::vector<AnalyzeSample> {
+[[nodiscard]] auto AnalyzeData::retrieveSamples(const std::string& sampleGroup,
+                                                const fs::path& parentDir,
+                                                const fs::path& outputDir)
+    -> std::vector<AnalyzeSample> {
     const std::vector<AnalyzeInput> inputSamples = retrieveInputSamples(parentDir);
 
     std::vector<AnalyzeSample> samples;
@@ -41,7 +43,7 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
         const fs::path interactionReadIDsPath =
             outputDirSample / (inputSample.sampleName + outInteractionReadIDsSuffix);
         const fs::path interactionsTranscriptCountsPath =
-            outputDirSample / (inputSample.sampleName + outInteractionsTranscrptCountsSuffix);
+            outputDirSample / (inputSample.sampleName + outInteractionsTranscriptCountsSuffix);
         const fs::path interactionsBEDPath =
             outputDirSample / (inputSample.sampleName + outInteractionsBEDSuffix);
         const fs::path interactionsBEDARCPath =
@@ -62,7 +64,8 @@ auto AnalyzeData::retrieveSamples(const std::string& sampleGroup, const fs::path
     return samples;
 }
 
-auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir) -> std::vector<AnalyzeInput> {
+[[nodiscard]] auto AnalyzeData::retrieveInputSamples(const fs::path& parentDir)
+    -> std::vector<AnalyzeInput> {
     const std::vector<fs::path> sampleDirs = getSubDirectories(parentDir);
 
     std::vector<AnalyzeInput> samples;

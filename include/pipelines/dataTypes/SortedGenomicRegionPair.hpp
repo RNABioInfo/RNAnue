@@ -2,13 +2,16 @@
 
 #include <algorithm>
 
+#include "GenomicFeature.hpp"
 #include "GenomicRegion.hpp"
 #include "GenomicStrandSpecificity.hpp"
 #include "Logger.hpp"
+#include "PartiallyOrderedConcept.hpp"
 
 namespace dataTypes {
 
-struct SortedGenomicRegionPair {
+template <PartiallyOrdered T>
+struct SortedPair {
     /**
      * @brief Constructs a SortedGenomicRegionPair by sorting the input regions.
      *
@@ -17,14 +20,14 @@ struct SortedGenomicRegionPair {
      * @param regionOne The first region to be sorted
      * @param regionTwo The second region to be sorted
      */
-    constexpr SortedGenomicRegionPair(GenomicRegion regionOne, GenomicRegion regionTwo)
+    constexpr SortedPair(T regionOne, T regionTwo)
         : firstRegion(std::min(regionOne, regionTwo)),
           secondRegion(std::max(regionOne, regionTwo)) {}
 
-    GenomicRegion firstRegion;
-    GenomicRegion secondRegion;
+    T firstRegion;
+    T secondRegion;
 
-    auto operator==(const SortedGenomicRegionPair& other) const noexcept -> bool {
+    auto operator==(const SortedPair& other) const noexcept -> bool {
         return firstRegion == other.firstRegion && secondRegion == other.secondRegion;
     }
 
@@ -38,8 +41,8 @@ struct SortedGenomicRegionPair {
      * @param other The other SortedGenomicRegionPair to be merged.
      * @return true if both merges succeed, false otherwise.
      */
-    auto merge(const SortedGenomicRegionPair& other,
-               const GenomicStrandSpecificity& strandSpecificity) noexcept -> bool {
+    auto merge(const SortedPair& other, const GenomicStrandSpecificity& strandSpecificity) noexcept
+        -> bool {
         const auto tmpFirstRegion = firstRegion;
         const auto tmpSecondRegion = secondRegion;
 
@@ -58,5 +61,8 @@ struct SortedGenomicRegionPair {
         return true;
     }
 };
+
+using SortedGenomicRegionPair = SortedPair<GenomicRegion>;
+using SortedGenomicFeaturePair = SortedPair<GenomicFeature>;
 
 }  // namespace dataTypes

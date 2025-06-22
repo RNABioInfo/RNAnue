@@ -2,12 +2,14 @@
 // Standard
 #include <cstddef>
 #include <string>
+#include <string_view>
 
 namespace constants::pipelines {
 const std::string PREPROCESS = "preprocess";
 const std::string ALIGN = "align";
 const std::string DETECT = "detect";
 const std::string ANALYZE = "analyze";
+const std::string POSTPROCESS = "postprocess";
 const std::string COMPLETE = "complete";
 
 const std::string GENERAL_DESCRIPTION =
@@ -65,3 +67,24 @@ namespace constants::annotation {
 constexpr size_t exptectedGffFileTokenCount = 9;
 constexpr size_t strandTokenColumn = 6;
 }  // namespace constants::annotation
+
+namespace constants::interaction {
+static const std::string clusterIDHeader = "cluster_ID";
+static const std::string firstFeatureIDHeader = "fst_feat_id";
+static const std::string firstSegmentReferenceHeader = "fst_seg_chr";
+static const std::string firstSegmentStartHeader = "fst_seg_strt";
+static const std::string firstSegmentEndHeader = "fst_seg_end";
+static const std::string firstSegmentStrandHeader = "fst_seg_strd";
+static const std::string secondFeatureIDHeader = "sec_feat_id";
+static const std::string secondSegmentReferenceHeader = "sec_seg_chr";
+static const std::string secondSegmentStartHeader = "sec_seg_strt";
+static const std::string secondSegmentEndHeader = "sec_seg_end";
+static const std::string secondSegmentStrandHeader = "sec_seg_strd";
+static const std::string transcriptContributionHeader = "no_splits";
+static const std::string meanInterCrosslinkCountHeader = "mean_inter_crosslinks";
+static const std::string sdInterCrosslinksHeader = "sd_inter_crosslinks";
+static const std::string globalComplementarityScoreHeader = "gcs";
+static const std::string globalHybridizationScoreHeader = "ghs";
+static const std::string pValueHeader = "p_value";
+static const std::string padjValueHeader = "padj_value";
+}  // namespace constants::interaction

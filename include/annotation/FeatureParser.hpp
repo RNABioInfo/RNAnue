@@ -8,7 +8,7 @@
 #include <unordered_set>
 #include <vector>
 
-// RNAnue
+// Internal
 #include "FileType.hpp"
 #include "GenomicFeature.hpp"
 

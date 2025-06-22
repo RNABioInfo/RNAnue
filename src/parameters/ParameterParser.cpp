@@ -28,6 +28,7 @@
 #include "OtherOptions.hpp"
 #include "ParameterOptions.hpp"
 #include "PostprocessOptions.hpp"
+#include "PostprocessParameters.hpp"
 #include "PreprocessOptions.hpp"
 #include "PreprocessParameters.hpp"
 #include "SubcallOptions.hpp"
@@ -54,7 +55,9 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
     if (subcall == constants::pipelines::ANALYZE) {
         return analyze::AnalyzeParameters{params};
     }
-    // if (subcall == const)
+    if (subcall == constants::pipelines::POSTPROCESS) {
+        return postprocess::PostprocessParameters{params};
+    }
 
     Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Unknown subcall: " + subcall);
     exit(EXIT_FAILURE);

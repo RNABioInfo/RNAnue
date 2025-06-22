@@ -65,10 +65,12 @@ auto InteractionCluster::overlapsWithShortestSegmentFraction(
     const InteractionCluster &other, const GenomicStrandSpecificity strandSpecificity,
     float shortestOverlapFraction) const noexcept -> bool {
     return sortedSegments.firstRegion.overlapsWithShortestSegmentFraction(
-               other.getFirstSegment(), overlapOrientation(strandSpecificity),
+               other.getFirstSegment(),
+               GenomicOrientation::fromStrandSpecificity(strandSpecificity),
                shortestOverlapFraction) &&
            sortedSegments.secondRegion.overlapsWithShortestSegmentFraction(
-               other.getSecondSegment(), overlapOrientation(strandSpecificity),
+               other.getSecondSegment(),
+               GenomicOrientation::fromStrandSpecificity(strandSpecificity),
                shortestOverlapFraction);
 }
 

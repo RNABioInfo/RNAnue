@@ -24,14 +24,14 @@ static const std::string validInputContiguousAlignmentsTranscriptCountsSuffix =
     detect::outSampleContiguousAlignmentsTranscriptCountsSuffix;
 static const std::string validSharedReadCountsSuffix = detect::outSampleReadCountsSummarySuffix;
 
-static const std::array<std::string, 5> validSuffices = {
+static const std::array validSuffices = {
     validInputSplitAlignmentsSuffix, validInputMultisplitAlignmentsSuffix,
     validInputUnassignedContiguousAlignmentsSuffix,
     validInputContiguousAlignmentsTranscriptCountsSuffix, validSharedReadCountsSuffix};
 
 static const std::string outInteractionsSuffix = "_interactions.tsv";
 static const std::string outInteractionReadIDsSuffix = "_interactions_readIDs.tsv";
-static const std::string outInteractionsTranscrptCountsSuffix =
+static const std::string outInteractionsTranscriptCountsSuffix =
     "_interaction_transcript_counts.tsv";
 static const std::string outInteractionsBEDSuffix = "_interaction_regions.bed";
 static const std::string outInteractionsBEDARCSuffix = "_interaction_regions.arc";
@@ -53,10 +53,12 @@ struct AnalyzeData : public PipelineData {
     [[nodiscard]] auto getInputFilePaths() const -> std::vector<fs::path>;
 
    private:
-    static auto retrieveSamples(const std::string& sampleGroup, const fs::path& parentDir,
-                                const fs::path& outputDir) -> std::vector<AnalyzeSample>;
+    [[nodiscard]] static auto retrieveSamples(const std::string& sampleGroup,
+                                              const fs::path& parentDir, const fs::path& outputDir)
+        -> std::vector<AnalyzeSample>;
 
-    static auto retrieveInputSamples(const fs::path& parentDir) -> std::vector<AnalyzeInput>;
+    [[nodiscard]] static auto retrieveInputSamples(const fs::path& parentDir)
+        -> std::vector<AnalyzeInput>;
 };
 
 }  // namespace pipelines::analyze

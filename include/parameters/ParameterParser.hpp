@@ -16,6 +16,7 @@
 #include "CompleteParameters.hpp"
 #include "Config.hpp"
 #include "DetectParameters.hpp"
+#include "PostprocessParameters.hpp"
 #include "PreprocessParameters.hpp"
 
 namespace po = boost::program_options;
@@ -26,7 +27,8 @@ class ParameterParser {
    public:
     using ParametersVariant =
         std::variant<CompleteParameters, preprocess::PreprocessParameters, align::AlignParameters,
-                     detect::DetectParameters, analyze::AnalyzeParameters>;
+                     detect::DetectParameters, analyze::AnalyzeParameters,
+                     postprocess::PostprocessParameters>;
 
     static auto getParameters(int argc, const char* const argv[]) -> ParametersVariant;  // NOLINT
 

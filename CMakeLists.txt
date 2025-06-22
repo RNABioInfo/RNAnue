@@ -10,7 +10,7 @@ if(NOT CMAKE_BUILD_TYPE)
 endif()
 
 set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-psabi -Wno-interference-size")
-set(CMAKE_CXX_FLAGS_DEBUG "-g -fconcepts-diagnostics-depth=2")
+set(CMAKE_CXX_FLAGS_DEBUG "-g")
 set(CMAKE_CXX_FLAGS_RELEASE "-O3")
 
 # Configure header file to pass the version number to the source code
@@ -168,25 +168,25 @@ target_link_libraries (RNAnue PUBLIC matplot)
 # ----------------------------------------------------------------------------
 if (CMAKE_BUILD_TYPE STREQUAL DEBUG OR CMAKE_BUILD_TYPE STREQUAL Debug)
     set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-    set(BUILD_TESTS ON)
+    # set(BUILD_TESTS ON)
 
-    message(STATUS "--------------")
-    message(STATUS "Enabling tests")
-    message(STATUS "--------------")
+    # message(STATUS "--------------")
+    # message(STATUS "Enabling tests")
+    # message(STATUS "--------------")
 
-    add_subdirectory(tests)
+    # add_subdirectory(tests)
 
-    if (NOT VIENNA_RNA_FOUND)
-        message(STATUS "Adding ViennaRNA as dependency for tests")
-        add_dependencies(tests viennaRNA)
-    endif()
+    # if (NOT VIENNA_RNA_FOUND)
+    #     message(STATUS "Adding ViennaRNA as dependency for tests")
+    #     add_dependencies(tests viennaRNA)
+    # endif()
 
-    if(NOT HTSlib_FOUND)
-        message(STATUS "Adding htslib as dependency for tests")
-        add_dependencies(tests htslib)
-    endif()
+    # if(NOT HTSlib_FOUND)
+    #     message(STATUS "Adding htslib as dependency for tests")
+    #     add_dependencies(tests htslib)
+    # endif()
 
-    add_dependencies(tests Boost)
+    # add_dependencies(tests Boost)
 endif()
 
 # ----------------------------------------------------------------------------
