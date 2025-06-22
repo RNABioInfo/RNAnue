@@ -215,6 +215,42 @@ auto FeatureAnnotator::getBestOverlappingFeature(const SamRecord &record,
     return getBestOverlappingFeature(region.value(), orientation);
 }
 
+auto FeatureAnnotator::getBestOverlappingFeatureWithPreferredOrientation(
+    const GenomicRegion &region, const GenomicOrientation preferredOrientation) const
+    -> std::optional<GenomicFeature> {
+    auto featureIterator = overlappingFeatureIt(region, GenomicOrientation::BOTH);
+
+    GenomicStrand preferredStrand = region.getStrand();
+
+    switch (preferredOrientation) {
+        case GenomicOrientation::SAME:
+            break;
+        case GenomicOrientation::OPPOSITE:
+            preferredStrand = !preferredStrand;
+            break;
+        case GenomicOrientation::BOTH:
+            preferredStrand = GenomicStrand::NONE;
+            break;
+        default:
+            break;
+    }
+
+    auto maxOverlapSizeElement =
+        std::max_element(featureIterator.begin(), featureIterator.end(),
+                         [&](const GenomicFeature &lhs, const GenomicFeature &rhs) {
+                             return lhs.getGenomicRegion().overlap(region) <
+                                        rhs.getGenomicRegion().overlap(region) ||
+                                    (preferredStrand != GenomicStrand::NONE &&
+                                     rhs.getGenomicRegion().getStrand() == preferredStrand &&
+                                     lhs.getGenomicRegion().getStrand() != preferredStrand);
+                         });
+
+    if (maxOverlapSizeElement != featureIterator.end()) {
+        return *maxOverlapSizeElement;
+    }
+    return std::nullopt;
+}
+
 auto FeatureAnnotator::getFeatureTreeMap() const -> const FeatureTreeMap & {
     return featureTreeMap;
 }

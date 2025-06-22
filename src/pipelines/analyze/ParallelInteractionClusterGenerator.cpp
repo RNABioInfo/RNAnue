@@ -20,6 +20,8 @@
 #include "FeatureAnnotator.hpp"
 #include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
+#include "GenomicStrand.hpp"
+#include "GenomicStrandSpecificity.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
 #include "LogLevel.hpp"
@@ -145,20 +147,32 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
 void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
     const FeatureAnnotator& supplementaryFeatureAnnotator) noexcept {
     auto getSupplementaryFeatureIDForSegment = [&](const GenomicRegion& segment) -> std::string {
-        const auto features = supplementaryFeatureAnnotator.getOverlappingFeatures(
-            segment,
-            GenomicOrientation::fromStrandSpecificity(parameters.clusterMergingStrandSpecificity));
+        auto features = supplementaryFeatureAnnotator.getOverlappingFeatures(
+            segment, parameters.featureOrientation);
 
+        // If the number of features is not exactly one and merging is unspecific,
+        // attempt to narrow down the features by selecting the best overlapping one.
+        if (features.size() != 1 &&
+            parameters.clusterMergingStrandSpecificity == GenomicStrandSpecificity::UNSPECIFIC) {
+            if (auto bestFeature =
+                    supplementaryFeatureAnnotator.getBestOverlappingFeatureWithPreferredOrientation(
+                        segment, parameters.featureOrientation)) {
+                features = {*bestFeature};  // Use the best match as the unique feature.
+            }
+        }
+
+        // Warn if we still don't have exactly one feature.
         if (features.size() != 1) {
             Logger::log<LogLevel::WARNING>(
                 "Expected exactly one supplementary feature hit but got: ");
-
             for (const auto& feature : features) {
                 Logger::log<LogLevel::WARNING>(feature);
             }
         }
-        assert((features.size() == 1) &&
-               "All segments should be annotated and should have a unique feature associated");
+
+        // Ensure the invariant with an assert.
+        assert(features.size() == 1 &&
+               "All segments should be annotated and have a unique feature associated");
 
         return features.front().getAnnotationID();
     };

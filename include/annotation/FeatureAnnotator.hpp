@@ -149,6 +149,17 @@ class FeatureAnnotator {
         -> std::optional<GenomicFeature>;
 
     /**
+     * @brief Returns the best overlapping feature for a SAM record.
+     *
+     * @param record SAM record.
+     * @param orientation The preferred genomic orientation.
+     * @return std::optional<GenomicFeature> The best (highest overlap) feature, if any.
+     */
+    [[nodiscard]] auto getBestOverlappingFeatureWithPreferredOrientation(
+        const GenomicRegion& region, GenomicOrientation orientation) const
+        -> std::optional<GenomicFeature>;
+
+    /**
      * @brief Getter for the internal feature tree map.
      *
      * @return const FeatureTreeMap& Constant reference to the feature tree map.
