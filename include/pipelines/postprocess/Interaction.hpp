@@ -124,7 +124,7 @@ struct Interaction {
         {
             const auto oldSize = firstFeatureIDs.size();
             const auto otherSize = other.firstFeatureIDs.size();
-            interactionMetrics.resize(oldSize + otherSize);
+            firstFeatureIDs.resize(oldSize + otherSize);
             std::ranges::move(other.firstFeatureIDs,
                               firstFeatureIDs.begin() + static_cast<long>(oldSize));
         }
@@ -132,9 +132,9 @@ struct Interaction {
         {
             const auto oldSize = secondFeatureIDs.size();
             const auto otherSize = other.secondFeatureIDs.size();
-            interactionMetrics.resize(oldSize + otherSize);
+            secondFeatureIDs.resize(oldSize + otherSize);
             std::ranges::move(other.secondFeatureIDs,
-                              firstFeatureIDs.begin() + static_cast<long>(oldSize));
+                              secondFeatureIDs.begin() + static_cast<long>(oldSize));
         }
 
         {
@@ -143,6 +143,7 @@ struct Interaction {
 
         return true;
     }
+    friend auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream&;
 
    private:
     std::vector<InteractionID> interactionIDs;
@@ -154,34 +155,66 @@ struct Interaction {
 };
 
 inline auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream& {
-    ostream << "Interaction ";
+    ostream << "Interaction:" << "\n";
+
+    // Print all Interaction IDs
+    ostream << "  IDs:" << "\n";
     if (!interaction.interactionIDs.empty()) {
-        ostream << "[sampleID: " << interaction.interactionIDs.front().sampleID
-                << ", clusterID: " << interaction.interactionIDs.front().clusterID << "] ";
+        for (const auto& interactionID : interaction.interactionIDs) {
+            ostream << "    { sampleID: " << interactionID.sampleID
+                    << ", clusterID: " << interactionID.clusterID << " }"
+                    << "\n";
+        }
     } else {
-        ostream << "[no ID] ";
+        ostream << "    [No IDs available]" << "\n";
     }
-    ostream << "Segments { First: " << interaction.getFirstSegment()
-            << ", Second: " << interaction.getSecondSegment() << " } ";
 
+    // Print genomic segments using getFirstSegment and getSecondSegment
+    ostream << "  Segments:" << "\n";
+    ostream << "    First: " << interaction.getFirstSegment() << "\n";
+    ostream << "    Second: " << interaction.getSecondSegment() << "\n";
+
+    // Print interaction metrics
+    ostream << "  Interaction Metrics:" << "\n";
     if (!interaction.interactionMetrics.empty()) {
-        const auto& metrics = interaction.interactionMetrics.front();
-        ostream << "Metrics { meanInterCrosslinkCount: " << metrics.meanInterCrosslinkCount
-                << ", contributionScore: " << metrics.contributionScore
-                << ", pValue: " << metrics.pValue << " } ";
+        for (const auto& metric : interaction.interactionMetrics) {
+            ostream << "    { contributionScore: " << metric.contributionScore
+                    << ", meanInterCrosslinkCount: " << metric.meanInterCrosslinkCount
+                    << ", sdInterCrosslinkCount: " << metric.sdInterCrosslinkCount
+                    << ", globalComplementarityScore: " << metric.globalComplementarityScore
+                    << ", globalHybridizationScore: " << metric.globalHybridizationScore
+                    << ", pValue: " << metric.pValue << ", padjValue: " << metric.padjValue << " }"
+                    << "\n";
+        }
+    } else {
+        ostream << "    [No Metrics available]" << "\n";
     }
 
-    if (!interaction.firstFeatureIDs.empty() || !interaction.secondFeatureIDs.empty()) {
-        ostream << "Features { First: ";
-        ostream << (!interaction.firstFeatureIDs.empty() ? interaction.firstFeatureIDs.front()
-                                                         : "N/A");
-        ostream << ", Second: ";
-        ostream << (!interaction.secondFeatureIDs.empty() ? interaction.secondFeatureIDs.front()
-                                                          : "N/A");
-        ostream << " } ";
+    // Print feature IDs
+    ostream << "  Feature IDs:" << "\n";
+    ostream << "    First Features: ";
+    if (!interaction.firstFeatureIDs.empty()) {
+        for (const auto& feat : interaction.firstFeatureIDs) {
+            ostream << feat << " ";
+        }
+    } else {
+        ostream << "N/A";
     }
+    ostream << "\n";
 
-    ostream << "TranscriptContribution: " << interaction.transcriptContribution;
+    ostream << "    Second Features: ";
+    if (!interaction.secondFeatureIDs.empty()) {
+        for (const auto& feat : interaction.secondFeatureIDs) {
+            ostream << feat << " ";
+        }
+    } else {
+        ostream << "N/A";
+    }
+    ostream << "\n";
+
+    // Print transcript contribution
+    ostream << "  Transcript Contribution: " << interaction.transcriptContribution << "\n";
+
     return ostream;
 }
 

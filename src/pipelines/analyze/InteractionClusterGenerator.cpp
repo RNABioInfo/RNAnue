@@ -38,6 +38,8 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
 
         // Try merging with clusters in the open queue
         for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+            // TODO: Fix bug where multiple overlaps result not in merging into one cluster
+
             if (clustersOverlap(*iter, cluster, parameters) &&
                 iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
                 clusterMerged = true;

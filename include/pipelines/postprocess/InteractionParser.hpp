@@ -51,7 +51,7 @@ class InteractionParser {
                 firstReferenceIndex,
                 Region{.startPosition = entry[firstSegmentStartHeader].get<int>(),
                        .endPosition = entry[firstSegmentEndHeader].get<int>()},
-                getGenomicStrand(*entry[firstSegmentEndHeader].get<std::string>().cbegin())};
+                getGenomicStrand(*entry[firstSegmentStrandHeader].get<std::string>().cbegin())};
 
             int secondReferenceIndex{
                 getReferenceIndexForID(entry[secondSegmentReferenceHeader].get<std::string>())};
@@ -59,7 +59,7 @@ class InteractionParser {
                 secondReferenceIndex,
                 Region{.startPosition = entry[secondSegmentStartHeader].get<int>(),
                        .endPosition = entry[secondSegmentEndHeader].get<int>()},
-                getGenomicStrand(*entry[secondSegmentEndHeader].get<std::string>().cbegin())};
+                getGenomicStrand(*entry[secondSegmentStrandHeader].get<std::string>().cbegin())};
 
             interactions.emplace_back(
                 InteractionID{.sampleID = sampleID,

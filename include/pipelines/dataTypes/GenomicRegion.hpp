@@ -309,7 +309,6 @@ struct GenomicRegion {
 inline auto operator<<(std::ostream& outputStream, const GenomicRegion& genomicRegion)
     -> std::ostream& {
     return outputStream << genomicRegion.getReferenceIDIndex() << ":" << genomicRegion.getStart()
-                        << "-" << genomicRegion.getEnd() << ' ' << genomicRegion.getStrand()
-                        << '\n';
+                        << "-" << genomicRegion.getEnd() << ' ' << genomicRegion.getStrand();
 };
 }  // namespace dataTypes

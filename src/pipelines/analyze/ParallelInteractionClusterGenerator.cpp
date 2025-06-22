@@ -20,7 +20,6 @@
 #include "FeatureAnnotator.hpp"
 #include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
-#include "GenomicStrand.hpp"
 #include "GenomicStrandSpecificity.hpp"
 #include "InteractionCluster.hpp"
 #include "InteractionClusterGenerator.hpp"
