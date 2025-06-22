@@ -14,6 +14,8 @@
 #include "AnnotatedInteractionCluster.hpp"
 #include "ClusteringParameters.hpp"
 #include "GenomicFeature.hpp"
+#include "GenomicOrientation.hpp"
+#include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
 #include "PartiallyAnnotatedInteractionCluster.hpp"
 #include "VariantOverload.hpp"
@@ -70,14 +72,27 @@ auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) 
     if (clusterPassesFilters(cluster)) {
         if (!firstFeatureID) {
             // Create a new supplementary feature from the first segment
+
+            // If the feature orientation is opposite switch strand for segment
+            GenomicRegion firstRegionCopy = cluster.getFirstSegment();
+            if (parameters.featureOrientation == GenomicOrientation::OPPOSITE) {
+                firstRegionCopy.setStrand(!firstRegionCopy.getStrand());
+            }
+
             supplementaryFeatureRegions[firstSegment.getReferenceIDIndex()].emplace_back(
-                asGenomicFeature(firstSegment));
+                asGenomicFeature(firstRegionCopy));
         }
 
         if (!secondFeatureID) {
             // Create a new supplementary feature from the second segment
+
+            // If the feature orientation is opposite switch strand for segment
+            GenomicRegion secondRegionCopy = cluster.getSecondSegment();
+            if (parameters.featureOrientation == GenomicOrientation::OPPOSITE) {
+                secondRegionCopy.setStrand(!secondRegionCopy.getStrand());
+            }
             supplementaryFeatureRegions[secondSegment.getReferenceIDIndex()].emplace_back(
-                asGenomicFeature(secondSegment));
+                asGenomicFeature(secondRegionCopy));
         }
     }
 
