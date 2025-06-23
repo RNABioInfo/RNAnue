@@ -3,9 +3,12 @@
 // Standard
 #include <cstddef>
 #include <forward_list>
+#include <functional>
+#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <variant>
 #include <vector>
@@ -68,7 +71,7 @@ class InteractionClusterGenerator {
 
     FeatureMap supplementaryFeatureRegions;
 
-    std::forward_list<InteractionCluster> openClusterQueue;
+    std::list<InteractionCluster> openClusterQueue;
 
     std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 
@@ -93,6 +96,31 @@ class InteractionClusterGenerator {
     void attributeCluster(PartiallyAnnotatedInteractionCluster&& cluster) noexcept;
 
     void finalizeCluster(InteractionCluster&& cluster) noexcept;
+
+    void greedyMerge(std::list<InteractionCluster>::iterator seedIt) {
+        bool additionalMerge = true;
+
+        while (additionalMerge) {
+            additionalMerge = false;
+
+            for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+                if (iter == seedIt) {
+                    ++iter;
+                    continue;
+                }
+
+                if (clustersOverlap(*iter, *seedIt, parameters) &&
+                    seedIt->merge(*iter, parameters.clusterMergingStrandSpecificity)) {
+                    iter = openClusterQueue.erase(iter);
+
+                    additionalMerge = true;
+                    break;
+                }
+
+                ++iter;
+            }
+        }
+    }
 };
 
 }  // namespace pipelines::analyze

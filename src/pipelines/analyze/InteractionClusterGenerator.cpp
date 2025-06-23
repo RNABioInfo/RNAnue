@@ -33,8 +33,17 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
             continue;
         }
 
+        // Newest leftmost clusters shall always be at the front
+        if (cluster.isBefore(openClusterQueue.front())) {
+            for (auto &cluster : openClusterQueue) {
+                finalizeCluster(std::move(cluster));
+            }
+
+            openClusterQueue.clear();
+        }
+
         bool clusterMerged = false;
-        auto prevIter = openClusterQueue.before_begin();
+        // auto prevIter = openClusterQueue.before_begin();
 
         // Try merging with clusters in the open queue
         for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
@@ -43,22 +52,23 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
             if (clustersOverlap(*iter, cluster, parameters) &&
                 iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
                 clusterMerged = true;
+                greedyMerge(iter);
                 break;
             }
 
-            if (cluster.isBefore(*iter)) {
-                finalizeCluster(std::move(*iter));
-                iter = openClusterQueue.erase_after(prevIter);
-                continue;
-            }
+            // if (cluster.isBefore(*iter)) {
+            //     finalizeCluster(std::move(*iter));
+            //     iter = openClusterQueue.erase_after(prevIter);
+            //     continue;
+            // }
 
-            prevIter = iter;
+            // prevIter = iter;
             ++iter;
         }
 
         // If not merged, insert new cluster into the queue
         if (!clusterMerged) {
-            openClusterQueue.emplace_after(prevIter, std::move(cluster));
+            openClusterQueue.emplace_front(std::move(cluster));
         }
     }
 
