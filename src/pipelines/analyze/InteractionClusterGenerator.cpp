@@ -43,7 +43,6 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
         }
 
         bool clusterMerged = false;
-        // auto prevIter = openClusterQueue.before_begin();
 
         // Try merging with clusters in the open queue
         for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
@@ -56,13 +55,6 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
                 break;
             }
 
-            // if (cluster.isBefore(*iter)) {
-            //     finalizeCluster(std::move(*iter));
-            //     iter = openClusterQueue.erase_after(prevIter);
-            //     continue;
-            // }
-
-            // prevIter = iter;
             ++iter;
         }
 

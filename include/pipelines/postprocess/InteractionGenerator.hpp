@@ -6,6 +6,7 @@
 #include <algorithm>
 #include <forward_list>
 #include <functional>
+#include <list>
 #include <ranges>
 #include <utility>
 #include <vector>
@@ -43,30 +44,34 @@ class InteractionGenerator {
                 continue;
             }
 
+            // Newest leftmost clusters shall always be at the front
+            if (cluster.isBefore(openClusterQueue.front())) {
+                for (auto &cluster : openClusterQueue) {
+                    finishedClusters.emplace_back(std::move(cluster));
+                }
+
+                openClusterQueue.clear();
+            }
+
             bool clusterMerged = false;
-            auto prevIter = openClusterQueue.before_begin();
 
             // Try merging with clusters in the open queue
             for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+                // TODO: Fix bug where multiple overlaps result not in merging into one cluster
+
                 if (clustersOverlap(*iter, cluster, parameters) &&
                     iter->merge(cluster, parameters.mergingStrandSpecificity)) {
                     clusterMerged = true;
+                    greedyMerge(iter);
                     break;
                 }
 
-                if (cluster.isBefore(*iter)) {
-                    finishedClusters.emplace_back(std::move(*iter));
-                    iter = openClusterQueue.erase_after(prevIter);
-                    continue;
-                }
-
-                prevIter = iter;
                 ++iter;
             }
 
             // If not merged, insert new cluster into the queue
             if (!clusterMerged) {
-                openClusterQueue.emplace_after(prevIter, std::move(cluster));
+                openClusterQueue.emplace_front(std::move(cluster));
             }
         }
 
@@ -82,7 +87,7 @@ class InteractionGenerator {
 
    private:
     ClusteringParameters parameters;
-    std::forward_list<Interaction> openClusterQueue;
+    std::list<Interaction> openClusterQueue;
     std::vector<Interaction> finishedClusters;
 
     static auto clustersOverlap(const Interaction &cluster1, const Interaction &cluster2,
@@ -90,6 +95,31 @@ class InteractionGenerator {
         return cluster1.overlapsWithShortestSegmentFraction(
             cluster2, parameters.mergingStrandSpecificity, parameters.minSegmentOverlapFraction);
     };
+
+    void greedyMerge(std::list<Interaction>::iterator seedIt) {
+        bool additionalMerge = true;
+
+        while (additionalMerge) {
+            additionalMerge = false;
+
+            for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+                if (iter == seedIt) {
+                    ++iter;
+                    continue;
+                }
+
+                if (clustersOverlap(*iter, *seedIt, parameters) &&
+                    seedIt->merge(*iter, parameters.mergingStrandSpecificity)) {
+                    iter = openClusterQueue.erase(iter);
+
+                    additionalMerge = true;
+                    break;
+                }
+
+                ++iter;
+            }
+        }
+    }
 };
 
 }  // namespace pipelines::postprocess
