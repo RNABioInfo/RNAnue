@@ -155,6 +155,8 @@ auto ParameterParser::getConfigFileOptions() -> po::options_description {
     const po::options_description alignOptions{ParameterOptions::getOptions<AlignOptions>()};
     const po::options_description detectOptions{ParameterOptions::getOptions<DetectOptions>()};
     const po::options_description analyzeOptions{ParameterOptions::getOptions<AnalyzeOptions>()};
+    const po::options_description postprocessOptions{
+        ParameterOptions::getOptions<PostprocessOptions>()};
 
     po::options_description configFileOptions{"Config file options"};
 
@@ -162,7 +164,8 @@ auto ParameterParser::getConfigFileOptions() -> po::options_description {
         .add(preprocessOptions)
         .add(alignOptions)
         .add(detectOptions)
-        .add(analyzeOptions);
+        .add(analyzeOptions)
+        .add(postprocessOptions);
 
     return configFileOptions;
 }
