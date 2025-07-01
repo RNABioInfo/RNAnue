@@ -87,9 +87,9 @@ struct Region {
             return false;
         }
 
-        const double fraction =
-            static_cast<double>(overlapLength) / static_cast<double>(shortestLength);
-        return fraction >= static_cast<double>(overlapFraction);
+        const float fraction =
+            static_cast<float>(overlapLength) / static_cast<float>(shortestLength);
+        return fraction >= overlapFraction;
     }
 
     /**

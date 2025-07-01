@@ -2,6 +2,7 @@
 
 // Standard
 #include <algorithm>
+#include <cstddef>
 #include <ostream>
 #include <string>
 #include <utility>
@@ -49,6 +50,9 @@ struct Interaction {
           secondFeatureIDs({interactionFeatureIDs.secondFeature}),
           transcriptContribution(interactionMetrics.contributionScore) {}
 
+    [[nodiscard]] auto getInteractionIDs() const noexcept -> const std::vector<InteractionID>& {
+        return interactionIDs;
+    }
     [[nodiscard]] auto getFirstSegment() const noexcept -> const GenomicRegion& {
         return sortedSegments.firstRegion;
     }
@@ -58,6 +62,18 @@ struct Interaction {
     [[nodiscard]] auto getInteractionMetrics() const noexcept
         -> const std::vector<InteractionMetrics>& {
         return interactionMetrics;
+    }
+
+    [[nodiscard]] auto getContributionScore(const std::string& sampleID) const noexcept -> float {
+        float score = 0;
+
+        for (size_t index = 0; index < interactionIDs.size(); ++index) {
+            if (interactionIDs[index].sampleID == sampleID) {
+                score += interactionMetrics[index].contributionScore;
+            }
+        }
+
+        return score;
     }
 
     friend auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream&;
@@ -143,6 +159,7 @@ struct Interaction {
 
         return true;
     }
+
     friend auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream&;
 
    private:

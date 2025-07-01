@@ -4,7 +4,6 @@
 
 // Internal
 #include <algorithm>
-#include <forward_list>
 #include <functional>
 #include <list>
 #include <ranges>

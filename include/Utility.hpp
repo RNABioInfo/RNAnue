@@ -84,6 +84,22 @@ void deleteDir(const fs::path &path);
     return tokens;
 };
 
+[[nodiscard]] inline auto toString(const std::vector<std::string> &elements, char delimiter = ',')
+    -> std::string {
+    std::string outString;
+    bool first = true;
+    for (const auto &element : elements) {
+        if (!first) {
+            outString.push_back(delimiter);
+        } else {
+            first = false;
+        }
+        outString.append(element);
+    }
+
+    return outString;
+}
+
 inline auto hasSuffix(const std::string &fullString, const std::string &ending) -> bool {
     if (fullString.length() >= ending.length()) {
         return (0 ==
@@ -205,6 +221,7 @@ auto calculateMedian(std::vector<T> values) -> T {
 }
 
 auto generateRandomHexColor() -> std::string;
+auto generateRandomRGBString() -> std::string;
 
 auto getTime() -> std::string;  // reports the current time
 

@@ -228,4 +228,28 @@ void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {
     excludedClusterCount += other.excludedClusterCount;
 }
 
+void InteractionClusterGenerator::greedyMerge(std::list<InteractionCluster>::iterator seedIt) {
+    bool additionalMerge = true;
+
+    while (additionalMerge) {
+        additionalMerge = false;
+
+        for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
+            if (iter == seedIt) {
+                ++iter;
+                continue;
+            }
+
+            if (clustersOverlap(*iter, *seedIt, parameters) &&
+                seedIt->merge(*iter, parameters.clusterMergingStrandSpecificity)) {
+                iter = openClusterQueue.erase(iter);
+
+                additionalMerge = true;
+                break;
+            }
+
+            ++iter;
+        }
+    }
+}
 }  // namespace pipelines::analyze

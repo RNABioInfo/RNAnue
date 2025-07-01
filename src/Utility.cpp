@@ -248,6 +248,22 @@ auto generateRandomHexColor() -> std::string {
     return stringStream.str();  // Return the hex color code as a string
 }
 
+auto generateRandomRGBString() -> std::string {
+    std::random_device randomDevice;
+    std::mt19937 gen(randomDevice());
+    std::uniform_int_distribution<> distr(0, 255);  // NOLINT
+
+    std::stringstream stringStream;
+    for (int i = 0; i < 3; ++i) {
+        if (i > 0) {
+            stringStream << ",";
+        }
+        stringStream << distr(gen);
+    }
+
+    return stringStream.str();  // Return the comma separated RGB values as a string
+}
+
 auto getTime() -> std::string {
     const auto now = std::chrono::system_clock::now();
     const std::time_t current_time = std::chrono::system_clock::to_time_t(now);

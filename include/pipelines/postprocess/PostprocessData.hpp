@@ -24,9 +24,9 @@ static const std::string validInputInteractionsSuffix = analyze::outInteractions
 
 static const std::array validSuffices{validInputInteractionsSuffix};
 
-static const std::string outSuperInteractionsBEDSuffix = "_super_interaction_regions.bed";
+static const std::string outSuperInteractionsBEDPESuffix = "_super_interaction_regions.bedpe";
 static const std::string outSuperInteractionTranscriptCountsGCSSuffix =
-    "_interaction_transcript_counts.gcs";
+    "_super_interaction_transcript_counts.gct";
 
 static const std::string pipelinePrefix = "05_postprocess";
 
@@ -37,15 +37,16 @@ struct PostprocessData : public PipelineData {
     using SampleByConditionMap = std::unordered_map<std::string, std::vector<PostprocessSample>>;
 
     SampleByConditionMap samples;
-    fs::path superInteractionsOutPath;
-    fs::path transcriptCountsGCSOutPath;
+    fs::path superInteractionsBEDPEOutPath;
+    fs::path superInteractionsCountsGCTOutPath;
 
     PostprocessData(const fs::path& outputDir, const fs::path& treatmentDir,
                     const std::optional<fs::path>& controlDir)
         : samples(retrieveSamples(treatmentDir, controlDir, outputDir)) {
         const fs::path outputDirPipeline = outputDir / pipelinePrefix;
-        superInteractionsOutPath = outputDirPipeline / ("complete" + outSuperInteractionsBEDSuffix);
-        transcriptCountsGCSOutPath =
+        superInteractionsBEDPEOutPath =
+            outputDirPipeline / ("complete" + outSuperInteractionsBEDPESuffix);
+        superInteractionsCountsGCTOutPath =
             outputDirPipeline / ("complete" + outSuperInteractionTranscriptCountsGCSSuffix);
     }
 
@@ -64,22 +65,17 @@ struct PostprocessData : public PipelineData {
 
         std::unordered_map<std::string, std::vector<PostprocessSample>> samplesByCondition;
 
-        samplesByCondition.emplace(
-            std::string{conditionID},
-            retrieveSamplesByCondition(std::string{conditionID}, treatmentDir, outputDirPipeline));
+        samplesByCondition.emplace(std::string{conditionID}, retrieveSamplesInDir(treatmentDir));
 
         if (controlDir) {
-            samplesByCondition.emplace(
-                std::string{controlID},
-                retrieveSamplesByCondition(std::string{controlID}, *controlDir, outputDirPipeline));
+            samplesByCondition.emplace(std::string{controlID}, retrieveSamplesInDir(*controlDir));
         }
 
         return samplesByCondition;
     }
 
-    [[nodiscard]] static auto retrieveSamplesByCondition(
-        [[maybe_unused]] const std::string& condition, const fs::path& parentDir,
-        [[maybe_unused]] const fs::path& outputDirPipeline) -> std::vector<PostprocessSample> {
+    [[nodiscard]] static auto retrieveSamplesInDir(const fs::path& parentDir)
+        -> std::vector<PostprocessSample> {
         const std::vector<PostprocessInput> inputSamples = retrieveInputSamples(parentDir);
 
         std::vector<PostprocessSample> samples;

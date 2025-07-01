@@ -57,7 +57,7 @@ class InteractionClusterGenerator {
      * and merges any overlapping clusters. This is done from back to front while closing clusters
      * that are further back than the current cluster.
      *
-     * @param clusters A forwaring reference to the sorted list of interaction clusters to be
+     * @param clusters A forwarding reference to the sorted list of interaction clusters to be
      * merged.
      * @return A list of finalized interaction clusters.
      */
@@ -97,30 +97,7 @@ class InteractionClusterGenerator {
 
     void finalizeCluster(InteractionCluster&& cluster) noexcept;
 
-    void greedyMerge(std::list<InteractionCluster>::iterator seedIt) {
-        bool additionalMerge = true;
-
-        while (additionalMerge) {
-            additionalMerge = false;
-
-            for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
-                if (iter == seedIt) {
-                    ++iter;
-                    continue;
-                }
-
-                if (clustersOverlap(*iter, *seedIt, parameters) &&
-                    seedIt->merge(*iter, parameters.clusterMergingStrandSpecificity)) {
-                    iter = openClusterQueue.erase(iter);
-
-                    additionalMerge = true;
-                    break;
-                }
-
-                ++iter;
-            }
-        }
-    }
+    void greedyMerge(std::list<InteractionCluster>::iterator seedIt);
 };
 
 }  // namespace pipelines::analyze

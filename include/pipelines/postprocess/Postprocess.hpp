@@ -1,15 +1,19 @@
 #pragma once
 
 // Standard
+#include <cstddef>
 #include <utility>
+#include <vector>
 
 // Internal
 #include "GenomicStrandSpecificity.hpp"
+#include "InteractionGenerator.hpp"
+#include "InteractionParser.hpp"
 #include "Logger.hpp"
 #include "PostprocessData.hpp"
 #include "PostprocessParameters.hpp"
-#include "postprocess/InteractionGenerator.hpp"
-#include "postprocess/InteractionParser.hpp"
+#include "SuperInteractionsWriter.hpp"
+#include "csv.hpp"
 
 namespace pipelines::postprocess {
 
@@ -30,9 +34,10 @@ class Postprocess {
         auto mergingResult = generator.merge(std::exchange(parsingResult.interactions, {}));
 
         Logger::log("Merged Interactions: ", mergingResult.superInteractions.size());
-        for (const auto& interaction : mergingResult.superInteractions) {
-            Logger::log(interaction);
-        }
+
+        Logger::log("Writing output files");
+        SuperInteractionsWriter::writeInteractions(data, parsingResult.referenceIndexToIDMap,
+                                                   mergingResult);
     };
 
    private:
