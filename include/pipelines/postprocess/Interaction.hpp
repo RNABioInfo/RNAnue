@@ -4,7 +4,9 @@
 #include <algorithm>
 #include <cstddef>
 #include <ostream>
+#include <ranges>
 #include <string>
+#include <string_view>
 #include <utility>
 #include <vector>
 
@@ -39,6 +41,11 @@ struct InteractionFeatureIDs {
     std::string secondFeature;
 };
 
+struct InteractionTypeCounts {
+    size_t intraInteractionCount;
+    size_t interInteractionCount;
+};
+
 struct Interaction {
     Interaction(InteractionID interactionID, SortedGenomicRegionPair sortedSegments,
                 const InteractionFeatureIDs& interactionFeatureIDs,
@@ -53,6 +60,15 @@ struct Interaction {
     [[nodiscard]] auto getInteractionIDs() const noexcept -> const std::vector<InteractionID>& {
         return interactionIDs;
     }
+    [[nodiscard]] auto getInteractionIDs(std::string_view sampleID) const noexcept {
+        return interactionIDs | std::views::filter([&sampleID](const auto& interaction) {
+                   return interaction.sampleID == sampleID;
+               }) |
+               std::views::transform(
+                   [](const auto& interaction) -> std::string { return interaction.clusterID; }) |
+               std::ranges::to<std::vector>();
+    }
+
     [[nodiscard]] auto getFirstSegment() const noexcept -> const GenomicRegion& {
         return sortedSegments.firstRegion;
     }
@@ -64,16 +80,77 @@ struct Interaction {
         return interactionMetrics;
     }
 
-    [[nodiscard]] auto getContributionScore(const std::string& sampleID) const noexcept -> float {
-        float score = 0;
+    [[nodiscard]] auto getInteractionTypeCounts() const noexcept -> InteractionTypeCounts {
+        size_t intraCount{0};
+        size_t interCount{0};
 
-        for (size_t index = 0; index < interactionIDs.size(); ++index) {
-            if (interactionIDs[index].sampleID == sampleID) {
-                score += interactionMetrics[index].contributionScore;
+        for (const auto& [firstID, secondID] :
+             std::ranges::zip_view(firstFeatureIDs, secondFeatureIDs)) {
+            if (firstID == secondID) {
+                ++intraCount;
+            } else {
+                ++interCount;
             }
         }
 
+        return {.intraInteractionCount = intraCount, .interInteractionCount = interCount};
+    }
+
+    [[nodiscard]] auto getContributionScore(const std::string_view sampleID) const noexcept
+        -> float {
+        float score = 0;
+
+        for (size_t index : getIndices(sampleID)) {
+            score += interactionMetrics[index].contributionScore;
+        }
+
         return score;
+    }
+
+    [[nodiscard]] auto getFirstFeatureIDs(const std::string_view sampleID) const noexcept
+        -> std::vector<std::string> {
+        std::vector<std::string> featureIDs;
+
+        for (size_t index : getIndices(sampleID)) {
+            featureIDs.emplace_back(firstFeatureIDs[index]);
+        }
+
+        return featureIDs;
+    }
+
+    [[nodiscard]] auto getSecondFeatureIDs(const std::string_view sampleID) const noexcept
+        -> std::vector<std::string> {
+        std::vector<std::string> featureIDs;
+
+        for (size_t index : getIndices(sampleID)) {
+            featureIDs.emplace_back(secondFeatureIDs[index]);
+        }
+
+        return featureIDs;
+    }
+
+    [[nodiscard]] auto getFeatureIDs(const std::string_view sampleID) const noexcept
+        -> std::vector<InteractionFeatureIDs> {
+        std::vector<InteractionFeatureIDs> featureIDs;
+
+        for (size_t index : getIndices(sampleID)) {
+            featureIDs.emplace_back(firstFeatureIDs[index], secondFeatureIDs[index]);
+        }
+
+        return featureIDs;
+    }
+
+    [[nodiscard]] auto getIndices(const std::string_view sampleID) const noexcept
+        -> std::vector<size_t> {
+        std::vector<size_t> indices;
+
+        for (size_t index = 0; index < interactionIDs.size(); ++index) {
+            if (interactionIDs[index].sampleID == sampleID) {
+                indices.emplace_back(index);
+            }
+        }
+
+        return indices;
     }
 
     friend auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream&;

@@ -6,8 +6,8 @@
 #include <format>
 #include <fstream>
 #include <iterator>
+#include <optional>
 #include <ostream>
-#include <ranges>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -63,7 +63,7 @@ void writeSuperInteractionsBEDPEHeader(std::ofstream& bedOut,
            << helper::toString(sampleNames)
            << "\" description=\"Segments of interacting RNA "
               "clusters derived from DDD-Experiment\" itemRgb=\"On\"\n";
-    bedOut << "#columns color=12\n";
+    bedOut << "#columns color=16\n";
 }
 
 void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
@@ -81,13 +81,65 @@ void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
     writer << lineTokens;
 }
 
+[[nodiscard]] auto formattedIDs(const std::string_view sampleID,
+                                const std::vector<std::string>& ids) -> std::string {
+    std::string parentIDs;
+    bool first = true;
+    for (const auto& featureID : ids) {
+        if (!first) {
+            parentIDs.push_back(',');
+        } else {
+            first = false;
+        }
+        parentIDs.append(featureID);
+    }
+
+    return std::format("{}:{};", sampleID, parentIDs);
+}
+
+[[nodiscard]] auto formattedInteractionIDs(const std::string_view sampleID,
+                                           const Interaction& superInteraction)
+    -> std::optional<std::string> {
+    auto interactionIDs = superInteraction.getInteractionIDs(sampleID);
+
+    if (interactionIDs.empty()) {
+        return std::nullopt;
+    }
+
+    return formattedIDs(sampleID, interactionIDs);
+}
+
+[[nodiscard]] auto formattedFirstFeatureIDs(const std::string_view sampleID,
+                                            const Interaction& superInteraction)
+    -> std::optional<std::string> {
+    auto featureIDs = superInteraction.getFirstFeatureIDs(sampleID);
+
+    if (featureIDs.empty()) {
+        return std::nullopt;
+    }
+
+    return formattedIDs(sampleID, featureIDs);
+}
+
+[[nodiscard]] auto formattedSecondFeatureIDs(const std::string_view sampleID,
+                                             const Interaction& superInteraction)
+    -> std::optional<std::string> {
+    auto featureIDs = superInteraction.getSecondFeatureIDs(sampleID);
+
+    if (featureIDs.empty()) {
+        return std::nullopt;
+    }
+
+    return formattedIDs(sampleID, featureIDs);
+}
+
 void writeSuperInteractionsBEDPE(csv::TSVWriter<std::ofstream>& writer,
                                  const std::unordered_map<int, std::string>& referenceIndexToIDMap,
                                  const std::string& interactionID,
                                  const std::vector<std::string>& sampleIDs,
                                  const Interaction& superInteraction) {
     std::vector<std::string> lineTokens;
-    static constexpr int bedpeFieldCount = 12;
+    static constexpr int bedpeFieldCount = 17;
     lineTokens.reserve(bedpeFieldCount);
 
     lineTokens.emplace_back(getReferenceID(superInteraction.getFirstSegment().getReferenceIDIndex(),
@@ -106,29 +158,36 @@ void writeSuperInteractionsBEDPE(csv::TSVWriter<std::ofstream>& writer,
         std::string{static_cast<char>(superInteraction.getSecondSegment().getStrand())});
 
     std::string parentClusters;
-    for (const auto& sampleID : sampleIDs) {
-        auto clusterIdsView =
-            superInteraction.getInteractionIDs() |
-            std::views::filter(
-                [&sampleID](const auto& interaction) { return interaction.sampleID == sampleID; }) |
-            std::views::transform(
-                [](const auto& interaction) -> std::string_view { return interaction.clusterID; });
 
-        std::string parentIDs;
-        bool first = true;
-        for (const auto& clusterID : clusterIdsView) {
-            if (!first) {
-                parentIDs.push_back(',');
-            } else {
-                first = false;
-            }
-            parentIDs.append(clusterID);
+    std::string firstFeatures;
+    std::string secondFeatures;
+
+    for (const auto& sampleID : sampleIDs) {
+        auto interactionsString = formattedInteractionIDs(sampleID, superInteraction);
+        auto firstFeatureIDsString = formattedFirstFeatureIDs(sampleID, superInteraction);
+        auto secondFeatureIDsString = formattedSecondFeatureIDs(sampleID, superInteraction);
+
+        if (interactionsString) {
+            parentClusters.append(*interactionsString);
         }
 
-        parentClusters.append(std::format("{}:{};", sampleID, parentIDs));
+        if (firstFeatureIDsString) {
+            firstFeatures.append(*firstFeatureIDsString);
+        }
+
+        if (secondFeatureIDsString) {
+            secondFeatures.append(*secondFeatureIDsString);
+        }
     }
 
     lineTokens.emplace_back(std::move(parentClusters));
+    lineTokens.emplace_back(std::move(firstFeatures));
+    lineTokens.emplace_back(std::move(secondFeatures));
+
+    auto interactionTypeCounts = superInteraction.getInteractionTypeCounts();
+
+    lineTokens.emplace_back(std::format("{}", interactionTypeCounts.intraInteractionCount));
+    lineTokens.emplace_back(std::format("{}", interactionTypeCounts.interInteractionCount));
 
     const std::string color = helper::generateRandomRGBString();
     lineTokens.emplace_back(color);
