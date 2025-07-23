@@ -28,7 +28,7 @@ struct AnalyzeOptions {
 
     static constexpr DefaultedParameterOption<int, 0> clusteringDistanceTolerance{
         {.shortName = std::nullopt, .longName = "clustdist"},
-        "threshold distance at which two clusters are merged into a single combined cluster, default is to only merge overlapping and blunt ended clusters (mutually exclusive with --clustfrac)"sv};
+        "threshold distance at which two clusters are merged into a single combined cluster, default is to merge overlapping and blunt ended clusters (negative values can be used to implicitly expand search regions during clustering; mutually exclusive with --clustfrac)"sv};
 
     static constexpr ParameterOption<float, true> clusterFractionOverlap{
         {.shortName = std::nullopt, .longName = "clustfrac"},
