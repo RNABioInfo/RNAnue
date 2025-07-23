@@ -7,9 +7,9 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <format>
 #include <optional>
 #include <ostream>
-#include <vector>
 
 // Internal
 #include "GenomicOrientation.hpp"
@@ -312,3 +312,14 @@ inline auto operator<<(std::ostream& outputStream, const GenomicRegion& genomicR
                         << "-" << genomicRegion.getEnd() << ' ' << genomicRegion.getStrand();
 };
 }  // namespace dataTypes
+
+template <>
+struct std::formatter<dataTypes::GenomicRegion> {
+    constexpr auto parse(auto& ctx) { return ctx.begin(); }
+
+    auto format(const dataTypes::GenomicRegion& region, auto& ctx) const {
+        return std::format_to(ctx.out(), "{}:{}-{} {}", region.getReferenceIDIndex(),
+                              region.getStart(), region.getEnd(),
+                              static_cast<char>(region.getStrand()));
+    }
+};

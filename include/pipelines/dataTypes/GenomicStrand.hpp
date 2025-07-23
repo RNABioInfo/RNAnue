@@ -1,5 +1,8 @@
 #pragma once
 
+#include <format>
+#include <string>
+#include <utility>
 namespace dataTypes {
 enum GenomicStrand : char { FORWARD = '+', REVERSE = '-', NONE = '*' };
 
@@ -32,4 +35,26 @@ inline auto operator!(GenomicStrand strand) -> GenomicStrand {
     return NONE;
 };
 
+inline static auto toString(const GenomicStrand strand) -> std::string {
+    switch (strand) {
+        case GenomicStrand::FORWARD:
+            return "+";
+        case GenomicStrand::REVERSE:
+            return "-";
+        case GenomicStrand::NONE:
+            return ".";
+        default:
+            std::unreachable();
+    }
+}
+
 }  // namespace dataTypes
+
+template <>
+struct std::formatter<dataTypes::GenomicStrand> {
+    constexpr auto parse(auto& ctx) { return ctx.begin(); }
+
+    auto format(const dataTypes::GenomicStrand& strand, auto& ctx) const {
+        return std::format_to(ctx.out(), "{}", strand);
+    }
+};
