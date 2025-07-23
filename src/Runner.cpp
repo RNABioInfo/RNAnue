@@ -73,6 +73,7 @@ void Runner::runDetectPipeline(const detect::DetectParameters &parameters) {
 
 void Runner::runAnalyzePipeline(const analyze::AnalyzeParameters &parameters) {
     Logger::log("Running analyze pipeline");
+    Logger::log("Logging mode: ", parameters.logLevel);
 
     const auto inputDirs = InputDirectories(parameters.outputDir, detect::pipelinePrefix);
 
