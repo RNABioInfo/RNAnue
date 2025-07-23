@@ -76,9 +76,15 @@ class Logger {
         } else {
             log<IncludeSourceLocation, LogLevel::ERROR>("Invalid log level: ", logLevelString);
         }
+
+        Logger::log("Logging with level: ", getInstance().logLevel);
     }
 
-    static void setLogLevel(LogLevel level) { getInstance().logLevel = level; }
+    static void setLogLevel(LogLevel level) {
+        getInstance().logLevel = level;
+
+        Logger::log("Logging with level: ", getInstance().logLevel);
+    }
 
     template <LogLevel level = LogLevel::INFO, typename... Args>
         requires(not IsErrorLogLevel(level))

@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <cstddef>
+#include <format>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -19,6 +20,7 @@
 #include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "TranscriptContributionsByID.hpp"
+#include "Utility.hpp"
 
 namespace pipelines::analyze {
 
@@ -41,6 +43,16 @@ auto StatisticEvaluator::getTranscriptProbabilities(
     transcriptProbabilities.reserve(transcriptCounts.size());
 
     for (const auto &[transcriptID, count] : transcriptCounts) {
+        if (helper::isApproxEqual(totalTranscriptContribution, 0) || std::isnan(count) ||
+            std::isnan(totalTranscriptContribution)) {
+            Logger::log<LogLevel::DEBUG>(std::format(
+                "Transcript contributions is invalid. ID: {}, Count: {}, Contribution: {}",
+                transcriptID, count, totalTranscriptContribution));
+
+            transcriptProbabilities[transcriptID] = 0;
+
+            continue;
+        }
         transcriptProbabilities[transcriptID] = count / totalTranscriptContribution;
     }
 
@@ -80,6 +92,28 @@ auto StatisticEvaluator::evaluatePValues(std::vector<AnnotatedInteractionCluster
         const double firstTranscriptProbability = firstIt->second;
         const double secondTranscriptProbability = secondIt->second;
 
+        if (std::isnan(firstTranscriptProbability) ||
+            helper::isApproxEqual(firstTranscriptProbability, 0)) {
+            Logger::log<LogLevel::DEBUG>(std::format(
+                "Transcript probability is invalid. ID_1: {}, prob_1: {}, seg_1: {}",
+                firstTranscriptID, firstTranscriptProbability, cluster.getFirstSegment()));
+
+            for (const auto &recordID : cluster.getRecordIDs()) {
+                Logger::log<LogLevel::DEBUG>(std::format("Record ID: {}", recordID));
+            }
+        }
+
+        if (std::isnan(secondTranscriptProbability) ||
+            helper::isApproxEqual(secondTranscriptProbability, 0)) {
+            Logger::log<LogLevel::DEBUG>(std::format(
+                "Transcript probability is invalid. ID_2: {}, prob_2: {}, seg_2: {}",
+                secondTranscriptID, secondTranscriptProbability, cluster.getSecondSegment()));
+
+            for (const auto &recordID : cluster.getRecordIDs()) {
+                Logger::log<LogLevel::DEBUG>(std::format("Record ID: {}", recordID));
+            }
+        }
+
         const double ligationByChanceProbability =
             (firstTranscriptID == secondTranscriptID)
                 ? firstTranscriptProbability * secondTranscriptProbability
@@ -99,7 +133,11 @@ auto StatisticEvaluator::evaluatePValues(std::vector<AnnotatedInteractionCluster
         if (std::isnan(normalizedLigationByChanceProbability) ||
             normalizedLigationByChanceProbability < 0.0 ||
             normalizedLigationByChanceProbability > 1.0) {
-            Logger::log<LogLevel::DEBUG>("Skipping record due ligation by chance prob invalid.");
+            Logger::log<LogLevel::WARNING>(
+                "Skipping record due ligation by chance prob invalid. Norm. lig.: ",
+                normalizedLigationByChanceProbability,
+                "; Lig. prob.: ", ligationByChanceProbabilities[i],
+                "; Comb. prob.: ", combinedProbability);
 
             continue;
         }

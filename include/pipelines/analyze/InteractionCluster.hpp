@@ -138,13 +138,27 @@ class InteractionCluster {
      */
     [[nodiscard]] auto isBefore(const InteractionCluster &other) const noexcept -> bool;
 
-    [[nodiscard]] auto overlapsWithTolerance(const InteractionCluster &other,
-                                             GenomicStrandSpecificity strandSpecificity,
-                                             int tolerance) const noexcept -> bool;
+    [[nodiscard]] inline auto overlapsWithTolerance(const InteractionCluster &other,
+                                                    GenomicStrandSpecificity strandSpecificity,
+                                                    int tolerance) const noexcept -> bool {
+        return sortedSegments.firstRegion.overlapsWithTolerance(
+                   other.getFirstSegment(), overlapOrientation(strandSpecificity), tolerance) &&
+               sortedSegments.secondRegion.overlapsWithTolerance(
+                   other.getSecondSegment(), overlapOrientation(strandSpecificity), tolerance);
+    };
 
-    [[nodiscard]] auto overlapsWithShortestSegmentFraction(
+    [[nodiscard]] inline auto overlapsWithShortestSegmentFraction(
         const InteractionCluster &other, GenomicStrandSpecificity strandSpecificity,
-        float shortestOverlapFraction) const noexcept -> bool;
+        float shortestOverlapFraction) const noexcept -> bool {
+        return sortedSegments.firstRegion.overlapsWithShortestSegmentFraction(
+                   other.getFirstSegment(),
+                   GenomicOrientation::fromStrandSpecificity(strandSpecificity),
+                   shortestOverlapFraction) &&
+               sortedSegments.secondRegion.overlapsWithShortestSegmentFraction(
+                   other.getSecondSegment(),
+                   GenomicOrientation::fromStrandSpecificity(strandSpecificity),
+                   shortestOverlapFraction);
+    };
 
     // Returns the fraction of the overlap between the two segments relative to the length
     // of the shorter segment

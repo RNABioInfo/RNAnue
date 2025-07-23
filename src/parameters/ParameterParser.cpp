@@ -95,9 +95,9 @@ auto ParameterParser::parseParameters(int argc,
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
-    Logger::setLogLevel(params.at("loglevel").as<LogLevel>());
-
     insertConfigFileParameters(params);
+
+    Logger::setLogLevel(params.at("loglevel").as<LogLevel>());
 
     return params;
 }

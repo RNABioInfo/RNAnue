@@ -52,28 +52,6 @@ auto InteractionCluster::isBefore(const InteractionCluster &other) const noexcep
             getSecondSegment().getEnd() < other.getSecondSegment().getStart());
 };
 
-auto InteractionCluster::overlapsWithTolerance(const InteractionCluster &other,
-                                               const GenomicStrandSpecificity strandSpecificity,
-                                               const int tolerance) const noexcept -> bool {
-    return sortedSegments.firstRegion.overlapsWithTolerance(
-               other.getFirstSegment(), overlapOrientation(strandSpecificity), tolerance) &&
-           sortedSegments.secondRegion.overlapsWithTolerance(
-               other.getSecondSegment(), overlapOrientation(strandSpecificity), tolerance);
-}
-
-auto InteractionCluster::overlapsWithShortestSegmentFraction(
-    const InteractionCluster &other, const GenomicStrandSpecificity strandSpecificity,
-    float shortestOverlapFraction) const noexcept -> bool {
-    return sortedSegments.firstRegion.overlapsWithShortestSegmentFraction(
-               other.getFirstSegment(),
-               GenomicOrientation::fromStrandSpecificity(strandSpecificity),
-               shortestOverlapFraction) &&
-           sortedSegments.secondRegion.overlapsWithShortestSegmentFraction(
-               other.getSecondSegment(),
-               GenomicOrientation::fromStrandSpecificity(strandSpecificity),
-               shortestOverlapFraction);
-}
-
 auto InteractionCluster::segmentsMaxSelfOverlapFraction() const noexcept -> double {
     return std::max(
         getFirstSegment().overlapFraction(getSecondSegment(), GenomicOrientation::SAME),

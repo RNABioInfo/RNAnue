@@ -4,9 +4,11 @@
 #include <sys/stat.h>
 
 #include <cassert>
+#include <cmath>
 #include <cstddef>
 #include <deque>
 #include <filesystem>
+#include <format>
 #include <fstream>
 #include <ios>
 #include <limits>
@@ -165,6 +167,18 @@ void Analyze::parseNonAnnotatedContiguousToSupplementaryFeatures(
         const float contributionScore = record.tags().get<"XB"_tag>();
 
         assert(transcriptCounts.contains(transcriptID));
+
+        if (std::isnan(transcriptCounts.at(transcriptID)) || std::isnan(contributionScore)) {
+            Logger::log<LogLevel::WARNING>(std::format(
+                "Invalid contribution – check unassigned contiguous record in detect step. Record "
+                "ID: {}, "
+                "Interaction ID: {}, Current "
+                "contribution: {}, Record contribution: {}",
+                record.id(), transcriptID, transcriptCounts.at(transcriptID), contributionScore));
+
+            continue;
+        }
+
         transcriptCounts[transcriptID] += contributionScore;
     }
 }
