@@ -3,6 +3,7 @@
 // Standard
 #include <string>
 #include <string_view>
+#include <type_traits>
 #include <utility>
 
 // Boost
@@ -63,6 +64,11 @@ class DefaultedParameterOption : public ParameterOption<T> {
             optionsDescription.add_options()(this->names.optionsName().data(),
                                              po::bool_switch()->default_value(defaultValue),
                                              getDescription().data());
+        } else if constexpr (std::is_floating_point_v<T>) {
+            optionsDescription.add_options()(
+                this->names.optionsName().data(),
+                po::value<T>()->default_value(defaultValue, std::format("{:.{}}", defaultValue, 3)),
+                getDescription().data());
         } else {
             optionsDescription.add_options()(this->names.optionsName().data(),
                                              po::value<T>()->default_value(defaultValue),
