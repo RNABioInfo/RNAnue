@@ -1,240 +1,483 @@
+// FeatureParser.cpp
 #include "FeatureParser.hpp"
 
 // Standard
 #include <algorithm>
-#include <array>
+#include <cctype>
+#include <charconv>
 #include <cstddef>
 #include <filesystem>
+#include <format>
 #include <fstream>
-#include <iostream>
-#include <numeric>
 #include <optional>
-#include <sstream>
-#include <stdexcept>
 #include <string>
-#include <unordered_map>
-#include <unordered_set>
+#include <string_view>
+#include <system_error>
+#include <utility>
 #include <vector>
 
 // Internal
 #include "Constants.hpp"
+#include "FeatureGrouper.hpp"
 #include "FileType.hpp"
 #include "GenomicFeature.hpp"
+#include "GenomicFeatureGroup.hpp"
 #include "GenomicRegion.hpp"
 #include "GenomicStrand.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
-
-using namespace constants::annotation;
+#include "ReferenceIndexMapping.hpp"
 
 namespace annotation {
 
-/** @brief Constructs a FeatureParser object.
- *
- * This constructor initializes a FeatureParser object with the specified included features and
- * feature ID flag.
- *
- * @param includedFeatures The set of included features. Default is exon.
- *        Possible values include exon, gene, lncRNA, and other.
- * @param featureIDFlag The optional feature ID flag. Default is empty.
- *       Default is ID for GFF files and gene_id for GTF files.
- */
-FeatureParser::FeatureParser(const std::unordered_set<std::string> &includedFeatures,
-                             const std::optional<std::string> &featureIDFlag)
-    : includedFeatures(includedFeatures), featureIDFlag(featureIDFlag) {}
+using namespace constants::annotation;
 
-auto FeatureParser::parse(const fs::path &featureFilePath,
-                          const ReferenceIDToIndexMap &referenceToIndex) const -> FeatureMap {
-    FileType fileType = getFileType(featureFilePath);
+FeatureParser::FeatureParser(IncludedFeatureSet includedFeaturesParam,
+                             std::optional<std::string> featureIdFlagParam)
+    : includedFeatures(std::move(includedFeaturesParam)),
+      featureIDFlag(std::move(featureIdFlagParam)) {}
 
-    return iterateFeatureFile(featureFilePath, fileType, referenceToIndex);
-}
-
-auto FeatureParser::getFileType(const fs::path &featureFilePath) -> FileType {
-    std::ifstream file(featureFilePath.string());
-    if (!file) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: " +
-                                                            featureFilePath.string());
-    }
-
-    std::string line;
-    std::getline(file, line);
-
-    if (line.starts_with("##gff-version")) {
-        return FileType(FileType::GFF);
-    }
-    if (line.starts_with("##gtf-version")) {
-        return FileType(FileType::GTF);
-    }
-
-    throw std::runtime_error(
-        "Annotation file type not supported. First line does not contain "
-        "##gff-version or ##gtf-version");
-}
-
-auto FeatureParser::iterateFeatureFile(const fs::path &featureFilePath, const FileType fileType,
-                                       const ReferenceIDToIndexMap &referenceToIndex) const
+auto FeatureParser::parseFlatMap(const fs::path& featureFilePath,
+                                 const ReferenceIndexMapping& referenceToIndex) const
     -> FeatureMap {
-    FeatureMap featureMap;
+    return parseFlatAndGrouped(featureFilePath, referenceToIndex).flatByChromosomeIndex;
+}
 
-    std::ifstream file(featureFilePath);
+auto FeatureParser::parseGroupedByParentID(const fs::path& featureFilePath,
+                                           const ReferenceIndexMapping& referenceToIndex) const
+    -> ParentIDToFeatureGroupMap {
+    return parseFlatAndGrouped(featureFilePath, referenceToIndex).groupedByParentID;
+}
 
-    if (!file.is_open()) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
+auto FeatureParser::parseFlatAndGrouped(const fs::path& featureFilePath,
+                                        const ReferenceIndexMapping& referenceToIndex) const
+    -> Results {
+    static_assert(columnCount == expectedAnnotationFileTokenCount);
+
+    const auto fileType = getFileType(featureFilePath);
+
+    ParseSettings settings{
+        .fileType = fileType,
+        .idKey = std::string_view{featureIDFlag.value_or(fileType.defaultIDKey())},
+        .keys =
+            AttributeKeys{
+                .parentKey = std::string_view{fileType.defaultGroupKey()},
+                .geneNameKey = std::string_view{FileType::defaultGeneNameKey()},
+            },
+    };
+
+    Results result{};
+    const auto stats = scanFile(FileScanInput{
+        .featureFilePath = featureFilePath,
+        .settings = settings,
+        .referenceToIndex = referenceToIndex,
+        .flatMap = &result.flatByChromosomeIndex,
+        .groupMap = &result.groupedByParentID,
+    });
+
+    const auto includedText = buildIncludedFeatureTypesText(includedFeatures);
+
+    if (stats.parsedCount == 0) {
+        Logger::log<LogLevel::WARNING>(std::format(
+            "No features parsed from file {}. Check your feature file and included features flag.",
+            featureFilePath.string()));
+        return result;
+    }
+
+    const auto groupInfo =
+        stats.parentIDs.empty()
+            ? std::string{}
+            : (std::string{" Found "} + std::to_string(stats.parentIDs.size()) + " parent groups.");
+
+    const auto msg = std::format("Parsed {} features of type: {}.{}", stats.parsedCount,
+                                 includedText, groupInfo);
+    Logger::log(msg);
+
+    return result;
+}
+
+auto FeatureParser::getFileType(const fs::path& featureFilePath) -> FileType {
+    std::ifstream fileStream(featureFilePath);
+    if (!fileStream) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open annotation file: {}",
                                                             featureFilePath.string());
     }
 
-    size_t parsedFeatures = 0;
-    std::unordered_set<std::string> featureGroups;
-
-    for (std::string line; std::getline(file, line);) {
-        if (line[0] == '#') {
-            continue;
+    std::string lineData;
+    while (std::getline(fileStream, lineData)) {
+        if (!lineData.empty()) {
+            break;
         }
+    }
 
-        const auto tokens = getTokens(line, includedFeatures);
+    if (lineData.starts_with("##gff-version")) {
+        return FileType{FileType::GFF};
+    }
+    if (lineData.starts_with("##gtf-version")) {
+        return FileType{FileType::GTF};
+    }
 
-        if (!isValidFeature(tokens)) {
-            continue;
-        }
+    Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+        "Annotation file type not supported. First non-empty line of {} does not contain "
+        "##gff-version or ##gtf-version",
+        featureFilePath.string());
 
-        const auto &tokens_v = tokens.value();
+    std::unreachable();
+}
 
-        const std::string &referenceID = tokens_v[0];
+auto FeatureParser::shouldSkipLine(std::string_view line) -> bool {
+    return line.empty() || line.front() == '#';
+}
 
-        if (!referenceToIndex.contains(referenceID)) {
-            Logger::log<LogLevel::WARNING>(
-                "Feature reference id not found: ", referenceID,
-                ", ensure the annotation and reference genome use the same reference IDs.");
+auto FeatureParser::trim(std::string_view value) -> std::string_view {
+    auto isSpace = [](unsigned char chr) { return std::isspace(chr) != 0; };
 
-            continue;
-        }
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.front()))) {
+        value.remove_prefix(1);
+    }
+    while (!value.empty() && isSpace(static_cast<unsigned char>(value.back()))) {
+        value.remove_suffix(1);
+    }
+    return value;
+}
 
-        const int referenceIDIndex = referenceToIndex.at(referenceID);
-        const std::string &featureType = tokens_v[2];
+auto FeatureParser::tryParseInt(std::string_view value) -> std::optional<int> {
+    int parsed{};
+    const char* begPtr = value.data();
+    const char* endPtr = value.data() + value.size();
 
-        // Convert to zero-based half-open index
-        int startPosition = std::stoi(tokens_v[3]) - 1;
-        int endPosition = std::stoi(tokens_v[4]);
+    const auto res = std::from_chars(begPtr, endPtr, parsed);
+    if (res.ec != std::errc{} || res.ptr != endPtr) {
+        return std::nullopt;
+    }
+    return parsed;
+}
 
-        const auto attributes = getAttributes(fileType, tokens_v[8]);
+auto FeatureParser::tryParseCoordinates(CoordinateTokens tokens)
+    -> std::optional<std::pair<int, int>> {
+    const auto startOne = tryParseInt(tokens.startToken);
+    const auto endOne = tryParseInt(tokens.endToken);
 
-        auto getAttribute = [&attributes](const std::string &key) -> std::optional<std::string> {
-            const auto iterator = attributes.find(key);
-            if (iterator == attributes.end()) {
+    if (!startOne || !endOne || *startOne <= 0 || *endOne <= 0) {
+        return std::nullopt;
+    }
+
+    return std::pair<int, int>{*startOne - 1, *endOne};
+}
+
+auto FeatureParser::tryParseStrand(std::string_view token) -> std::optional<char> {
+    if (token.empty()) {
+        return std::nullopt;
+    }
+
+    const char chr = token.front();
+    if (chr == '+' || chr == '-' || chr == '.') {
+        return chr;
+    }
+
+    return std::nullopt;
+}
+
+auto FeatureParser::trySplitColumns(std::string_view line, const char delimiter)
+    -> std::optional<ColumnViews> {
+    ColumnViews out{};
+
+    for (std::size_t idxCol = 0; idxCol < columnCount; ++idxCol) {
+        const auto posDelim = line.find(delimiter);
+
+        if (posDelim == std::string_view::npos) {
+            if (idxCol + 1 != columnCount) {
                 return std::nullopt;
             }
-            return iterator->second;
-        };
+            out.cols[idxCol] = line;
+            break;
+        }
 
-        const std::string featureIDFlag = this->featureIDFlag.value_or(fileType.defaultIDKey());
-        const auto identifier = getAttribute(featureIDFlag);
+        out.cols[idxCol] = line.substr(0, posDelim);
+        line.remove_prefix(posDelim + 1);
+    }
 
-        if (!identifier.has_value()) {
-            Logger::log<LogLevel::WARNING>("Could not find identifier in GFF file");
+    if (out.cols.back().find(delimiter) != std::string_view::npos) {
+        return std::nullopt;
+    }
+
+    return out;
+}
+
+auto FeatureParser::normalizeAttributeValue(const FileType fileType, std::string_view value)
+    -> std::string {
+    value = trim(value);
+
+    if (fileType != FileType::GTF) {
+        return std::string{value};
+    }
+
+    std::string out;
+    out.reserve(value.size());
+
+    for (char chr : value) {
+        if (chr != '"') {
+            out.push_back(chr);
+        }
+    }
+
+    while (!out.empty()) {
+        const auto lastChr = static_cast<unsigned char>(out.back());
+        if (out.back() == ';' || std::isspace(lastChr) != 0) {
+            out.pop_back();
+            continue;
+        }
+        break;
+    }
+
+    const auto trimmed = trim(std::string_view{out});
+    if (trimmed.size() == out.size()) {
+        return out;
+    }
+    return std::string{trimmed};
+}
+
+auto FeatureParser::extractAllAttributes(AttributeParseInput const& input) -> AttributeMap {
+    const char fieldDelim = FileType::attributeDelimiter();
+    const char assignChar = input.fileType.attributeAssignment();
+
+    AttributeMap attributes;
+    const auto estimatedCount = estimateAttributeCount(input.attributes, fieldDelim);
+    attributes.reserve(std::max(kMinAttributeReserve, estimatedCount));
+
+    std::string_view remaining = input.attributes;
+
+    while (!remaining.empty()) {
+        const auto delimPos = remaining.find(fieldDelim);
+        const auto rawField =
+            remaining.substr(0, delimPos == std::string_view::npos ? remaining.size() : delimPos);
+        const auto fieldView = trim(rawField);
+
+        if (delimPos == std::string_view::npos) {
+            remaining = {};
+        } else {
+            remaining.remove_prefix(delimPos + 1);
+        }
+
+        if (fieldView.empty()) {
             continue;
         }
 
-        const std::optional<std::string> geneName =
-            getAttribute(annotation::FileType::defaultGeneNameKey());
-
-        GenomicRegion genomicRegion{referenceIDIndex,
-                                    {.startPosition = startPosition, .endPosition = endPosition},
-                                    getGenomicStrand(tokens_v[strandTokenColumn][0])};
-
-        featureMap[referenceIDIndex].emplace_back(featureType, genomicRegion, identifier.value(),
-                                                  getAttribute(fileType.defaultGroupKey()),
-                                                  geneName);
-
-        ++parsedFeatures;
-
-        if (featureMap[referenceIDIndex].back().getGroupID().has_value()) {
-            featureGroups.insert(featureMap[referenceIDIndex].back().getGroupID().value());
+        const auto assignPos = fieldView.find(assignChar);
+        if (assignPos == std::string_view::npos) {
+            continue;
         }
+
+        const auto keyView = trim(fieldView.substr(0, assignPos));
+        const auto valView = trim(fieldView.substr(assignPos + 1));
+        if (keyView.empty() || valView.empty()) {
+            continue;
+        }
+
+        attributes.try_emplace(std::string{keyView}, std::string{valView});
     }
 
-    const std::string includedFeatureTypes =
-        std::accumulate(includedFeatures.begin(), includedFeatures.end(), std::string(),
-                        [](const std::string &lhs, const std::string &rhs) {
-                            return lhs.empty() ? rhs : lhs + ", " + rhs;
-                        });
-
-    if (parsedFeatures != 0) {
-        const std::string featureGroupLog =
-            featureGroups.empty()
-                ? ""
-                : " Found " + std::to_string(featureGroups.size()) + " feature groups.";
-
-        Logger::log("Parsed ", std::to_string(parsedFeatures),
-                    " features of type: ", includedFeatureTypes, ".", featureGroupLog);
-    } else {
-        Logger::log<LogLevel::WARNING>(
-            "No features parsed. Check your feature file and included features flag.");
-    }
-
-    return featureMap;
+    return attributes;
 }
 
-auto FeatureParser::getTokens(const std::string &line,
-                              const std::unordered_set<std::string> &includedFeatures)
-    -> std::optional<std::vector<std::string>> {
-    std::vector<std::string> tokens;
-    std::istringstream issLine(line);
+auto FeatureParser::tryParseFeature(const ColumnViews& columns, const ParseSettings& settings,
+                                    const ReferenceIndexMapping& referenceToIndex,
+                                    LookupBuffers& buffers) const -> std::optional<ParsedFeature> {
+    const auto& cols = columns.cols;
 
-    for (std::string token; std::getline(issLine, token, '\t');) {
-        // Checks at the third token if the feature is included
-        if (tokens.size() == 2 && !includedFeatures.contains(token)) {
+    const std::string_view refView = cols[0];
+    const std::string_view typView = cols[2];
+
+    if (!includedFeatures.empty()) {
+        buffers.featureType.assign(typView.data(), typView.size());
+        if (!includedFeatures.contains(buffers.featureType)) {
             return std::nullopt;
         }
-
-        tokens.push_back(token);
     }
 
-    return tokens;
+    buffers.referenceID.assign(refView.data(), refView.size());
+    const auto refIdxOpt = referenceToIndex.findIndex(buffers.referenceID);
+    if (!refIdxOpt) {
+        Logger::log<LogLevel::WARNING>(
+            std::format("Feature reference id not found: {}. Ensure the annotation and reference "
+                        "genome use the same reference IDs.",
+                        buffers.referenceID));
+
+        return std::nullopt;
+    }
+
+    const int refIdx = *refIdxOpt;
+
+    const auto coordOpt =
+        tryParseCoordinates(CoordinateTokens{.startToken = cols[3], .endToken = cols[4]});
+    if (!coordOpt) {
+        return std::nullopt;
+    }
+
+    const auto strandOpt = tryParseStrand(cols[strandTokenColumn]);
+    if (!strandOpt) {
+        return std::nullopt;
+    }
+
+    const auto attrs = extractAttributes(AttributeParseInput{
+        .fileType = settings.fileType,
+        .attributes = cols[8],
+        .idKey = settings.idKey,
+        .keys = settings.keys,
+    });
+
+    if (!attrs.identifier) {
+        return std::nullopt;
+    }
+
+    GenomicRegion region{
+        refIdx,
+        {.startPosition = coordOpt->first, .endPosition = coordOpt->second},
+        getGenomicStrand(*strandOpt),
+    };
+
+    return ParsedFeature{std::string(typView), region,         *attrs.identifier,
+                         attrs.parentID,       attrs.geneName, attrs.attributes};
 }
 
-auto FeatureParser::getAttributes(const annotation::FileType fileType,
-                                  const std::string &attributes)
-    -> std::unordered_map<std::string, std::string> {
-    std::unordered_map<std::string, std::string> attributeMap;
-    std::istringstream issAttr(attributes);
+auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
+    std::ifstream fileStream(input.featureFilePath);
+    if (!fileStream) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open annotation file: {}",
+                                                            input.featureFilePath.string());
+    }
 
-    const char delim = annotation::FileType::attributeDelimiter();
+    ScanStats scanStats{};
+    LookupBuffers buffers{};
 
-    for (std::string attribute; std::getline(issAttr, attribute, delim);) {
-        const auto keyPosition = attribute.find(fileType.attributeAssignment());
+    std::vector<annotation::FeatureGrouper::GroupingFeature> groupingFeatures;
+    if (input.groupMap != nullptr) {
+        constexpr std::size_t initialReserve = 1'024;
+        groupingFeatures.reserve(initialReserve);
+    }
 
-        if (keyPosition == std::string::npos) {
+    std::string lineData;
+    std::size_t lineIndex = 0;
+
+    while (std::getline(fileStream, lineData)) {
+        ++lineIndex;
+
+        const std::string_view lineView{lineData};
+        if (shouldSkipLine(lineView)) {
             continue;
         }
 
-        std::string key = attribute.substr(0, keyPosition);
-        std::string value = attribute.substr(keyPosition + 1);
-
-        if (key.empty() || value.empty()) {
+        const auto columnsOpt = trySplitColumns(lineView, '\t');
+        if (!columnsOpt) {
+            Logger::log<LogLevel::WARNING>(
+                "Skipping malformed feature at line {} in {}: expected {} columns", lineIndex,
+                input.featureFilePath.string(), expectedAnnotationFileTokenCount);
             continue;
         }
 
-        if (fileType == FileType::GTF) {
-            const auto keyRet = std::ranges::remove(key, ' ');
-            key.erase(keyRet.begin(), keyRet.end());
-            const auto attributeRet = std::ranges::remove(value, '\"');
-            attribute.erase(attributeRet.begin(), attributeRet.end());
+        auto parsedOpt =
+            tryParseFeature(*columnsOpt, input.settings, input.referenceToIndex, buffers);
+        if (!parsedOpt) {
+            continue;
         }
 
-        attributeMap[key] = value;
+        if (input.flatMap != nullptr) {
+            auto& featureMap = *input.flatMap;
+            auto& vecRef = featureMap[parsedOpt->getGenomicRegion().getReferenceIDIndex()];
+            vecRef.emplace_back(*parsedOpt);
+        }
+
+        if (input.groupMap != nullptr) {
+            groupingFeatures.emplace_back(std::move(*parsedOpt));
+        }
+
+        ++scanStats.parsedCount;
     }
 
-    return attributeMap;
+    if (input.groupMap != nullptr) {
+        auto groupingResult =
+            annotation::FeatureGrouper::groupByHierarchy(std::move(groupingFeatures));
+
+        *input.groupMap = std::move(groupingResult.groups);
+        scanStats.parentIDs = std::move(groupingResult.groupKeys);
+    }
+
+    return scanStats;
 }
 
-constexpr auto FeatureParser::isValidFeature(const std::optional<std::vector<std::string>> &tokens)
-    -> bool {
-    const std::array<char, 3> allowedStrand = {'+', '-', '.'};
+auto FeatureParser::buildIncludedFeatureTypesText(const IncludedFeatureSet& featureSet)
+    -> std::string {
+    std::string text;
+    constexpr int capacity = 64;
+    text.reserve(capacity);
 
-    return tokens.has_value() && tokens.value().size() == exptectedGffFileTokenCount &&
-           std::ranges::find(allowedStrand, tokens.value()[strandTokenColumn][0]) !=
-               allowedStrand.end();
+    for (const auto& item : featureSet) {
+        if (!text.empty()) {
+            text.append(", ");
+        }
+        text.append(item);
+    }
+
+    return text;
 }
+auto FeatureParser::estimateAttributeCount(std::string_view attributes, char fieldDelim)
+    -> std::size_t {
+    if (attributes.empty()) {
+        return std::size_t{0};
+    }
 
+    std::size_t delimCount{0};
+    for (const char chr : attributes) {
+        delimCount += static_cast<std::size_t>(chr == fieldDelim);
+    }
+    return delimCount + std::size_t{1};
+}
+auto FeatureParser::popRaw(AttributeMap& attributes, std::string_view keyView)
+    -> std::optional<std::string> {
+    const auto iterator = attributes.find(keyView);
+    if (iterator == attributes.end()) {
+        return std::nullopt;
+    }
+
+    auto value = std::move(iterator->second);
+    attributes.erase(iterator);
+    return value;
+}
+auto FeatureParser::popNormalized(AttributeMap& attributes, FileType fileType,
+                                  std::string_view keyView) -> std::optional<std::string> {
+    auto rawValue = popRaw(attributes, keyView);
+    if (!rawValue) {
+        return std::nullopt;
+    }
+    return normalizeAttributeValue(fileType, std::string_view{*rawValue});
+}
+auto FeatureParser::popParentId(AttributeMap& attributes, FileType fileType,
+                                std::string_view parentKeyView) -> std::optional<std::string> {
+    auto normalized = popNormalized(attributes, fileType, parentKeyView);
+    if (!normalized) {
+        return std::nullopt;
+    }
+
+    const auto commaPosition = normalized->find(',');
+    if (commaPosition != std::string::npos) {
+        Logger::log<LogLevel::WARNING>(
+            "Feature has multiple Parent values ('{}'); using the first one.", *normalized);
+        normalized->resize(commaPosition);
+    }
+
+    return normalized;
+}
+auto FeatureParser::popSpecificAttributes(AttributeMap& attributes,
+                                          AttributeParseInput const& input) -> ExtractedAttributes {
+    ExtractedAttributes extracted;
+    extracted.identifier = popNormalized(attributes, input.fileType, input.idKey);
+    extracted.parentID = popParentId(attributes, input.fileType, input.keys.parentKey);
+    extracted.geneName = popNormalized(attributes, input.fileType, input.keys.geneNameKey);
+    extracted.attributes = std::move(attributes);
+    return extracted;
+}
+auto FeatureParser::extractAttributes(AttributeParseInput input) -> ExtractedAttributes {
+    auto attributes = extractAllAttributes(input);
+    return popSpecificAttributes(attributes, input);
+}
 }  // namespace annotation

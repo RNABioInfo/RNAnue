@@ -48,7 +48,7 @@ struct DetectOptions {
         {.shortName = std::nullopt, .longName = "splicing"},
         "splicing events are removed in the detection of split reads"sv};
 
-    static constexpr DefaultedParameterOption<bool, true> allowAltSplicing{
+    static constexpr DefaultedParameterOption<bool, true> removeAltSplicing{
         {.shortName = std::nullopt, .longName = "altsplice"},
         "remove alternative splicing events"sv};
 
@@ -66,6 +66,6 @@ struct DetectOptions {
 
     static constexpr auto allOptions = std::make_tuple(
         maxPrimaryAlignmentCount, minMappingQuality, minComplementarity, siteLengthRatio,
-        minDetectLength, maxEnergy, excludeSoftClipping, filterSplicing, allowAltSplicing,
+        minDetectLength, maxEnergy, excludeSoftClipping, filterSplicing, removeAltSplicing,
         splicingTolerance, includeWobble, minHitGroupContribution);
 };

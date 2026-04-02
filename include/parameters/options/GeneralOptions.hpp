@@ -61,6 +61,13 @@ struct GeneralOptions {
         featureOrientation{
             {.shortName = std::nullopt, .longName = "orientation"},
             "orientation of the reads in relation to RNA sequences (strand-specific sequencing). Non strand-specific setting (both) disables nrgmax filtering. [same, opposite, both]"sv};
+    static constexpr DefaultedParameterOption<bool, true> maskMultiCopyGenes{
+        {.shortName = std::nullopt, .longName = "maskmulitcopy"},
+        "mask multi-copy genes, only keeping one transcript per gene"sv};
+
+    static constexpr ArithmeticParameterOption<double, 0.99, {.lowerBound = 0.0, .upperBound = 1.0}>
+        minMultiCopyIdentity{{.shortName = std::nullopt, .longName = "mincopyident"},
+                             "minimum identity of two transcripts to be considered a copy"sv};
 
     static constexpr ArithmeticParameterOption<int, 100000,
                                                {.lowerBound = 1, .upperBound = 1000000}>
@@ -69,5 +76,5 @@ struct GeneralOptions {
 
     static constexpr auto allOptions =
         std::make_tuple(trtms, ctrls, out, logLevel, threads, featuresPath, featureTypes,
-                        featureOrientation, chunkSize);
+                        featureOrientation, maskMultiCopyGenes, minMultiCopyIdentity, chunkSize);
 };

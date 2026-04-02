@@ -63,6 +63,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Runner.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureAnnotator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureGrouper.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureParser.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureWriter.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/GenomicFeatureTreeMerger.cpp
@@ -76,6 +77,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/GenomicRegion.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/RecordFragment.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/GenomicOrientation.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/dataTypes/FeatureGroup.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/Preprocess.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/preprocess/PreprocessData.cpp
@@ -87,6 +89,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/Align.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/AlignData.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/GeneCopyMasker.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/detect/Detect.cpp

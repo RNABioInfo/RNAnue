@@ -16,29 +16,35 @@
 
 // Internal
 #include "GenomicRegion.hpp"
+#include "TransparentStringMap.hpp"
 
 namespace dataTypes {
 
 struct GenomicFeature {
    public:
     GenomicFeature(std::string type, GenomicRegion genomicRegion, std::string featureID,
-                   std::optional<std::string> groupID, std::optional<std::string> geneName)
+                   std::optional<std::string> parentID, std::optional<std::string> geneName,
+                   util::TransparentStringMap attributes = {})
         : type(std::move(type)),
           genomicRegion(genomicRegion),
           featureID(std::move(featureID)),
-          groupID(std::move(groupID)),
-          geneName(std::move(geneName)) {}
+          groupID(std::move(parentID)),
+          geneName(std::move(geneName)),
+          attributes(std::move(attributes)) {}
 
     // Getters
     [[nodiscard]] auto getType() const noexcept -> const std::string& { return type; }
     [[nodiscard]] auto getGenomicRegion() const noexcept -> GenomicRegion { return genomicRegion; }
     [[nodiscard]] auto getGenomicRegion() noexcept -> GenomicRegion& { return genomicRegion; }
     [[nodiscard]] auto getID() const noexcept -> const std::string& { return featureID; }
-    [[nodiscard]] auto getGroupID() const noexcept -> const std::optional<std::string>& {
+    [[nodiscard]] auto getParentID() const noexcept -> const std::optional<std::string>& {
         return groupID;
     }
     [[nodiscard]] auto getGeneName() const noexcept -> const std::optional<std::string>& {
         return geneName;
+    }
+    [[nodiscard]] auto getAttributes() const noexcept -> const util::TransparentStringMap& {
+        return attributes;
     }
 
     /**
@@ -70,6 +76,7 @@ struct GenomicFeature {
     std::string featureID;
     std::optional<std::string> groupID;
     std::optional<std::string> geneName;
+    util::TransparentStringMap attributes;
 };
 
 // TODO Rewrite as constructor of GenomicFeature
@@ -86,8 +93,8 @@ inline auto operator<<(std::ostream& ostream, const GenomicFeature& genomicFeatu
     -> std::ostream& {
     ostream << "type: " << genomicFeature.getType() << ", id: " << genomicFeature.getID();
 
-    if (genomicFeature.getGroupID()) {
-        ostream << ", groupID: " << genomicFeature.getGroupID().value();
+    if (genomicFeature.getParentID()) {
+        ostream << ", parentID: " << genomicFeature.getParentID().value();
     }
 
     if (genomicFeature.getGeneName()) {

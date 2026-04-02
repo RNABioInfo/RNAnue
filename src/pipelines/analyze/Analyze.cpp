@@ -26,6 +26,7 @@
 #include "AnalyzeData.hpp"
 #include "AnalyzeParameters.hpp"
 #include "AnalyzeSample.hpp"
+#include "AnnotationFilePicker.hpp"
 #include "Constants.hpp"
 #include "CustomSamTags.hpp"  // IWYU pragma: keep
 #include "FeatureAnnotator.hpp"
@@ -49,10 +50,12 @@ using namespace annotation;
 void Analyze::process(const AnalyzeData &data) {
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
+    const auto annotationFilePath = utility::AnnotationFilePicker::getFile(parameters);
+
     const ReferenceIDToIndexMap referenceIDToIndex =
         annotation::loadReferenceIDToIndexMap(data.getInputFilePaths());
     std::shared_ptr<const FeatureAnnotator> featureAnnotator{
-        std::make_shared<const FeatureAnnotator>(parameters.featuresInPath, referenceIDToIndex,
+        std::make_shared<const FeatureAnnotator>(annotationFilePath, referenceIDToIndex,
                                                  parameters.featureTypes)};
 
     for (const auto &sample : data.treatmentSamples) {

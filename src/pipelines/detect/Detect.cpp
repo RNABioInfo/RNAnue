@@ -27,8 +27,10 @@
 #include <seqan3/io/sam_file/output.hpp>
 #include <seqan3/io/sam_file/sam_flag.hpp>
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
+#include <seqan3/utility/tuple/pod_tuple.hpp>
 
 // Internal
+#include "AnnotationFilePicker.hpp"
 #include "AnnotationStep.hpp"
 #include "AsyncSplitReadGroupBuffer.hpp"
 #include "ComplementarityEvaluationStep.hpp"
@@ -54,7 +56,6 @@
 #include "TempOutputDirs.hpp"
 #include "Utility.hpp"
 #include "VariantOverload.hpp"
-#include "seqan3/utility/tuple/pod_tuple.hpp"
 
 using namespace dataTypes;
 
@@ -63,10 +64,12 @@ namespace pipelines::detect {
 void Detect::process(const DetectData& data) {
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
+    const auto annotationFilePath = utility::AnnotationFilePicker::getFile(params);
+
     const ReferenceIDToIndexMap referenceIDToIndex =
         annotation::loadReferenceIDToIndexMap(data.getInputFilePaths());
     std::shared_ptr<const FeatureAnnotator> featureAnnotator{
-        std::make_shared<const FeatureAnnotator>(params.featuresInPath, referenceIDToIndex,
+        std::make_shared<const FeatureAnnotator>(annotationFilePath, referenceIDToIndex,
                                                  params.featureTypes)};
 
     const auto evaluationParameters =

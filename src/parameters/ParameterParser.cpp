@@ -39,7 +39,8 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
     -> ParameterParser::ParametersVariant {
     const auto params = parseParameters(argc, argv);
 
-    const std::string subcall = params.at("subcall").as<std::string>();
+    const std::string subcall =
+        params.at(constants::pipelines::SUBCALL_PARAMETER_KEY).as<std::string>();
     if (subcall == constants::pipelines::COMPLETE) {
         return CompleteParameters{params};
     }

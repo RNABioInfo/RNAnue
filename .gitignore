@@ -77,3 +77,4 @@ _deps
 /build
 /devel_build
 /submodules/ViennaRNA/build/**
+cspell.json

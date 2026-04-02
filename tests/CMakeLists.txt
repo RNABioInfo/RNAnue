@@ -39,7 +39,6 @@ add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/RecordFragment.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicOrientation.cpp
 
-
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/Deduplicator.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequenceSingleEnd.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequencePairedEnd.cpp

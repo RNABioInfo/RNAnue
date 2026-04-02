@@ -24,12 +24,12 @@ auto SplicingEvaluationStep::getGroupedFeaturesAtBoundingRegions(
     // within upstream bounding region.
     for (const GenomicFeature &feature : config.featureAnnotator->overlappingFeatureIt(
              boundingRegions.first, config.featureOrientation)) {
-        if (not feature.getGroupID() ||
+        if (not feature.getParentID() ||
             !boundingRegions.first.contains(feature.getGenomicRegion().getEnd() - 1)) {
             continue;
         }
 
-        featuresFirstRegionByGroupID.emplace(*feature.getGroupID(), feature);
+        featuresFirstRegionByGroupID.emplace(*feature.getParentID(), feature);
     }
 
     if (featuresFirstRegionByGroupID.empty()) {
@@ -42,13 +42,13 @@ auto SplicingEvaluationStep::getGroupedFeaturesAtBoundingRegions(
     // is within the second bounding region.
     for (const GenomicFeature &feature : config.featureAnnotator->overlappingFeatureIt(
              boundingRegions.second, config.featureOrientation)) {
-        if (!feature.getGroupID() ||
-            !featuresFirstRegionByGroupID.contains(*feature.getGroupID()) ||
+        if (!feature.getParentID() ||
+            !featuresFirstRegionByGroupID.contains(*feature.getParentID()) ||
             !boundingRegions.second.contains(feature.getGenomicRegion().getStart())) {
             continue;
         }
 
-        auto partnerFeature = featuresFirstRegionByGroupID.at(*feature.getGroupID());
+        auto partnerFeature = featuresFirstRegionByGroupID.at(*feature.getParentID());
 
         if (feature.getGenomicRegion().getStrand() !=
             partnerFeature.getGenomicRegion().getStrand()) {
@@ -84,7 +84,7 @@ auto SplicingEvaluationStep::groupedFeaturePairsEncloseAdditonalFeatureFromGroup
 
         for (const GenomicFeature &enclosedFeature : config.featureAnnotator->overlappingFeatureIt(
                  enclosingRegion, config.featureOrientation)) {
-            if (enclosedFeature.getGroupID() == featurePair.first.getGroupID()) {
+            if (enclosedFeature.getParentID() == featurePair.first.getParentID()) {
                 return true;
             }
         }

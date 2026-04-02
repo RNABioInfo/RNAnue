@@ -3,8 +3,11 @@
 #include <cstddef>
 #include <string>
 #include <string_view>
+#include <unordered_set>
 
 namespace constants::pipelines {
+const std::string SUBCALL_PARAMETER_KEY = "subcall";
+
 const std::string PREPROCESS = "preprocess";
 const std::string ALIGN = "align";
 const std::string DETECT = "detect";
@@ -47,6 +50,8 @@ constexpr size_t defaultAlignAccuracy = 90;
 constexpr size_t defaultMinFragmentScore = 18;
 constexpr size_t defaultMinFragmentLength = 20;
 constexpr size_t defaultMinSpliceCoverage = 80;
+constexpr std::string_view maskedAnnotationFileName = "masked_annotations.gtf";
+constexpr std::string_view maskedReferenceGenomeFileName = "masked_reference_genome.fa";
 
 // Detect defaults
 constexpr size_t defaultMinMapq = 0;
@@ -64,7 +69,34 @@ constexpr size_t defaultMinClusterCount = 1;
 }  // namespace constants::pipelines
 
 namespace constants::annotation {
-constexpr size_t exptectedGffFileTokenCount = 9;
+inline static const std::unordered_set<std::string> defaultAllTranscriptTypes{"antisense_RNA",
+                                                                              "C_gene_segment",
+                                                                              "D_gene_segment",
+                                                                              "exon",
+                                                                              "five_prime_UTR",
+                                                                              "telomerase_RNA",
+                                                                              "three_prime_UTR",
+                                                                              "gene",
+                                                                              "J_gene_segment",
+                                                                              "lnc_RNA",
+                                                                              "miRNA",
+                                                                              "mRNA",
+                                                                              "primary_transcript",
+                                                                              "pseudogene",
+                                                                              "RNase_MRP_RNA",
+                                                                              "RNase_P_RNA",
+                                                                              "rRNA",
+                                                                              "scaRNA",
+                                                                              "scRNA",
+                                                                              "snoRNA",
+                                                                              "snRNA",
+                                                                              "transcript",
+                                                                              "tmRNA",
+                                                                              "tRNA",
+                                                                              "vault_RNA",
+                                                                              "V_gene_segment",
+                                                                              "Y_RNA"};
+constexpr size_t expectedAnnotationFileTokenCount = 9;
 constexpr size_t strandTokenColumn = 6;
 }  // namespace constants::annotation
 

@@ -34,6 +34,7 @@
 #include "IITree.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
+#include "ReferenceIndexMapping.hpp"
 #include "SamRecord.hpp"
 
 namespace annotation {
@@ -72,14 +73,14 @@ auto loadReferenceIDToIndexMap(const std::vector<fs::path> &samFilePaths) -> Ref
     return referenceToIndex;
 }
 
-FeatureAnnotator::FeatureAnnotator(fs::path &featureFilePath,
+FeatureAnnotator::FeatureAnnotator(const fs::path &featureFilePath,
                                    const ReferenceIDToIndexMap &referenceIDToIndex,
                                    const std::unordered_set<std::string> &includedFeatures,
                                    const std::string &featureIDFlag) noexcept
     : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
                                          featureIDFlag)) {}
 
-FeatureAnnotator::FeatureAnnotator(fs::path &featureFilePath,
+FeatureAnnotator::FeatureAnnotator(const fs::path &featureFilePath,
                                    const ReferenceIDToIndexMap &referenceIDToIndex,
                                    const std::unordered_set<std::string> &includedFeatures) noexcept
     : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
@@ -112,8 +113,12 @@ auto FeatureAnnotator::buildFeatureTreeMap(const fs::path &featureFilePath,
                                            const std::unordered_set<std::string> &includedFeatures,
                                            const std::optional<std::string> &featureIDFlag)
     -> FeatureTreeMap {
-    return buildFeatureTreeMap(
-        FeatureParser(includedFeatures, featureIDFlag).parse(featureFilePath, referenceIDToIndex));
+    auto indexMapping = ReferenceIndexMapping{referenceIDToIndex, MissingReferencePolicy::Reject};
+
+    auto flatMap =
+        FeatureParser{includedFeatures, featureIDFlag}.parseFlatMap(featureFilePath, indexMapping);
+
+    return buildFeatureTreeMap(flatMap);
 }
 
 auto FeatureAnnotator::featureCount() const noexcept -> size_t {

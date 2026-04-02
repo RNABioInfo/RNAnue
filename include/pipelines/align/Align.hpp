@@ -6,6 +6,7 @@
 #include <filesystem>
 #include <optional>
 #include <string>
+#include <utility>
 #include <vector>
 
 // Boost
@@ -24,7 +25,7 @@ extern "C" {
 #include "AlignParameters.hpp"
 #include "AlignSample.hpp"
 
-// Samtools derived elements
+// samtools derived elements
 extern "C" {
 using SamOrder = enum {
     Coordinate,
@@ -44,7 +45,7 @@ namespace pipelines::align {
 
 class Align {
    public:
-    explicit Align(AlignParameters params) : parameters(params) {};
+    explicit Align(AlignParameters params) : parameters(std::move(params)) {};
 
     void process(const AlignData &data);
 
@@ -54,12 +55,15 @@ class Align {
 
     [[nodiscard]] auto threadsAdaptedToEntries(const fs::path &inputPath) const -> size_t;
 
+    void preprocessReferences();
+
     void processSample(const AlignSampleType &sample);
 
     void processSingleEnd(const AlignSampleSingle &sample);
     void processMergedPairedEnd(const AlignSampleMergedPaired &sample);
 
-    auto findIndex(const fs::path &referenceGenomePath) const -> std::optional<fs::path>;
+    [[nodiscard]] auto findIndex(const fs::path &referenceGenomePath) const
+        -> std::optional<fs::path>;
 
     void buildIndex();
 

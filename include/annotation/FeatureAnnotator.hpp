@@ -61,7 +61,8 @@ class FeatureAnnotator {
      * @param includedFeatures Set of feature names to include.
      * @param featureIDFlag Feature identifier flag.
      */
-    FeatureAnnotator(fs::path& featureFilePath, const ReferenceIDToIndexMap& referenceIDToIndex,
+    FeatureAnnotator(const fs::path& featureFilePath,
+                     const ReferenceIDToIndexMap& referenceIDToIndex,
                      const std::unordered_set<std::string>& includedFeatures,
                      const std::string& featureIDFlag) noexcept;
     /**
@@ -71,7 +72,8 @@ class FeatureAnnotator {
      * @param referenceIDToIndex Pre-built mapping from reference IDs to indices.
      * @param includedFeatures Set of feature names to include.
      */
-    FeatureAnnotator(fs::path& featureFilePath, const ReferenceIDToIndexMap& referenceIDToIndex,
+    FeatureAnnotator(const fs::path& featureFilePath,
+                     const ReferenceIDToIndexMap& referenceIDToIndex,
                      const std::unordered_set<std::string>& includedFeatures) noexcept;
     /**
      * @brief Construct a Feature Annotator object using an in-memory feature map.

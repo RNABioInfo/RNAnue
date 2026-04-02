@@ -18,6 +18,8 @@ namespace pipelines::align {
 
 struct AlignParameters : public GeneralParameters {
     std::filesystem::path referenceGenome;
+    bool maskMultiCopyGenes;
+    double minMultiCopyIdentity;
     bool multimapAlignments;
     size_t minLengthThreshold;
     size_t accuracy;

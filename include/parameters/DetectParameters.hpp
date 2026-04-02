@@ -41,7 +41,7 @@ struct DetectParameters : public GeneralParameters {
           maxHybridizationEnergy(DetectOptions::maxEnergy.extractValue(params)),
           excludeSoftClipping(DetectOptions::excludeSoftClipping.extractValue(params)),
           removeSplicingEvents(DetectOptions::filterSplicing.extractValue(params)),
-          removeAlternativeSplicing(DetectOptions::allowAltSplicing.extractValue(params)),
+          removeAlternativeSplicing(DetectOptions::removeAltSplicing.extractValue(params)),
           splicingTolerance(DetectOptions::splicingTolerance.extractValue(params)),
           includeWobbleBasePairsInCrosslinkingSites(
               DetectOptions::includeWobble.extractValue(params)),

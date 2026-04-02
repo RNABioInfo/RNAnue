@@ -3,6 +3,7 @@
 // Standard
 #include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <filesystem>
 #include <optional>
 #include <string>
@@ -10,6 +11,9 @@
 #include <vector>
 
 // segmehl
+#include "AnnotationFilePicker.hpp"
+#include "GenomePreprocessor.hpp"
+#include "ReferenceGenomeFilePicker.hpp"
 #include "hts.h"
 #include "segemehl.h"
 
@@ -27,6 +31,8 @@ namespace pipelines::align {
 void Align::process(const AlignData &data) {
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
+    preprocessReferences();
+
     for (const auto &sample : data.treatmentSamples) {
         processSample(sample);
     }
@@ -40,6 +46,25 @@ void Align::process(const AlignData &data) {
     for (const auto &sample : *data.controlSamples) {
         processSample(sample);
     }
+}
+
+void Align::preprocessReferences() {
+    // We do not need to do preprocessing if we do not mask multi-copy genes
+    if (!parameters.maskMultiCopyGenes) {
+        return;
+    }
+
+    const auto genomePreprocessor = GenomePreprocessor{parameters};
+    const GenomePreprocessor::Output genomePreprocessingOutput = {
+        .preprocessedGenomePath = utility::ReferenceGenomeFilePicker::maskedFilePath(parameters),
+        .preprocessedAnnotationPath = utility::AnnotationFilePicker::maskedFilePath(parameters)};
+
+    genomePreprocessor.process(
+        {.refGenomePath = parameters.referenceGenome, .annotationPath = parameters.featuresInPath},
+        genomePreprocessingOutput);
+
+    parameters.referenceGenome = genomePreprocessingOutput.preprocessedGenomePath;
+    parameters.featuresInPath = genomePreprocessingOutput.preprocessedAnnotationPath;
 }
 
 void Align::processSample(const AlignSampleType &sample) {

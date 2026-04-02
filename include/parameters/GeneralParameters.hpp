@@ -15,6 +15,7 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
+#include "AlignData.hpp"
 #include "GeneralOptions.hpp"
 #include "GenomicOrientation.hpp"
 #include "LogLevel.hpp"
@@ -29,6 +30,8 @@ class GeneralParameters {
     std::filesystem::path featuresInPath;
     std::unordered_set<std::string> featureTypes;
     dataTypes::GenomicOrientation featureOrientation;
+    bool maskMultiCopyGenes;
+    double minMultiCopyIdentity;
 
     LogLevel logLevel;
 
@@ -43,6 +46,8 @@ class GeneralParameters {
           featuresInPath(GeneralOptions::featuresPath.extractValue(params)),
           featureTypes(validateFeatureTypes(params)),
           featureOrientation(GeneralOptions::featureOrientation.extractValue(params)),
+          maskMultiCopyGenes(GeneralOptions::maskMultiCopyGenes.extractValue(params)),
+          minMultiCopyIdentity(GeneralOptions::minMultiCopyIdentity.extractValue(params)),
           logLevel(GeneralOptions::logLevel.extractValue(params)),
           threadCount(GeneralOptions::threads.extractValue(params)),
           chunkSize(GeneralOptions::chunkSize.extractValue(params)) {};
