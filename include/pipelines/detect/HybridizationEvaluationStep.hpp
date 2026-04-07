@@ -6,6 +6,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <iterator>
 #include <optional>
 
@@ -13,6 +14,7 @@
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
 #include <seqan3/alphabet/structure/dot_bracket3.hpp>
 #include <seqan3/io/sam_file/sam_tag_dictionary.hpp>
+#include <string>
 #include <variant>
 #include <vector>
 
@@ -141,12 +143,15 @@ struct HybridizationEvaluationStepMetrics {
         auto plotter = plotting::FigurePlotter(plotting::FigureConfig::makeDefault(
             "Hybridization Metrics of all Chimeric Hits", outDir));
 
+        const size_t considered = passedCount + failedCount;
+        const std::string n_label = std::format("N considered: {}", considered);
+
         // Failed Passed Plot
         std::vector<std::vector<size_t>> failedPassed = {{failedCount}, {passedCount}};
         plotter.addStackedBar<size_t>(
             {.title = "Failed / Passed Hit Groups", .xlabel = "Sample", .ylabel = "Count"},
             {.data = failedPassed,
-             .legendTitle = "Evalutation Result",
+             .legendTitle = "Evaluation Result",
              .legendLabels = {"Passed", "Failed"},
              .groupLabels = std::nullopt});
 
@@ -157,16 +162,17 @@ struct HybridizationEvaluationStepMetrics {
              .ylabel = "Intermolecular Crosslink Count"},
             {.x_vals = mfeValues, .y_vals = y_vals, .datapointLabel = "Hit Group"});
 
-        plotter.addHistogram<double>({.title = "Minimum Free Energy Scores",
-                                      .xlabel = "Minimum Free Energy",
-                                      .ylabel = "Count"},
-                                     plotting::HistogramData{.data = mfeValues,
-                                                             .datapointLabel = "Hit Groups",
-                                                             .cutoffLabel = "Max: ",
-                                                             .cutoffValue = config.mfeThreshold});
+        plotter.addHistogram<double>(
+            {.title = std::format("Minimum Free Energy Scores ({})", n_label),
+             .xlabel = "Minimum Free Energy",
+             .ylabel = "Count"},
+            plotting::HistogramData{.data = mfeValues,
+                                    .datapointLabel = "Hit Groups",
+                                    .cutoffLabel = "Max: ",
+                                    .cutoffValue = config.mfeThreshold});
 
         plotter.addHistogram<size_t>(
-            {.title = "Predicted Crosslinking Sites",
+            {.title = std::format("Predicted Crosslinking Sites ({})", n_label),
              .xlabel = "Crosslinking Count",
              .ylabel = "Count"},
             plotting::HistogramData{.data = getInterCrosslinkingCounts<size_t>(),

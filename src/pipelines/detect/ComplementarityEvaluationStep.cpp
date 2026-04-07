@@ -5,9 +5,11 @@
 #include <cstddef>
 #include <cstdint>
 #include <filesystem>
+#include <format>
 #include <functional>
 #include <optional>
 #include <ranges>
+#include <string>
 #include <tuple>
 #include <vector>
 
@@ -19,7 +21,6 @@
 // Internal
 #include "CoOptimalPairwiseAligner.hpp"
 #include "FigurePlotter.hpp"
-#include "FileFormat.hpp"
 #include "SplitRecords.hpp"
 #include "UnderlyingSequence.hpp"
 
@@ -56,12 +57,15 @@ void ComplementarityEvaluationStepMetrics::createPlots(const fs::path &outDir) c
     auto plotter = plotting::FigurePlotter(plotting::FigureConfig::makeDefault(
         "Complementarity Metrics of all Chimeric Hits", {outDir}));
 
+    const size_t considered = passedCount + failedCount;
+    const std::string n_label = std::format("N considered: {}", considered);
+
     // Failed Passed Plot
     std::vector<std::vector<size_t>> failedPassed = {{failedCount}, {passedCount}};
     plotter.addStackedBar<size_t>(
         {.title = "Failed / Passed Hit Groups", .xlabel = "Sample", .ylabel = "Count"},
         {.data = failedPassed,
-         .legendTitle = "Evalutation Result",
+         .legendTitle = "Evaluation Result",
          .legendLabels = {"Passed", "Failed"},
          .groupLabels = std::nullopt});
 
@@ -74,16 +78,17 @@ void ComplementarityEvaluationStepMetrics::createPlots(const fs::path &outDir) c
                                {.x_vals = x_vals, .y_vals = y_vals, .datapointLabel = "Hit Group"});
 
     // Complementarity Plot
-    plotter.addHistogram<float>({.title = "Alignment Complementarity Scores",
-                                 .xlabel = "Fraction of Matched vs. Alignment Length",
-                                 .ylabel = "Count"},
-                                plotting::HistogramData{.data = complementarityScores,
-                                                        .datapointLabel = "Hit Groups",
-                                                        .cutoffLabel = "Min: ",
-                                                        .cutoffValue = config.minComplementarity});
+    plotter.addHistogram<float>(
+        {.title = std::format("Alignment Complementarity Scores ({})", n_label),
+         .xlabel = "Fraction of Matched vs. Alignment Length",
+         .ylabel = "Count"},
+        plotting::HistogramData{.data = complementarityScores,
+                                .datapointLabel = "Hit Groups",
+                                .cutoffLabel = "Min: ",
+                                .cutoffValue = config.minComplementarity});
 
     // Fraction Plot
-    plotter.addHistogram<float>({.title = "Fraction Matched Scores",
+    plotter.addHistogram<float>({.title = std::format("Fraction Matched Scores ({})", n_label),
                                  .xlabel = "Fraction of Matched vs. Shortest Record Length",
                                  .ylabel = "Count"},
                                 plotting::HistogramData{.data = fractionScores,

@@ -147,7 +147,7 @@ struct SegemehlReadGroupPreprocessor {
         std::unordered_map<int, SegemehlHitGroupConstructor> hitGroupConstructorByTag;
         hitGroupConstructorByTag.reserve(readGroup.size());
 
-        for (SamRecord record : std::move(readGroup)) {
+        for (auto&& record : std::move(readGroup)) {
             assert(record.tags().contains("HI"_tag));
             const int hitGroupTag = record.tags().get<"HI"_tag>();
 

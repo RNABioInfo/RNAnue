@@ -35,7 +35,7 @@ auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) 
     const auto &record2 = splitRecords.second();
 
     const auto sequence1View = record1.sequence() | views::underlying_sequence(record1.flag());
-    const auto sequence2View = record2.sequence() | views::underlying_sequence(record1.flag());
+    const auto sequence2View = record2.sequence() | views::underlying_sequence(record2.flag());
 
     auto toString = [](const auto &seq) {
         return (seq | seqan3::views::to_char | seqan3::ranges::to<std::string>());

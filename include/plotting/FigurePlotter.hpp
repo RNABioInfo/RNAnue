@@ -37,7 +37,8 @@ struct FigureConfig {
     size_t widthPixel;
     size_t heightPixel;
 
-    size_t maxDatapointsPerPlot;
+    size_t maxDataPointsPerScatterPlot;
+    size_t maxDataPointsPerHistogram;
 
     std::string_view fileFormat;
     fs::path outDirPath;
@@ -46,7 +47,8 @@ struct FigureConfig {
         return FigureConfig{.title = title,
                             .widthPixel = defaults::widthPixel,
                             .heightPixel = defaults::heightPixel,
-                            .maxDatapointsPerPlot = defaults::maxDatapointsPerPlot,
+                            .maxDataPointsPerScatterPlot = defaults::maxDataPointsPerScatterPlot,
+                            .maxDataPointsPerHistogram = defaults::maxDataPointsPerHistogram,
                             .fileFormat = defaults::fileFormat,
                             .outDirPath = outDirPath};
     }
@@ -121,7 +123,7 @@ class FigurePlotter {
 
         for (const auto& data : {datas...}) {
             const auto values =
-                subsample(data.data, this->config.maxDatapointsPerPlot, randomDevice);
+                subsample(data.data, this->config.maxDataPointsPerHistogram, randomDevice);
             auto plot = axes->hist(values, matplot::histogram::binning_algorithm::fd);
             plot->face_alpha(face_alpha);
             datapointLabels.push_back(data.datapointLabel);
@@ -140,7 +142,7 @@ class FigurePlotter {
     template <NumericType T>
     void addScatter(const PlotConfig& config, const ScatterData<T>& data) {
         const auto [x_vals, y_vals] =
-            subsample(data.x_vals, data.y_vals, this->config.maxDatapointsPerPlot);
+            subsample(data.x_vals, data.y_vals, this->config.maxDataPointsPerScatterPlot);
         auto axes = addAxes();
 
         constexpr double dotSize = 3;
