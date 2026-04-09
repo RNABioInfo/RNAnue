@@ -135,7 +135,7 @@ class GeneCopyMasker {
 
         addNewCluster(seqan3::dna5_vector{querySequence.begin(), querySequence.end()}, group);
 
-        return true;
+        return false;
     };
 
     template <typename TAlignmentConfig>
