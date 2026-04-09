@@ -1,18 +1,25 @@
 #pragma once
 
 #include <algorithm>
+#include <cstddef>
 #include <iterator>
 #include <random>
+#include <ranges>
+#include <vector>
 
 template <typename T>
 [[nodiscard]] auto subsample(const std::vector<T>& input, size_t count, std::mt19937& randomDevice)
     -> std::vector<T> {
-    std::vector<T> subsampledData;
-    subsampledData.reserve(count);
-    std::sample(input.begin(), input.end(), std::back_inserter(subsampledData),
+    if (input.size() <= count) {
+        return input;
+    }
+
+    std::vector<T> subsampleData;
+    subsampleData.reserve(count);
+    std::sample(input.begin(), input.end(), std::back_inserter(subsampleData),
                 static_cast<int>(count), randomDevice);
 
-    return subsampledData;
+    return subsampleData;
 }
 
 template <std::ranges::random_access_range R1, std::ranges::random_access_range R2>

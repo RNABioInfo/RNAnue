@@ -67,7 +67,7 @@ struct SegemehlReadGroupPreprocessorMetrics {
             {.title = "Failed / Passed Read Groups", .xlabel = "Sample", .ylabel = "Count"},
             {.data = {{passedReadGroupCount}, {totalFailReadGroupCount}},
              .legendTitle = "Status",
-             .legendLabels = {"Failed", "Passed"},
+             .legendLabels = {"Passed", "Failed"},
              .groupLabels = std::nullopt});
 
         plotter.addScatter<size_t>({.title = "Passed vs. Failed Hit Groups per Read Group",
