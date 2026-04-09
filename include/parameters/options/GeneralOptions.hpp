@@ -62,7 +62,7 @@ struct GeneralOptions {
             {.shortName = std::nullopt, .longName = "orientation"},
             "orientation of the reads in relation to RNA sequences (strand-specific sequencing). Non strand-specific setting (both) disables nrgmax filtering. [same, opposite, both]"sv};
     static constexpr DefaultedParameterOption<bool, true> maskMultiCopyGenes{
-        {.shortName = std::nullopt, .longName = "maskmulitcopy"},
+        {.shortName = std::nullopt, .longName = "maskmulticopy"},
         "mask multi-copy genes, only keeping one transcript per gene"sv};
 
     static constexpr ArithmeticParameterOption<double, 0.99, {.lowerBound = 0.0, .upperBound = 1.0}>
