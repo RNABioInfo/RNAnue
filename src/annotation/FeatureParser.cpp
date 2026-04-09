@@ -78,9 +78,10 @@ auto FeatureParser::parseFlatAndGrouped(const fs::path& featureFilePath,
     const auto includedText = buildIncludedFeatureTypesText(includedFeatures);
 
     if (stats.parsedCount == 0) {
-        Logger::log<LogLevel::WARNING>(std::format(
-            "No features parsed from file {}. Check your feature file and included features flag.",
-            featureFilePath.string()));
+        Logger::log<LogLevel::WARNING>(
+            std::format("No features parsed from file {}. Check your feature file and included "
+                        "features flag: {}",
+                        featureFilePath.string(), includedText));
         return result;
     }
 
@@ -311,11 +312,13 @@ auto FeatureParser::tryParseFeature(const ColumnViews& columns, const ParseSetti
     const auto coordOpt =
         tryParseCoordinates(CoordinateTokens{.startToken = cols[3], .endToken = cols[4]});
     if (!coordOpt) {
+        Logger::log<LogLevel::WARNING>("Could not parse coordinates for feature.");
         return std::nullopt;
     }
 
     const auto strandOpt = tryParseStrand(cols[strandTokenColumn]);
     if (!strandOpt) {
+        Logger::log<LogLevel::WARNING>("Could not parse strand for feature.");
         return std::nullopt;
     }
 
@@ -327,6 +330,7 @@ auto FeatureParser::tryParseFeature(const ColumnViews& columns, const ParseSetti
     });
 
     if (!attrs.identifier) {
+        Logger::log<LogLevel::WARNING>(std::format("Could not parse identifier for feature."));
         return std::nullopt;
     }
 
