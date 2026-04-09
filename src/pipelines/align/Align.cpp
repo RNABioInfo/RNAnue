@@ -49,8 +49,8 @@ void Align::process(const AlignData &data) {
 }
 
 void Align::preprocessReferences() {
-    // We do not need to do preprocessing if we do not mask multi-copy genes
     if (!parameters.maskMultiCopyGenes) {
+        Logger::log("Gene copy masking disabled.");
         return;
     }
 
@@ -63,6 +63,7 @@ void Align::preprocessReferences() {
         {.refGenomePath = parameters.referenceGenome, .annotationPath = parameters.featuresInPath},
         genomePreprocessingOutput);
 
+    Logger::log("Replacing provided reference genome and annotation with masked.");
     parameters.referenceGenome = genomePreprocessingOutput.preprocessedGenomePath;
     parameters.featuresInPath = genomePreprocessingOutput.preprocessedAnnotationPath;
 }

@@ -64,7 +64,6 @@ class GeneCopyMasker {
 
     [[nodiscard]] auto process() -> Result {
         if (!parameters.maskMultiCopyGenes) {
-            Logger::log("Gene copy masking disabled.");
             return Result{.maskedGenome = std::move(maskedGenome),
                           .maskedClusters = std::move(clusters)};
         }
