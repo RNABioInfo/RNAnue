@@ -5,6 +5,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <cstdio>
+#include <format>
 #include <iterator>
 #include <limits>
 #include <optional>
@@ -27,6 +28,8 @@
 #include "GenomicFeature.hpp"
 #include "GenomicFeatureGroup.hpp"
 #include "GenomicRegion.hpp"
+#include "LogLevel.hpp"
+#include "Logger.hpp"
 #include "MaskedFeatureCluster.hpp"
 #include "ReferenceGenome.hpp"
 #include "seqan3/alignment/configuration/align_config_min_score.hpp"
@@ -61,19 +64,28 @@ class GeneCopyMasker {
 
     [[nodiscard]] auto process() -> Result {
         if (!parameters.maskMultiCopyGenes) {
+            Logger::log("Gene copy masking disabled.");
             return Result{.maskedGenome = std::move(maskedGenome),
                           .maskedClusters = std::move(clusters)};
         }
 
+        Logger::log(
+            std::format("Starting gene copy masking for {} features.", featureGroups.size()));
         const auto alignmentConfig = seqan3::align_cfg::method_global{} |
                                      seqan3::align_cfg::edit_scheme |
                                      seqan3::align_cfg::output_score{};
 
         clusters.reserve(featureGroups.size());
 
+        size_t numMasked = 0;
+
         for (auto& group : std::views::values(featureGroups)) {
-            maskGroupIfCopy(group, alignmentConfig);
+            if (maskGroupIfCopy(group, alignmentConfig)) {
+                ++numMasked;
+            };
         }
+
+        Logger::log(std::format("Masked {} features.", numMasked));
 
         return Result{.maskedGenome = std::move(maskedGenome),
                       .maskedClusters = std::move(clusters)};
@@ -95,14 +107,16 @@ class GeneCopyMasker {
     std::unordered_map<std::size_t, std::vector<std::size_t>> clusterIndicesByLength;
 
     template <typename TAlignmentConfig>
-    auto maskGroupIfCopy(dataTypes::GenomicFeatureGroup& group,
-                         TAlignmentConfig const& alignmentConfig) -> void {
+    [[nodiscard]] auto maskGroupIfCopy(dataTypes::GenomicFeatureGroup& group,
+                                       TAlignmentConfig const& alignmentConfig) -> bool {
         const auto& rootFeature = group.getRoot().feature;
         const auto rootRegion = rootFeature.getGenomicRegion();
 
         const auto querySequence = extractRegionSequenceSpan(rootRegion);
         if (querySequence.empty()) {
-            return;
+            Logger::log<LogLevel::WARNING>(
+                std::format("Found empty query sequence for {}", rootFeature.getAnnotationID()));
+            return false;
         }
 
         const auto currentLength = querySequence.size();
@@ -114,10 +128,12 @@ class GeneCopyMasker {
                 querySequence, minCandidateLength, maxCandidateLength, alignmentConfig);
             matchedClusterIndex.has_value()) {
             registerClusterMatch(clusters[*matchedClusterIndex], group);
-            return;
+            return true;
         }
 
         addNewCluster(seqan3::dna5_vector{querySequence.begin(), querySequence.end()}, group);
+
+        return true;
     };
 
     template <typename TAlignmentConfig>
