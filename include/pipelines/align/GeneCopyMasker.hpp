@@ -126,6 +126,9 @@ class GeneCopyMasker {
         if (const auto matchedClusterIndex = findMatchingClusterIndex(
                 querySequence, minCandidateLength, maxCandidateLength, alignmentConfig);
             matchedClusterIndex.has_value()) {
+            Logger::log<LogLevel::DEBUG>(
+                std::format("Found match at index: {}, for feature group: {}", *matchedClusterIndex,
+                            group.getRoot().feature.getAnnotationID()));
             registerClusterMatch(clusters[*matchedClusterIndex], group);
             return true;
         }
@@ -170,11 +173,16 @@ class GeneCopyMasker {
         const auto allowedEdits =
             maxAllowedEdits(currentLength, candidateLength, parameters.minMultiCopyIdentity);
 
+        Logger::log<LogLevel::DEBUG>(std::format(
+            "Computing edit distance with settings. requiredEditsByLength: {}, allowedEdits: {}",
+            requiredEditsByLength, allowedEdits));
+
         if (requiredEditsByLength > allowedEdits) {
             return false;
         }
 
         if (std::ranges::equal(cluster.baseSequence, currentSequence)) {
+            Logger::log<LogLevel::DEBUG>("Got exact match for sequences.");
             return true;
         }
 
@@ -186,6 +194,9 @@ class GeneCopyMasker {
         }
 
         const auto identity = editDistanceToIdentity(*editCountOpt, currentLength, candidateLength);
+
+        Logger::log<LogLevel::DEBUG>(std::format("Gene identity is {}, min identity is {}",
+                                                 identity, parameters.minMultiCopyIdentity));
 
         return identity >= parameters.minMultiCopyIdentity;
     }
