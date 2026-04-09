@@ -15,7 +15,6 @@
 #include <boost/program_options/variables_map.hpp>
 
 // Internal
-#include "AlignData.hpp"
 #include "GeneralOptions.hpp"
 #include "GenomicOrientation.hpp"
 #include "LogLevel.hpp"
