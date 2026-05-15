@@ -54,6 +54,14 @@ class DefaultedParameterOption : public ParameterOption<T> {
         return std::string{this->description} + " (default: " + std::to_string(defaultValue) + ")";
     }
 
+    [[nodiscard]] auto getInverseDescription() const -> std::string {
+        if (!this->names.inverseDescription.empty()) {
+            return std::string{this->names.inverseDescription};
+        }
+
+        return "set " + this->names.longName + " to false";
+    }
+
     /**
      * @brief Adds the parameter option with its default value to a Boost options_description.
      *
@@ -62,8 +70,17 @@ class DefaultedParameterOption : public ParameterOption<T> {
     auto addOptionTo(po::options_description& optionsDescription) const noexcept -> void override {
         if constexpr (std::is_same_v<T, bool>) {
             optionsDescription.add_options()(this->names.optionsName().data(),
-                                             po::bool_switch()->default_value(defaultValue),
+                                             po::value<bool>()
+                                                 ->default_value(defaultValue)
+                                                 ->implicit_value(true),
                                              getDescription().data());
+
+            if (this->names.hasInverseName()) {
+                optionsDescription.add_options()(
+                    this->names.inverseLongName.data(),
+                    po::bool_switch()->default_value(false),
+                    getInverseDescription().data());
+            }
         } else if constexpr (std::is_floating_point_v<T>) {
             optionsDescription.add_options()(
                 this->names.optionsName().data(),
@@ -74,5 +91,19 @@ class DefaultedParameterOption : public ParameterOption<T> {
                                              po::value<T>()->default_value(defaultValue),
                                              getDescription().data());
         }
+    }
+
+    [[nodiscard]] auto extractValue(const po::variables_map& variables) const -> T override {
+        auto value = ParameterOption<T>::extractValue(variables);
+
+        if constexpr (std::is_same_v<T, bool>) {
+            if (this->names.hasInverseName() &&
+                variables.contains(std::string{this->names.inverseLongName}) &&
+                variables.at(std::string{this->names.inverseLongName}).template as<bool>()) {
+                return false;
+            }
+        }
+
+        return value;
     }
 };

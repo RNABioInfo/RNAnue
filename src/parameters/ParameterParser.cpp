@@ -71,13 +71,18 @@ auto ParameterParser::parseParameters(int argc,
     const po::positional_options_description positionalOptions{getPositionalOptions()};
 
     po::variables_map params;
-    store(po::command_line_parser(argc, argv)
-              .options(commandLineOptions)
-              .positional(positionalOptions)
-              .run(),
-          params);
+    try {
+        store(po::command_line_parser(argc, argv)
+                  .options(commandLineOptions)
+                  .positional(positionalOptions)
+                  .run(),
+              params);
 
-    notify(params);
+        notify(params);
+    } catch (const po::error &error) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not parse command line: ",
+                                                            std::string{error.what()});
+    }
 
     printVersion();
 
@@ -119,8 +124,13 @@ void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
             "Configuration file could not be opened!");
     }
 
-    po::store(po::parse_config_file(configIn, configFileOptions), params);
-    notify(params);
+    try {
+        po::store(po::parse_config_file(configIn, configFileOptions), params);
+        notify(params);
+    } catch (const po::error &error) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Could not parse configuration file: ", std::string{error.what()});
+    }
 }
 
 auto ParameterParser::getCommandLineOptions() -> po::options_description {

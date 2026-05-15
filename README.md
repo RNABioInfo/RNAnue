@@ -43,7 +43,7 @@ singularity exec --bind /path/to/data:/data rnanue_latest.sif RNAnue <subcall> -
 
 #### Prerequisites
 
-To build RNAnue, you need `cmake (>=v2.24.0)`.
+To build RNAnue, you need `cmake (>=v3.24.0)` and oneTBB.
 If you need to compile ViennaRNA, you also need `autoconf`, `automake`, and `libtool` (see [Dependencies](#dependencies)).
 
 #### Downloading
@@ -74,7 +74,7 @@ cmake --install .
 
 > **IMPORTANT – MacOS**
 > When building on macOS, you need to specify the GCC compiler to avoid using AppleClang:
-> `CMAKE_CXX_COMPILER=<path-to-g++> CMAKE_CC_COMPILER=<path-to-gcc> cmake ..`
+> `cmake -DCMAKE_CXX_COMPILER=<path-to-g++> -DCMAKE_C_COMPILER=<path-to-gcc> ..`
 
 #### Dependencies
 
@@ -138,6 +138,10 @@ RNAnue <sub-call-here> --config <params.cfg-here>
 ```
 
 In any case, the specifying parameters over the command lines has precedence over the config file.
+Boolean parameters accept explicit values on the command line, for example
+`--deduplicate=false`. Options that are enabled by default also provide clearer inverse flags,
+such as `--no-deduplicate`, `--no-preprocess`, `--no-trimpolyg`, `--no-maskmulticopy`,
+`--no-multimap`, and `--keep-altsplice`.
 
 ## Results
 

@@ -13,15 +13,16 @@ inline auto maskedFilePath(const GeneralParameters& params) -> std::filesystem::
     return alignOutputDir / constants::pipelines::maskedReferenceGenomeFileName;
 }
 
-inline auto getFile(const GeneralParameters& params) -> std::filesystem::path {
-    // Check if masked annotation file exists in align output
-    auto alignOutputDir = params.outputDir / pipelines::align::pipelinePrefix;
+template <typename Parameters>
+inline auto getFile(const Parameters& params) -> std::filesystem::path {
+    if (!params.maskMultiCopyGenes) {
+        return params.referenceGenome;
+    }
 
-    auto maskedReferenceGenomeFile =
-        alignOutputDir / constants::pipelines::maskedReferenceGenomeFileName;
+    auto maskedReferenceGenomeFile = maskedFilePath(params);
 
     if (!std::filesystem::exists(maskedReferenceGenomeFile)) {
-        return params.featuresInPath;
+        return params.referenceGenome;
     }
 
     return maskedReferenceGenomeFile;

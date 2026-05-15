@@ -49,7 +49,10 @@ struct DetectOptions {
         "splicing events are removed in the detection of split reads"sv};
 
     static constexpr DefaultedParameterOption<bool, true> removeAltSplicing{
-        {.shortName = std::nullopt, .longName = "altsplice"},
+        {.shortName = std::nullopt,
+         .longName = "altsplice",
+         .inverseLongName = "keep-altsplice",
+         .inverseDescription = "keep alternative splicing events"},
         "remove alternative splicing events"sv};
 
     static constexpr DefaultedParameterOption<int, 5> splicingTolerance{

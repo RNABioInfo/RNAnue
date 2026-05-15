@@ -14,7 +14,10 @@ inline auto maskedFilePath(const GeneralParameters& params) -> std::filesystem::
 }
 
 inline auto getFile(const GeneralParameters& params) -> std::filesystem::path {
-    // Check if masked annotation file exists in align output
+    if (!params.maskMultiCopyGenes) {
+        return params.featuresInPath;
+    }
+
     auto maskedAnnotationFile = maskedFilePath(params);
 
     if (!std::filesystem::exists(maskedAnnotationFile)) {

@@ -1,17 +1,77 @@
 cmake_minimum_required(VERSION 3.24)
 
+if(CMAKE_HOST_APPLE AND NOT DEFINED CMAKE_CXX_COMPILER)
+    if(DEFINED ENV{CXX} AND NOT "$ENV{CXX}" MATCHES "^/usr/bin/"
+       AND "$ENV{CXX}" MATCHES "g\\+\\+(-[0-9]+)?$")
+        if(IS_ABSOLUTE "$ENV{CXX}")
+            set(RNANUE_MACOS_GXX "$ENV{CXX}")
+        else()
+            find_program(RNANUE_MACOS_GXX
+                         NAMES "$ENV{CXX}"
+                         HINTS /opt/homebrew/bin /usr/local/bin /opt/local/bin)
+        endif()
+    else()
+        find_program(RNANUE_MACOS_GXX
+                     NAMES g++-14 g++-13 g++-12
+                     HINTS /opt/homebrew/bin /usr/local/bin /opt/local/bin)
+    endif()
+
+    if(RNANUE_MACOS_GXX)
+        set(CMAKE_CXX_COMPILER "${RNANUE_MACOS_GXX}" CACHE FILEPATH "C++ compiler" FORCE)
+
+        get_filename_component(RNANUE_MACOS_GXX_DIR "${RNANUE_MACOS_GXX}" DIRECTORY)
+        get_filename_component(RNANUE_MACOS_GXX_NAME "${RNANUE_MACOS_GXX}" NAME)
+        string(REPLACE "g++" "gcc" RNANUE_MACOS_GCC_NAME "${RNANUE_MACOS_GXX_NAME}")
+        find_program(RNANUE_MACOS_GCC
+                     NAMES "${RNANUE_MACOS_GCC_NAME}"
+                     HINTS "${RNANUE_MACOS_GXX_DIR}"
+                     NO_DEFAULT_PATH)
+
+        if(RNANUE_MACOS_GCC)
+            set(CMAKE_C_COMPILER "${RNANUE_MACOS_GCC}" CACHE FILEPATH "C compiler" FORCE)
+        endif()
+    endif()
+endif()
+
 project(RNAnue VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
-if(NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE RELEASE)
+if(APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR
+        "RNAnue requires GCC with C++23 support on macOS. Reconfigure a fresh build directory "
+        "with -DCMAKE_CXX_COMPILER=/path/to/g++ and -DCMAKE_C_COMPILER=/path/to/gcc, "
+        "or set CXX and CC before the first CMake configure step.")
 endif()
 
-set(CMAKE_CXX_FLAGS "-Wall -Wextra -Wno-psabi -Wno-interference-size")
-set(CMAKE_CXX_FLAGS_DEBUG "-g")
-set(CMAKE_CXX_FLAGS_RELEASE "-O3")
+if(APPLE AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
+    message(FATAL_ERROR
+        "RNAnue requires a GCC C compiler on macOS. Reconfigure a fresh build directory "
+        "with -DCMAKE_C_COMPILER=/path/to/gcc, or set CC before the first CMake configure step.")
+endif()
+
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    foreach(RNANUE_CXX_FLAG_VAR
+            CMAKE_CXX_FLAGS
+            CMAKE_CXX_FLAGS_DEBUG
+            CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_MINSIZEREL)
+        string(REPLACE "-stdlib=libc++" "" ${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}")
+        set(${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}" CACHE STRING "" FORCE)
+    endforeach()
+endif()
+
+if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
+    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+endif()
+
+if(CMAKE_CXX_COMPILER MATCHES "^(/opt/homebrew|/usr/local|/opt/local)/")
+    get_filename_component(RNANUE_COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+    get_filename_component(RNANUE_COMPILER_PREFIX "${RNANUE_COMPILER_BIN_DIR}" DIRECTORY)
+    list(PREPEND CMAKE_PREFIX_PATH "${RNANUE_COMPILER_PREFIX}")
+endif()
 
 # Configure header file to pass the version number to the source code
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/Config.hpp.in ${CMAKE_CURRENT_SOURCE_DIR}/include/Config.hpp)
@@ -31,6 +91,9 @@ find_package(ViennaRNA)
 
 # # # htslib
 find_package(HTSlib)
+
+# # # Intel oneTBB
+find_package(TBB REQUIRED COMPONENTS tbb)
 
 # # # bam_sort
 set(BAM_SORT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules/bam_sort)
@@ -111,6 +174,13 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Utility.cpp
 )
 
+target_compile_options(RNAnue PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall>
+    $<$<COMPILE_LANGUAGE:CXX>:-Wextra>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-psabi>
+    $<$<COMPILE_LANG_AND_ID:CXX,GNU>:-Wno-interference-size>
+)
+
 target_sources(RNAnue PRIVATE
     ${BAM_SORT_DIR}/bam_sort.c
     ${BAM_SORT_DIR}/sam_opts.c
@@ -161,6 +231,7 @@ target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
 # # # Link Libraries
 target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
                                         segemehl
+                                        TBB::tbb
                                         ${VIENNA_RNA_LIBRARY}
                                         ${Boost_LIBRARIES})
 

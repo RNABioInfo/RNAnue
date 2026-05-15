@@ -96,7 +96,8 @@ inline static const std::unordered_set<std::string> defaultAllTranscriptTypes{"a
                                                                               "vault_RNA",
                                                                               "V_gene_segment",
                                                                               "Y_RNA",
-                                                                              "TU"};
+                                                                              "TU",
+                                                                              "transcription_unit"};
 constexpr size_t expectedAnnotationFileTokenCount = 9;
 constexpr size_t strandTokenColumn = 6;
 }  // namespace constants::annotation

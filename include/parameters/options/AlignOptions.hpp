@@ -22,7 +22,11 @@ struct AlignOptions {
         {.shortName = std::nullopt, .longName = "dbref"}, "reference genome (.fasta) (required)"sv};
 
     static constexpr DefaultedParameterOption<bool, true> allowMultimap{
-        {.shortName = std::nullopt, .longName = "multimap"}, "consider multimapping alignments."sv};
+        {.shortName = std::nullopt,
+         .longName = "multimap",
+         .inverseLongName = "no-multimap",
+         .inverseDescription = "disable multimapping alignments"},
+        "consider multimapping alignments."sv};
 
     static constexpr ArithmeticParameterOption<size_t, 90, {.lowerBound = 0, .upperBound = 100}>
         accuracy{{.shortName = std::nullopt, .longName = "accuracy"},
