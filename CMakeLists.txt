@@ -93,7 +93,13 @@ find_package(ViennaRNA)
 find_package(HTSlib)
 
 # # # Intel oneTBB
-find_package(TBB REQUIRED COMPONENTS tbb)
+find_package(TBB QUIET COMPONENTS tbb)
+if(TBB_FOUND)
+    message(STATUS "Using oneTBB from system")
+else()
+    message(STATUS "Building bundled oneTBB from source")
+    include(tbb)
+endif()
 
 # # # bam_sort
 set(BAM_SORT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules/bam_sort)
@@ -236,6 +242,10 @@ target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
                                         ${Boost_LIBRARIES})
 
 target_link_libraries (RNAnue PUBLIC matplot)
+
+if(TARGET RNAnue_tbb)
+    add_dependencies(RNAnue RNAnue_tbb)
+endif()
 
 # ----------------------------------------------------------------------------
 # Testing

@@ -43,7 +43,7 @@ singularity exec --bind /path/to/data:/data rnanue_latest.sif RNAnue <subcall> -
 
 #### Prerequisites
 
-To build RNAnue, you need `cmake (>=v3.24.0)` and oneTBB.
+To build RNAnue, you need `cmake (>=v3.24.0)`.
 If you need to compile ViennaRNA, you also need `autoconf`, `automake`, and `libtool` (see [Dependencies](#dependencies)).
 
 #### Downloading
@@ -87,6 +87,7 @@ RNAnue includes the following dependencies:
 The following dependencies will be used if present on the system, otherwise they will be fetched (internet connection required):
 
 - [htslib](https://github.com/samtools/htslib.git) (v1.20)
+- [oneTBB](https://github.com/oneapi-src/oneTBB) (v2022.0.0)
 - [Vienna Package](https://www.tbi.univie.ac.at/RNA/#binary_packages) (v2.6.4)
 
 ## Overview
