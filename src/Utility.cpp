@@ -39,6 +39,7 @@
 #include "LogLevel.hpp"
 #include "Logger.hpp"
 #include "SamReference.hpp"
+#include "SamFileUtility.hpp"
 #include "seqan3/io/exception.hpp"
 
 namespace helper {
@@ -81,59 +82,89 @@ auto getUUID() -> std::string {
 }
 
 auto looks_like_bam(const fs::path& path) -> bool {
-    // 1) Exists and non-empty
-    if (!fs::exists(path) || fs::file_size(path) < 4) {
-        return false;
-    }
-
-    try {
-        seqan3::sam_file_input inputFile{path};
-
-        return std::next(inputFile.begin()) != inputFile.end();
-    } catch (...) {
-        return false;
-    }
+    return SamFileUtility::inspect(path).isReadable();
 }
 
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath,
                    const std::optional<dataTypes::SamReference>& reference) {
     Logger::log("Merging files into: ", outputPath);
 
-    if (inputPaths.empty()) {
-        Logger::log<LogLevel::WARNING>("No input files to merge");
+    std::vector<SamFileUtility::SamFileInspection> validInputs;
+    validInputs.reserve(inputPaths.size());
+
+    std::optional<dataTypes::SamReference> outputReference = reference;
+    bool hasRecordInput = false;
+
+    for (const auto& inputPath : inputPaths) {
+        auto inspection = SamFileUtility::inspect(inputPath);
+
+        if (!inspection.isReadable()) {
+            Logger::log<SourceLocation{}, LogLevel::ERROR>(
+                "Could not merge invalid SAM/BAM input: ",
+                SamFileUtility::describe(inspection), "; output=", outputPath);
+        }
+
+        if (inspection.hasMissingEof()) {
+            Logger::log<LogLevel::WARNING>(
+                "SAM/BAM input is readable but missing the BGZF EOF marker; rewriting during "
+                "merge: ",
+                SamFileUtility::describe(inspection));
+        }
+
+        if (!outputReference && inspection.hasReferenceHeader()) {
+            outputReference = inspection.reference();
+        }
+
+        hasRecordInput = hasRecordInput || inspection.hasRecords();
+        validInputs.push_back(std::move(inspection));
+    }
+
+    if (!hasRecordInput) {
+        if (!outputReference) {
+            Logger::log<SourceLocation{}, LogLevel::ERROR>(
+                "Could not merge SAM/BAM files without records or a SAM reference; output: ",
+                outputPath, "; input_count: ", inputPaths.size());
+        }
+
+        Logger::log<LogLevel::INFO>("Creating header-only SAM/BAM output: ", outputPath);
+        SamFileUtility::writeHeaderOnlyFile(outputPath, *outputReference);
         return;
     }
 
-    std::vector<fs::path> filteredPaths;
-    std::ranges::copy_if(inputPaths, std::back_inserter(filteredPaths), looks_like_bam);
-
-    if (filteredPaths.empty()) {
-        Logger::log<LogLevel::INFO>("Skipping empty or invalid BAMs with output: ", outputPath);
-
-        if (reference) {
-            seqan3::sam_file_output out{outputPath, reference->referenceIDs,
-                                        reference->referenceLengths};
-        }
-
-        return;
+    if (!outputReference) {
+        Logger::log<SourceLocation{}, LogLevel::ERROR>(
+            "Could not determine SAM/BAM reference header for merge output: ", outputPath);
     }
 
     try {
-        seqan3::sam_file_output outputFile{outputPath};
+        seqan3::sam_file_output outputFile{outputPath, outputReference->referenceIDs,
+                                           outputReference->referenceLengths};
 
-        for (const auto& inputPath : filteredPaths) {
-            if (!looks_like_bam(inputPath)) {
-                Logger::log<LogLevel::INFO>("Skipping empty or invalid BAM: " + inputPath.string());
+        for (const auto& inspection : validInputs) {
+            if (!inspection.hasRecords()) {
+                Logger::log<LogLevel::DEBUG>("Skipping header-only SAM/BAM while merging records: ",
+                                             inspection.path);
                 continue;
             }
 
-            Logger::log<LogLevel::DEBUG>("Merging: ", inputPath);
+            Logger::log<LogLevel::DEBUG>("Merging: ", inspection.path);
 
-            seqan3::sam_file_input inputFile{inputPath};
+            seqan3::sam_file_input inputFile{inspection.path};
             inputFile | outputFile;
         }
+    } catch (const std::exception& exception) {
+        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
+                                                       outputPath, "; reason: ",
+                                                       exception.what());
     } catch (...) {
-        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write sam file: ", outputPath);
+        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
+                                                       outputPath);
+    }
+
+    const auto outputInspection = SamFileUtility::inspect(outputPath);
+    if (!outputInspection.isReadable() || outputInspection.hasMissingEof()) {
+        Logger::log<SourceLocation{}, LogLevel::ERROR>(
+            "Merged SAM/BAM output is invalid: ", SamFileUtility::describe(outputInspection));
     }
 }
 
@@ -148,9 +179,16 @@ void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& ou
     constexpr size_t MIN_ZIPPED_FILE_SIZE = 24;
 
     for (const auto& inputPath : inputPaths) {
-        if (!fs::exists(inputPath) || inputPath.extension() == ".gz"
-                ? fs::file_size(inputPath) <= MIN_ZIPPED_FILE_SIZE
-                : fs::file_size(inputPath) == 0) {
+        if (!fs::exists(inputPath)) {
+            Logger::log<LogLevel::DEBUG>(inputPath);
+            continue;
+        }
+
+        const auto fileSize = fs::file_size(inputPath);
+        const bool isEmptyOrTooSmall =
+            inputPath.extension() == ".gz" ? fileSize <= MIN_ZIPPED_FILE_SIZE : fileSize == 0;
+
+        if (isEmptyOrTooSmall) {
             Logger::log<LogLevel::DEBUG>(inputPath);
             continue;
         }

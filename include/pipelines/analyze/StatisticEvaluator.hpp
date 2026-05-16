@@ -23,20 +23,15 @@ class StatisticEvaluator {
     StatisticEvaluator() = delete;
 
     static auto evaluate(std::vector<AnnotatedInteractionCluster> &clusters,
-                         const TranscriptContributionsByID &transcriptCounts,
-                         float totalTranscriptContribution, double padjThreshold)
+                         const TranscriptContributionsByID &backgroundContributions,
+                         double padjThreshold)
         -> std::vector<EvaluatedInteractionCluster>;
 
    private:
     double padjThreshold;
 
-    static auto getTranscriptProbabilities(const TranscriptContributionsByID &transcriptCounts,
-                                           float totalTranscriptContribution)
-        -> std::unordered_map<std::string, float>;
-
     static auto evaluatePValues(std::vector<AnnotatedInteractionCluster> &clusters,
-                                const TranscriptContributionsByID &transcriptCounts,
-                                float totalTranscriptContribution)
+                                const TranscriptContributionsByID &backgroundContributions)
         -> std::vector<EvaluatedInteractionCluster>;
 
     static auto evaluatePAdjValues(std::vector<EvaluatedInteractionCluster> &clusters,

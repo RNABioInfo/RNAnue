@@ -38,7 +38,7 @@ auto InteractionCluster::operator>(const InteractionCluster &other) const noexce
 }
 
 auto InteractionCluster::operator==(const InteractionCluster &other) const noexcept -> bool {
-    return sortedSegments == sortedSegments && recordIDs == other.recordIDs &&
+    return sortedSegments == other.sortedSegments && recordIDs == other.recordIDs &&
            helper::vectorsApproxEqual(complementarityScores, other.complementarityScores) &&
            helper::vectorsApproxEqual(hybridizationEnergies, other.hybridizationEnergies) &&
            crosslinkingSiteCounts == other.crosslinkingSiteCounts;
@@ -101,9 +101,40 @@ auto InteractionCluster::merge(const InteractionCluster &other,
 
     {
         transcriptContribution += other.transcriptContribution;
+        transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
     }
 
     return true;
+}
+
+void InteractionCluster::absorbValidatedComponentMember(const InteractionCluster &other) noexcept {
+    auto absorbSegment = [](GenomicRegion &segment, const GenomicRegion &otherSegment) {
+        assert(segment.getReferenceIDIndex() == otherSegment.getReferenceIDIndex());
+
+        segment.setStart((std::min)(segment.getStart(), otherSegment.getStart()));
+        segment.setEnd((std::max)(segment.getEnd(), otherSegment.getEnd()));
+
+        if (segment.getStrand() != otherSegment.getStrand()) {
+            segment.setStrand(GenomicStrand::NONE);
+        }
+    };
+
+    absorbSegment(sortedSegments.firstRegion, other.sortedSegments.firstRegion);
+    absorbSegment(sortedSegments.secondRegion, other.sortedSegments.secondRegion);
+
+    maxComplementarityScore = (std::max)(maxComplementarityScore, other.maxComplementarityScore);
+    minHybridizationEnergy = (std::min)(minHybridizationEnergy, other.minHybridizationEnergy);
+
+    recordIDs.insert(recordIDs.end(), other.recordIDs.begin(), other.recordIDs.end());
+    complementarityScores.insert(complementarityScores.end(), other.complementarityScores.begin(),
+                                 other.complementarityScores.end());
+    hybridizationEnergies.insert(hybridizationEnergies.end(), other.hybridizationEnergies.begin(),
+                                 other.hybridizationEnergies.end());
+    crosslinkingSiteCounts.insert(crosslinkingSiteCounts.end(), other.crosslinkingSiteCounts.begin(),
+                                  other.crosslinkingSiteCounts.end());
+
+    transcriptContribution += other.transcriptContribution;
+    transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
 }
 
 auto InteractionCluster::complementarityStatistics() const -> double {

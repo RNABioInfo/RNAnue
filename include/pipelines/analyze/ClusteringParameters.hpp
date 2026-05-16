@@ -18,6 +18,12 @@ struct ClusterOverlapToleranceMergeParameter {
     explicit ClusterOverlapToleranceMergeParameter(int tolerance) noexcept : tolerance(tolerance) {}
 };
 
+[[nodiscard]] inline constexpr auto clusterDistanceToOverlapTolerance(int clusterDistance) noexcept
+    -> int {
+    // Distance 0 means blunt-ended intervals are allowed to merge, which is tolerance 1.
+    return clusterDistance + 1;
+}
+
 struct ShortestClusterOverlapFractionMergeParameter {
     float overlapFraction{};
 

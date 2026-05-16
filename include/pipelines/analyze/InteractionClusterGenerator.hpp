@@ -2,7 +2,6 @@
 
 // Standard
 #include <cstddef>
-#include <list>
 #include <memory>
 #include <string>
 #include <unordered_map>
@@ -60,6 +59,8 @@ class InteractionClusterGenerator {
      */
     auto mergeClusters(std::vector<InteractionCluster>&& clusters) -> Result;
 
+    auto mergeClusterGroup(std::vector<InteractionCluster>&& clusters) -> Result;
+
    private:
     ClusteringParameters parameters;
 
@@ -67,8 +68,6 @@ class InteractionClusterGenerator {
     std::vector<PartiallyAnnotatedInteractionCluster> partiallyAnnotatedClusters;
 
     FeatureMap supplementaryFeatureRegions;
-
-    std::list<InteractionCluster> openClusterQueue;
 
     std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 
@@ -94,7 +93,9 @@ class InteractionClusterGenerator {
 
     void finalizeCluster(InteractionCluster&& cluster) noexcept;
 
-    void greedyMerge(std::list<InteractionCluster>::iterator seedIt);
+    void finalizeMergedClusters(std::vector<InteractionCluster>&& clusters) noexcept;
+
+    [[nodiscard]] auto releaseResult() noexcept -> Result;
 };
 
 }  // namespace pipelines::analyze

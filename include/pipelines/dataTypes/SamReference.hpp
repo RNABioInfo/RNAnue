@@ -7,6 +7,7 @@
 #include <iterator>
 #include <seqan3/io/sam_file/input.hpp>
 #include <string>
+#include <utility>
 #include <vector>
 
 namespace dataTypes {
@@ -15,6 +16,9 @@ struct SamReference {
     explicit SamReference(auto samFileHeader)
         : referenceLengths(getReferenceLengths(samFileHeader)),
           referenceIDs(samFileHeader.ref_ids()) {}
+
+    SamReference(std::deque<std::string> ids, std::vector<size_t> lengths)
+        : referenceLengths(std::move(lengths)), referenceIDs(std::move(ids)) {}
 
     std::vector<size_t> referenceLengths;
     std::deque<std::string> referenceIDs;

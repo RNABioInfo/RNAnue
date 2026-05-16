@@ -59,12 +59,9 @@ class AnalyzeParameters : public GeneralParameters {
             return ShortestClusterOverlapFractionMergeParameter{clusterOverlapFractionMin.value()};
         }
 
-        // Add one so that the distance threshold of 0 equals tolerance of one meaning blunt ended
-        // clusters are merged by default.
-        constexpr int DISTANCE_TO_TOLERANCE_OFFSET = 1;
         return ClusterOverlapToleranceMergeParameter{
-            AnalyzeOptions::clusteringDistanceTolerance.extractValue(params) +
-            DISTANCE_TO_TOLERANCE_OFFSET};
+            clusterDistanceToOverlapTolerance(
+                AnalyzeOptions::clusteringDistanceTolerance.extractValue(params))};
     }
 };
 

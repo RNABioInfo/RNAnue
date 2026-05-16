@@ -2,9 +2,7 @@
 
 // Standard
 #include <cstddef>
-#include <iterator>
 #include <optional>
-#include <ranges>
 #include <string>
 #include <utility>
 #include <variant>
@@ -17,6 +15,7 @@
 #include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
 #include "InteractionCluster.hpp"
+#include "InteractionClusterComponentBuilder.hpp"
 #include "PartiallyAnnotatedInteractionCluster.hpp"
 #include "VariantOverload.hpp"
 
@@ -26,75 +25,29 @@ auto InteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster> 
     -> Result {
     std::vector<InteractionCluster> localClusters = std::move(clusters);
 
-    // Process from the end to the beginning
-    for (auto &cluster : localClusters | std::views::reverse) {
-        if (openClusterQueue.empty()) {
-            openClusterQueue.emplace_front(std::move(cluster));
-            continue;
-        }
+    auto clusterGroups = InteractionClusterComponentBuilder::groupClusters(
+        std::move(localClusters), parameters.clusterMergingStrandSpecificity);
 
-        // Newest leftmost clusters shall always be at the front
-        if (cluster.isBefore(openClusterQueue.front())) {
-            for (auto &cluster : openClusterQueue) {
-                finalizeCluster(std::move(cluster));
-            }
-
-            openClusterQueue.clear();
-        }
-
-        bool clusterMerged = false;
-
-        // Try merging with clusters in the open queue
-        for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
-            // TODO: Fix bug where multiple overlaps result not in merging into one cluster
-
-            if (clustersOverlap(*iter, cluster, parameters) &&
-                iter->merge(cluster, parameters.clusterMergingStrandSpecificity)) {
-                clusterMerged = true;
-                greedyMerge(iter);
-                break;
-            }
-
-            ++iter;
-        }
-
-        // If not merged, insert new cluster into the queue
-        if (!clusterMerged) {
-            openClusterQueue.emplace_front(std::move(cluster));
-        }
+    for (auto &clusterGroup : clusterGroups) {
+        finalizeMergedClusters(
+            InteractionClusterComponentBuilder::mergeGroup(std::move(clusterGroup), parameters));
     }
 
-    // Finalize remaining clusters
-    for (auto &cluster : openClusterQueue) {
-        finalizeCluster(std::move(cluster));
-    }
+    return releaseResult();
+};
 
-    openClusterQueue.clear();
-
-    return {.finishedClusters = std::move(finishedClusters),
-            .partiallyAnnotatedClusters = std::move(partiallyAnnotatedClusters),
-            .supplementaryFeatureMap = std::move(supplementaryFeatureRegions),
-            .featureCounts = std::move(featureCountsByFeatureID),
-            .includedClusterCount = includedClusterCount,
-            .excludedClusterCount = excludedClusterCount};
+auto InteractionClusterGenerator::mergeClusterGroup(std::vector<InteractionCluster> &&clusters)
+    -> Result {
+    finalizeMergedClusters(
+        InteractionClusterComponentBuilder::mergeGroup(std::move(clusters), parameters));
+    return releaseResult();
 };
 
 auto InteractionClusterGenerator::clustersOverlap(const InteractionCluster &cluster1,
                                                   const InteractionCluster &cluster2,
                                                   const ClusteringParameters &parameters) noexcept
     -> bool {
-    return std::visit(
-        overloaded{[&](const ClusterOverlapToleranceMergeParameter &tolerance) {
-                       return cluster1.overlapsWithTolerance(
-                           cluster2, parameters.clusterMergingStrandSpecificity,
-                           tolerance.tolerance);
-                   },
-                   [&](const ShortestClusterOverlapFractionMergeParameter &overlapFraction) {
-                       return cluster1.overlapsWithShortestSegmentFraction(
-                           cluster2, parameters.clusterMergingStrandSpecificity,
-                           overlapFraction.overlapFraction);
-                   }},
-        parameters.clusterMergeParameter);
+    return InteractionClusterComponentBuilder::clustersOverlap(cluster1, cluster2, parameters);
 };
 
 auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) noexcept
@@ -195,6 +148,22 @@ void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) 
         annotateCluster(std::forward<InteractionCluster>(cluster)));
 };
 
+void InteractionClusterGenerator::finalizeMergedClusters(
+    std::vector<InteractionCluster> &&clusters) noexcept {
+    for (auto &cluster : clusters) {
+        finalizeCluster(std::move(cluster));
+    }
+}
+
+auto InteractionClusterGenerator::releaseResult() noexcept -> Result {
+    return {.finishedClusters = std::move(finishedClusters),
+            .partiallyAnnotatedClusters = std::move(partiallyAnnotatedClusters),
+            .supplementaryFeatureMap = std::move(supplementaryFeatureRegions),
+            .featureCounts = std::move(featureCountsByFeatureID),
+            .includedClusterCount = includedClusterCount,
+            .excludedClusterCount = excludedClusterCount};
+}
+
 void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {
     // Merge finished clusters
     finishedClusters.reserve(finishedClusters.size() + other.finishedClusters.size());
@@ -228,28 +197,4 @@ void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {
     excludedClusterCount += other.excludedClusterCount;
 }
 
-void InteractionClusterGenerator::greedyMerge(std::list<InteractionCluster>::iterator seedIt) {
-    bool additionalMerge = true;
-
-    while (additionalMerge) {
-        additionalMerge = false;
-
-        for (auto iter = openClusterQueue.begin(); iter != openClusterQueue.end();) {
-            if (iter == seedIt) {
-                ++iter;
-                continue;
-            }
-
-            if (clustersOverlap(*iter, *seedIt, parameters) &&
-                seedIt->merge(*iter, parameters.clusterMergingStrandSpecificity)) {
-                iter = openClusterQueue.erase(iter);
-
-                additionalMerge = true;
-                break;
-            }
-
-            ++iter;
-        }
-    }
-}
 }  // namespace pipelines::analyze

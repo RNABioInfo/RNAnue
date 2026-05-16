@@ -2,6 +2,25 @@
 # Testing
 # ----------------------------------------------------------------------------
 include(FetchContent)
+
+# The top-level project still uses directory-wide include paths, but fetched
+# dependencies should not inherit RNAnue's headers or Conda-injected SDK
+# overlays. Keep this subdirectory explicit so GoogleTest is built in a clean
+# compiler environment.
+set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
+
+foreach(RNANUE_TEST_FLAG_VAR CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
+    string(REGEX REPLACE
+           "(^|[ \t]+)-isystem[ \t]+[^ \t]+/(miniconda3|miniforge3|anaconda3|mambaforge)/include($|[ \t]+)"
+           " "
+           ${RNANUE_TEST_FLAG_VAR}
+           " ${${RNANUE_TEST_FLAG_VAR}} ")
+    string(STRIP "${${RNANUE_TEST_FLAG_VAR}}" ${RNANUE_TEST_FLAG_VAR})
+endforeach()
+
+set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
+set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
+
 FetchContent_Declare(
     googletest
     DOWNLOAD_EXTRACT_TIMESTAMP true
@@ -10,81 +29,77 @@ FetchContent_Declare(
 
 FetchContent_MakeAvailable(googletest)
 
-enable_testing ()
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    # Newer Apple SDK Mach headers use the C11 spelling in headers that
+    # GoogleTest includes from C++ sources. Clang accepts it; GCC needs the
+    # C++ spelling. Scope the workaround to GoogleTest only.
+    target_compile_definitions(gtest PRIVATE _Static_assert=static_assert)
+    target_compile_definitions(gtest_main PRIVATE _Static_assert=static_assert)
+endif()
 
-add_executable (tests   ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterGeneratorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/ParallelInteractionClusterGeneratorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/FeatureAnnotatorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/DetectTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsSplicingEvaluatorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/SplitRecordsTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/AsyncSplitReadGroupBufferTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/DeduplicatorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/CrosslinkingSitesEvaluatorTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/IITreeTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/GenomicFeatureTreeMergerTests.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/UnderlyingSequenceTests.cpp
+add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterGeneratorTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParallelInteractionClusterGeneratorTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/SamFileUtilityTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
 
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureWriter.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/GenomicFeatureTreeMerger.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureGrouper.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/GenomicFeatureTreeMerger.cpp
 
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SamFileUtility.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SequenceFileUtility.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicOrientation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/RecordFragment.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/FeatureGroup.cpp
 
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/RecordFragment.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicOrientation.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionCluster.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionClusterGenerator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/ParallelInteractionClusterGenerator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/StatisticEvaluator.cpp
 
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/Deduplicator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequenceSingleEnd.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequencePairedEnd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utility.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SamFileUtility.cpp
 
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/Detect.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/DetectData.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/HitGroupEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsComplementarityEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsHybridizationEvaluator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/SplitRecordsSplicingEvaluator.cpp
-
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/Analyze.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/AnalyzeData.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionCluster.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionClusterGenerator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/ParallelInteractionClusterGenerator.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionsWriter.cpp
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/StatisticEvaluator.cpp
-
-                        ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utility.cpp
+    ${BAM_SORT_DIR}/bam_sort.c
+    ${BAM_SORT_DIR}/sam_opts.c
+    ${BAM_SORT_DIR}/bedidx.c
+    ${BAM_SORT_DIR}/bam.c
+    ${BAM_SORT_DIR}/sam_utils.c
 )
 
-# # # htslib
-target_link_libraries (tests PRIVATE ${HTSlib_LIBRARIES})
+target_include_directories(tests PRIVATE
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/annotation
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/concepts
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options/optionTypes
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/analyze
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
+    ${BAM_SORT_DIR}
+    ${VIENNA_RNA_INCLUDE_DIR}
+    ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
+    ${HTSlib_INCLUDE_DIRS}
+    ${HTSlib_INCLUDE_DIRS}/htslib
+    ${Boost_INCLUDE_DIR}
+)
 
-# # # ViennaRNA
-target_link_libraries (tests PRIVATE ${VIENNA_RNA_LIBRARY})
+target_link_libraries(tests PRIVATE
+    GTest::gtest_main
+    seqan3::seqan3
+    segemehl
+    TBB::tbb
+    ${HTSlib_LIBRARIES}
+    ${VIENNA_RNA_LIBRARY}
+    ${Boost_LIBRARIES}
+)
 
-target_include_directories (tests PRIVATE   ${CMAKE_CURRENT_SOURCE_DIR}/../include
-                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include/annotation
-                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/detect
-                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
-                                            ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
-                                            ${VIENNA_RNA_INCLUDE_DIR}
-                                            ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
-                                            ${HTSlib_INCLUDE_DIRS}
-                                            ${HTSlib_INCLUDE_DIRS}/htslib
-                                            ${Boost_INCLUDE_DIR})
-
-target_link_libraries(tests     PRIVATE
-                                GTest::gtest_main
-                                seqan3::seqan3
-                                segemehl
-                                ${Boost_LIBRARIES})
-
+if(TARGET RNAnue_tbb)
+    add_dependencies(tests RNAnue_tbb)
+endif()
 
 include(GoogleTest)
 gtest_discover_tests(tests)

@@ -22,6 +22,8 @@
 #include "AlignSample.hpp"
 #include "Constants.hpp"
 #include "Logger.hpp"
+#include "ReferenceGenome.hpp"
+#include "SamFileUtility.hpp"
 #include "SequenceFileUtility.hpp"
 #include "Utility.hpp"
 #include "VariantOverload.hpp"
@@ -109,7 +111,7 @@ void Align::processMergedPairedEnd(const AlignSampleMergedPaired &sample) {
 
     Logger::log("Merging alignment files");
 
-    helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath, std::nullopt);
+    helper::mergeSamFiles(samFiles, sample.output.outputAlignmentsPath, referenceFromGenome());
 
     sortAlignmentsByQueryName(sample.output.outputAlignmentsPath,
                               sample.output.outputAlignmentsPath);
@@ -195,12 +197,33 @@ void Align::buildIndex() {
             "-d", parameters.referenceGenome.string()};
 }
 
+auto Align::referenceFromGenome() const -> dataTypes::SamReference {
+    const ReferenceGenome referenceGenome{parameters.referenceGenome};
+
+    auto referenceIDs = referenceGenome.getReferenceIndexMapping().sortedReferenceIDs();
+    std::vector<size_t> referenceLengths;
+    referenceLengths.reserve(referenceIDs.size());
+
+    for (size_t index = 0; index < referenceIDs.size(); ++index) {
+        referenceLengths.push_back(referenceGenome.getSequence(static_cast<int>(index)).size());
+    }
+
+    return dataTypes::SamReference{std::move(referenceIDs), std::move(referenceLengths)};
+}
+
+void Align::writeEmptyAlignments(const fs::path& alignmentsOutPath,
+                                 const fs::path& emptyInputPath) const {
+    Logger::log("File has no entries: ", emptyInputPath,
+                "; writing header-only alignments: ", alignmentsOutPath);
+    SamFileUtility::writeHeaderOnlyFile(alignmentsOutPath, referenceFromGenome());
+}
+
 void Align::alignSingleReads(const fs::path &queryFastqInPath,
                              const fs::path &alignmentsFastqOutPath) const {
     const size_t threads = threadsAdaptedToEntries(queryFastqInPath);
 
     if (threads == 0) {
-        Logger::log("File has no entries: ", queryFastqInPath);
+        writeEmptyAlignments(alignmentsFastqOutPath, queryFastqInPath);
         return;
     }
 
@@ -222,12 +245,17 @@ void Align::alignSingleReads(const fs::path &queryFastqInPath,
 void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
                              const fs::path &queryReverseFastqInPath,
                              const fs::path &alignmentsFastqOutPath) const {
-    const size_t threads = threadsAdaptedToEntries(queryForwardFastqInPath);
+    const size_t forwardThreads = threadsAdaptedToEntries(queryForwardFastqInPath);
+    const size_t reverseThreads = threadsAdaptedToEntries(queryReverseFastqInPath);
 
-    if (threads == 0) {
-        Logger::log("File has no entries: ", queryForwardFastqInPath);
+    if (forwardThreads == 0 || reverseThreads == 0) {
+        writeEmptyAlignments(alignmentsFastqOutPath,
+                             forwardThreads == 0 ? queryForwardFastqInPath
+                                                 : queryReverseFastqInPath);
         return;
     }
+
+    const size_t threads = std::min(forwardThreads, reverseThreads);
 
     auto args = getGeneralAlignmentArgs(threads);
 
@@ -248,26 +276,7 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
 void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,
                                       const fs::path &sortedAlignmentsPath) const {
     Logger::log("Sorting alignments");
-
-    const size_t SORT_DEFAULT_MEGS_PER_THREAD = 768;
-    const size_t maxMem = SORT_DEFAULT_MEGS_PER_THREAD << 20;
-    const htsFormat inFmt = {sequence_data, bam, {.major = 1, .minor = 6}, no_compression, 0, 0};
-    const htsFormat outFmt = {sequence_data, bam, {.major = 1, .minor = 6}, no_compression, 0, 0};
-
-    const fs::path tempDir = fs::path(alignmentsPath).parent_path();
-    char emptyStr[] = "";       // NOLINT
-    const char wbStr[] = "wb";  // NOLINT
-
-    // NOLINTBEGIN
-    int ret = bam_sort_core_ext(QueryName, emptyStr, 0, true, true, alignmentsPath.c_str(),
-                                tempDir.c_str(), sortedAlignmentsPath.c_str(), wbStr, maxMem,
-                                int(parameters.threadCount), &inFmt, &outFmt, emptyStr, 1, 0);
-    // NOLINTEND
-
-    if (ret != 0) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not sort alignments");
-    }
-
+    SamFileUtility::sortByQueryName(alignmentsPath, sortedAlignmentsPath, parameters.threadCount);
     Logger::log("Sorting alignments done");
 }
 

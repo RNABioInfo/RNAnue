@@ -97,7 +97,16 @@ struct GenomicRegion {
         if (referenceIDIndex != other.referenceIDIndex) {
             return referenceIDIndex < other.referenceIDIndex;
         }
-        return region.startPosition < other.region.startPosition;
+
+        if (region.startPosition != other.region.startPosition) {
+            return region.startPosition < other.region.startPosition;
+        }
+
+        if (region.endPosition != other.region.endPosition) {
+            return region.endPosition < other.region.endPosition;
+        }
+
+        return static_cast<char>(strand) < static_cast<char>(other.strand);
     }
 
     auto operator>(const GenomicRegion& other) const -> bool { return other < *this; }

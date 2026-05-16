@@ -23,12 +23,10 @@ using namespace dataTypes;
 
 class InteractionCluster {
    public:
-    constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments,
-                                 std::vector<std::string> recordIDs,
-                                 std::vector<double> complementarityScores,
-                                 std::vector<double> hybridizationEnergies,
-                                 std::vector<int32_t> crosslinkingSiteCounts,
-                                 float transcriptContribution)
+    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::vector<std::string> recordIDs,
+                       std::vector<double> complementarityScores,
+                       std::vector<double> hybridizationEnergies,
+                       std::vector<int32_t> crosslinkingSiteCounts, float transcriptContribution)
         : sortedSegments(sortedSegments),
           recordIDs(std::move(recordIDs)),
           complementarityScores(std::move(complementarityScores)),
@@ -36,7 +34,9 @@ class InteractionCluster {
           hybridizationEnergies(std::move(hybridizationEnergies)),
           minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
           crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)),
-          transcriptContribution(transcriptContribution) {};
+          transcriptContribution(transcriptContribution),
+          transcriptContributionSquaredSum(estimateContributionSquareSum(
+              this->recordIDs.size(), transcriptContribution)) {};
 
     constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
                                  double complementarityScore, double hybridizationEnergy,
@@ -48,7 +48,8 @@ class InteractionCluster {
           hybridizationEnergies({hybridizationEnergy}),
           minHybridizationEnergy(hybridizationEnergy),
           crosslinkingSiteCounts({crosslinkingSiteCount}),
-          transcriptContribution(transcriptContribution) {};
+          transcriptContribution(transcriptContribution),
+          transcriptContributionSquaredSum(transcriptContribution * transcriptContribution) {};
 
     InteractionCluster() = delete;
 
@@ -83,6 +84,8 @@ class InteractionCluster {
         return recordIDs;
     }
 
+    [[nodiscard]] auto fragmentCount() const noexcept -> size_t { return recordIDs.size(); }
+
     [[nodiscard]] auto getComplementarityScores() const -> const std::vector<double> & {
         return complementarityScores;
     }
@@ -108,6 +111,10 @@ class InteractionCluster {
     [[nodiscard]] auto standardDeviationCrosslinkingSiteCount() const -> double;
 
     [[nodiscard]] auto getTranscriptContribution() const -> float { return transcriptContribution; }
+
+    [[nodiscard]] auto getTranscriptContributionSquaredSum() const -> double {
+        return transcriptContributionSquaredSum;
+    }
 
     // Comparisons
     /**
@@ -167,6 +174,8 @@ class InteractionCluster {
     [[nodiscard]] auto merge(const InteractionCluster &other,
                              const GenomicStrandSpecificity &) noexcept -> bool;
 
+    void absorbValidatedComponentMember(const InteractionCluster &other) noexcept;
+
     [[nodiscard]] auto complementarityStatistics() const -> double;
 
     [[nodiscard]] auto hybridizationEnergyStatistics() const -> double;
@@ -180,6 +189,18 @@ class InteractionCluster {
     double minHybridizationEnergy;
     std::vector<int32_t> crosslinkingSiteCounts;
     float transcriptContribution;
+    double transcriptContributionSquaredSum;
+
+    [[nodiscard]] static constexpr auto estimateContributionSquareSum(
+        size_t recordCount, float transcriptContribution) noexcept -> double {
+        if (recordCount == 0) {
+            return 0.0;
+        }
+
+        const double uniformContribution =
+            static_cast<double>(transcriptContribution) / static_cast<double>(recordCount);
+        return static_cast<double>(recordCount) * uniformContribution * uniformContribution;
+    }
 
     [[nodiscard]] static constexpr auto overlapOrientation(
         const GenomicStrandSpecificity strandSpecificity) -> GenomicOrientation {

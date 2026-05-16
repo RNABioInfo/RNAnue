@@ -90,21 +90,20 @@ void Analyze::processSample(const AnalyzeSample &sample,
     auto mergingResult = clusterGenerator.mergeClusters(std::move(clusters), parameters.threadCount,
                                                         parameters.chunkSize);
 
-    parseNonAnnotatedContiguousToSupplementaryFeatures(
-        sample.input.unassignedContiguousAlignmentsPath,
-        mergingResult.supplementaryFeatureAnnotator, mergingResult.featureCounts);
+    TranscriptContributionsByID backgroundContributions;
 
     parseAnnotatedContiguousFragmentCountsToTranscripts(
-        sample.input.contiguousAlignmentsTranscriptCountsPath, mergingResult.featureCounts);
+        sample.input.contiguousAlignmentsTranscriptCountsPath, backgroundContributions);
 
-    const float totalFragmentCount =
-        parseSampleFragmentCount(sample.input.sampleFragmentCountsPath);
+    parseNonAnnotatedContiguousToSupplementaryFeatures(
+        sample.input.unassignedContiguousAlignmentsPath,
+        mergingResult.supplementaryFeatureAnnotator, backgroundContributions);
+
     const auto evaluatedClusters =
-        StatisticEvaluator::evaluate(mergingResult.annotatedClusters, mergingResult.featureCounts,
-                                     totalFragmentCount, parameters.padjThreshold);
+        StatisticEvaluator::evaluate(mergingResult.annotatedClusters, backgroundContributions,
+                                     parameters.padjThreshold);
 
-    writeTranscriptCounts(mergingResult.featureCounts,
-                          sample.output.interactionsTranscriptCountsPath);
+    writeTranscriptCounts(backgroundContributions, sample.output.interactionsTranscriptCountsPath);
 
     annotation::FeatureWriter::write(
         mergingResult.supplementaryFeatureAnnotator.getFeatureTreeMap(), referenceIDs,
@@ -130,23 +129,7 @@ void Analyze::parseAnnotatedContiguousFragmentCountsToTranscripts(
                                                             contiguousTranscriptCountsInPath);
     }
 
-    std::string line;
-    while (std::getline(transcriptCountsIn, line)) {
-        std::istringstream iss(line);
-
-        size_t column = 0;
-        std::string transcriptID;
-        for (std::string token; std::getline(iss, token, '\t');) {
-            if (column == 0) {
-                transcriptID = token;
-            } else if (column == 1) {
-                transcriptCounts[transcriptID] += std::stof(token);
-            }
-            ++column;
-        }
-
-        break;
-    }
+    parseTranscriptContributionStream(transcriptCountsIn, transcriptCounts);
 }
 
 void Analyze::parseNonAnnotatedContiguousToSupplementaryFeatures(
@@ -168,16 +151,15 @@ void Analyze::parseNonAnnotatedContiguousToSupplementaryFeatures(
 
         const std::string &transcriptID = bestFeature->getAnnotationID();
         const float contributionScore = record.tags().get<"XB"_tag>();
+        const float currentContribution = transcriptCounts[transcriptID];
 
-        assert(transcriptCounts.contains(transcriptID));
-
-        if (std::isnan(transcriptCounts.at(transcriptID)) || std::isnan(contributionScore)) {
+        if (std::isnan(currentContribution) || std::isnan(contributionScore)) {
             Logger::log<LogLevel::WARNING>(std::format(
                 "Invalid contribution – check unassigned contiguous record in detect step. Record "
                 "ID: {}, "
                 "Interaction ID: {}, Current "
                 "contribution: {}, Record contribution: {}",
-                record.id(), transcriptID, transcriptCounts.at(transcriptID), contributionScore));
+                record.id(), transcriptID, currentContribution, contributionScore));
 
             continue;
         }

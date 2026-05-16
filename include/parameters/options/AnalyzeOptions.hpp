@@ -36,12 +36,12 @@ struct AnalyzeOptions {
 
     static constexpr DefaultedParameterOption<double, 1.0> maxPadjValue{
         {.shortName = std::nullopt, .longName = "padj"},
-        "adjusted p-value threshold for outputting an interaction"sv};
+        "adjusted abundance-corrected within-sample enrichment p-value threshold for outputting an interaction"sv};
 
     static constexpr DefaultedParameterOption<float, float{1.0}>
         minimumClusterTranscriptContribution{
             {.shortName = std::nullopt, .longName = "mincount"},
-            "minimum number of scored transcripts assigned to an interaction"sv};
+            "minimum weighted split-read contribution assigned to an interaction"sv};
 
     static constexpr auto allOptions =
         std::make_tuple(maxSelfOverlap, clusteringStrandSpecificity, clusteringDistanceTolerance,

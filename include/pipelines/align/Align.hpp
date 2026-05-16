@@ -12,9 +12,6 @@
 // Boost
 #include <boost/program_options.hpp>
 
-// htslib
-#include <htslib/hts.h>
-
 // segemehl
 extern "C" {
 #include <segemehl.h>
@@ -24,22 +21,7 @@ extern "C" {
 #include "AlignData.hpp"
 #include "AlignParameters.hpp"
 #include "AlignSample.hpp"
-
-// samtools derived elements
-extern "C" {
-using SamOrder = enum {
-    Coordinate,
-    QueryName,
-    TagCoordinate,
-    TagQueryName,
-    MinHash,
-    TemplateCoordinate
-};
-auto bam_sort_core_ext(SamOrder sam_order, char *sort_tag, int minimiser_kmer, bool try_rev,
-                       bool no_squash, const char *fn, const char *prefix, const char *fnout,
-                       const char *modeout, size_t _max_mem, int n_threads, const htsFormat *in_fmt,
-                       const htsFormat *out_fmt, char *arg_list, int no_pg, int write_index) -> int;
-}
+#include "SamReference.hpp"
 
 namespace pipelines::align {
 
@@ -66,6 +48,10 @@ class Align {
         -> std::optional<fs::path>;
 
     void buildIndex();
+
+    [[nodiscard]] auto referenceFromGenome() const -> dataTypes::SamReference;
+    void writeEmptyAlignments(const fs::path &alignmentsOutPath,
+                              const fs::path &emptyInputPath) const;
 
     [[nodiscard]] auto getGeneralAlignmentArgs(size_t threadCount) const
         -> std::vector<std::string>;

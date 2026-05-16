@@ -21,7 +21,7 @@ struct RecordFragment {
     double complementarityScore;
     double hybridizationEnergy;
     int32_t interCrosslinkingSiteCount;
-    float transcriptContribution;
+    float transcriptContribution{1.0F};
 
     [[nodiscard]] static auto fromSamRecord(const SamRecord &record)
         -> std::optional<RecordFragment>;

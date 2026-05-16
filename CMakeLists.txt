@@ -37,6 +37,21 @@ project(RNAnue VERSION 1.0.0)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    foreach(RNANUE_CXX_FLAG_VAR
+            CMAKE_CXX_FLAGS
+            CMAKE_CXX_FLAGS_DEBUG
+            CMAKE_CXX_FLAGS_RELEASE
+            CMAKE_CXX_FLAGS_RELWITHDEBINFO
+            CMAKE_CXX_FLAGS_MINSIZEREL)
+        string(REPLACE "-stdlib=libc++" "" ${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}")
+        set(${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}" CACHE STRING "" FORCE)
+    endforeach()
+endif()
+
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_features.cmake)
 
 if(APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     message(FATAL_ERROR
@@ -49,18 +64,6 @@ if(APPLE AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
     message(FATAL_ERROR
         "RNAnue requires a GCC C compiler on macOS. Reconfigure a fresh build directory "
         "with -DCMAKE_C_COMPILER=/path/to/gcc, or set CC before the first CMake configure step.")
-endif()
-
-if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    foreach(RNANUE_CXX_FLAG_VAR
-            CMAKE_CXX_FLAGS
-            CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_CXX_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS_RELWITHDEBINFO
-            CMAKE_CXX_FLAGS_MINSIZEREL)
-        string(REPLACE "-stdlib=libc++" "" ${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}")
-        set(${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}" CACHE STRING "" FORCE)
-    endforeach()
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
@@ -96,9 +99,13 @@ find_package(HTSlib)
 find_package(TBB QUIET COMPONENTS tbb)
 if(TBB_FOUND)
     message(STATUS "Using oneTBB from system")
-else()
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     message(STATUS "Building bundled oneTBB from source")
     include(tbb)
+else()
+    message(FATAL_ERROR
+        "oneTBB was not found. Install oneTBB or set TBB_DIR to its CMake package directory. "
+        "On Linux, RNAnue can fetch and build bundled oneTBB automatically.")
 endif()
 
 # # # bam_sort
@@ -250,27 +257,21 @@ endif()
 # ----------------------------------------------------------------------------
 # Testing
 # ----------------------------------------------------------------------------
-if (CMAKE_BUILD_TYPE STREQUAL DEBUG OR CMAKE_BUILD_TYPE STREQUAL Debug)
-    set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-    # set(BUILD_TESTS ON)
+option(RNANUE_BUILD_TESTS "Build RNAnue tests" ON)
 
-    # message(STATUS "--------------")
-    # message(STATUS "Enabling tests")
-    # message(STATUS "--------------")
+if (RNANUE_BUILD_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
 
-    # add_subdirectory(tests)
+    if (NOT VIENNA_RNA_FOUND)
+        add_dependencies(tests viennaRNA)
+    endif()
 
-    # if (NOT VIENNA_RNA_FOUND)
-    #     message(STATUS "Adding ViennaRNA as dependency for tests")
-    #     add_dependencies(tests viennaRNA)
-    # endif()
+    if(NOT HTSlib_FOUND)
+        add_dependencies(tests htslib)
+    endif()
 
-    # if(NOT HTSlib_FOUND)
-    #     message(STATUS "Adding htslib as dependency for tests")
-    #     add_dependencies(tests htslib)
-    # endif()
-
-    # add_dependencies(tests Boost)
+    add_dependencies(tests Boost)
 endif()
 
 # ----------------------------------------------------------------------------

@@ -43,7 +43,10 @@ singularity exec --bind /path/to/data:/data rnanue_latest.sif RNAnue <subcall> -
 
 #### Prerequisites
 
-To build RNAnue, you need `cmake (>=v3.24.0)`.
+To build RNAnue, you need `cmake (>=v3.24.0)` and GCC/G++ 14 or newer.
+RNAnue uses C++23 standard-library APIs that are not fully available in GCC 13,
+including `<print>`, `std::forward_like`, `std::ranges::to`, and
+`std::ranges::zip_view`.
 If you need to compile ViennaRNA, you also need `autoconf`, `automake`, and `libtool` (see [Dependencies](#dependencies)).
 
 #### Downloading
@@ -70,7 +73,7 @@ cmake --install .
 ```
 
 > **IMPORTANT**
-> RNAnue can only be compiled with [gcc](https://gcc.gnu.org) (tested with v14.2.0; needs to support **C++23**)
+> RNAnue can only be compiled with [gcc](https://gcc.gnu.org) 14 or newer (tested with v14.2.0; needs to support **C++23**)
 
 > **IMPORTANT – MacOS**
 > When building on macOS, you need to specify the GCC compiler to avoid using AppleClang:
@@ -87,8 +90,9 @@ RNAnue includes the following dependencies:
 The following dependencies will be used if present on the system, otherwise they will be fetched (internet connection required):
 
 - [htslib](https://github.com/samtools/htslib.git) (v1.20)
-- [oneTBB](https://github.com/oneapi-src/oneTBB) (v2022.0.0)
 - [Vienna Package](https://www.tbi.univie.ac.at/RNA/#binary_packages) (v2.6.4)
+
+On Linux, [oneTBB](https://github.com/oneapi-src/oneTBB) is also fetched and built automatically if no system CMake package is found.
 
 ## Overview
 
@@ -179,6 +183,16 @@ duplex.
 ### Clustering results
 
 ### Interaction table
+
+The interaction table reports `no_splits` as the weighted split-read contribution assigned to an
+interaction cluster; this can be fractional when a read group is shared across competing hit groups.
+The `p_value` column is an analytic within-sample enrichment statistic: among the candidate
+interaction clusters detected in the sample, RNAnue tests whether a cluster has more weighted
+split-read support than expected from independent feature abundance estimated from contiguous
+background reads. `padj_value` is the Benjamini-Hochberg adjusted value across the evaluated
+candidate clusters. These values are intended for prioritization and filtering; they do not by
+themselves establish biological mechanism, physical validation, or treatment-control differential
+interaction.
 
 ### Testing
 

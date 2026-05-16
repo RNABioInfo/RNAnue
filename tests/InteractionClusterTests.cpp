@@ -456,4 +456,53 @@ TEST(InteractionClusterTest, MergeWithDifferentStrands) {
     EXPECT_FALSE(cluster1.merge(cluster2, GenomicStrandSpecificity::SPECIFIC));
 }
 
+TEST(InteractionClusterTest, GenomicRegionOrderingUsesEndAndStrandTieBreakers) {
+    const GenomicRegion shorter{0, Region{.startPosition = 10, .endPosition = 20},
+                                GenomicStrand::FORWARD};
+    const GenomicRegion longer{0, Region{.startPosition = 10, .endPosition = 30},
+                               GenomicStrand::FORWARD};
+    const GenomicRegion reverse{0, Region{.startPosition = 10, .endPosition = 30},
+                                GenomicStrand::REVERSE};
+
+    EXPECT_TRUE(shorter < longer);
+    EXPECT_FALSE(longer < shorter);
+    EXPECT_TRUE(longer < reverse);
+}
+
+TEST(InteractionClusterTest, EqualityComparesSortedSegments) {
+    const InteractionCluster cluster1 = InteractionCluster::fromRecordFragments(
+        RecordFragment{
+            .recordID = "record1",
+            .genomicRegion = GenomicRegion{0, Region{.startPosition = 0, .endPosition = 10},
+                                           GenomicStrand::FORWARD},
+            .complementarityScore = 0.5,
+            .hybridizationEnergy = -18,
+            .interCrosslinkingSiteCount = 1},
+        RecordFragment{
+            .recordID = "record1",
+            .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
+                                           GenomicStrand::FORWARD},
+            .complementarityScore = 0.5,
+            .hybridizationEnergy = -18,
+            .interCrosslinkingSiteCount = 1});
+
+    const InteractionCluster cluster2 = InteractionCluster::fromRecordFragments(
+        RecordFragment{
+            .recordID = "record1",
+            .genomicRegion = GenomicRegion{0, Region{.startPosition = 0, .endPosition = 11},
+                                           GenomicStrand::FORWARD},
+            .complementarityScore = 0.5,
+            .hybridizationEnergy = -18,
+            .interCrosslinkingSiteCount = 1},
+        RecordFragment{
+            .recordID = "record1",
+            .genomicRegion = GenomicRegion{1, Region{.startPosition = 0, .endPosition = 10},
+                                           GenomicStrand::FORWARD},
+            .complementarityScore = 0.5,
+            .hybridizationEnergy = -18,
+            .interCrosslinkingSiteCount = 1});
+
+    EXPECT_FALSE(cluster1 == cluster2);
+}
+
 // NOLINTEND(readability-magic-numbers)

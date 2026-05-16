@@ -5,12 +5,10 @@
 
 #include <algorithm>
 #include <cassert>
-#include <condition_variable>
 #include <cstddef>
 #include <functional>
 #include <iterator>
 #include <mutex>
-#include <queue>
 #include <string>
 #include <thread>
 #include <utility>
@@ -22,6 +20,7 @@
 #include "GenomicRegion.hpp"
 #include "GenomicStrandSpecificity.hpp"
 #include "InteractionCluster.hpp"
+#include "InteractionClusterComponentBuilder.hpp"
 #include "InteractionClusterGenerator.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
@@ -31,80 +30,37 @@ namespace pipelines::analyze {
 auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionCluster>&& clusters,
                                                         size_t threadCount, size_t batchSize)
     -> Result {
-    std::mutex produceMutex;
     std::mutex mergeMutex;
-    std::condition_variable conditionVariable;
-    bool doneProducing = false;
+    std::mutex groupMutex;
+    (void)batchSize;
 
     std::vector<InteractionCluster> localClusters = std::move(clusters);
 
-    Logger::log("Sorting clusters");
+    Logger::log("Grouping clusters");
 
-    // Clusters should be sorted from back to front
-    std::ranges::sort(localClusters, std::less<>{});
+    auto clusterGroups = InteractionClusterComponentBuilder::groupClusters(
+        std::move(localClusters), parameters.clusterMergingStrandSpecificity);
+    size_t nextGroupIndex = 0;
 
-    Logger::log("Finished sorting clusters");
+    Logger::log("Finished grouping clusters into ", clusterGroups.size(), " independent groups");
 
-    std::queue<std::vector<InteractionCluster>> clusterBatches;
-
-    auto clusterBatchProducer = [&]() {
-        while (!localClusters.empty()) {
-            auto startIterator = localClusters.size() > batchSize
-                                     ? localClusters.end() - long(batchSize)
-                                     : localClusters.begin();
-
-            // Check that the first cluster in the batch does not overlap with the last cluster
-            // in the remaining clusters
-            while (startIterator != localClusters.begin() &&
-                   !(startIterator - 1)->isBefore(*startIterator)) {
-                startIterator--;
-            }
-
-            const size_t batchElementCount = std::distance(startIterator, localClusters.end());
-            auto batch = std::vector<InteractionCluster>();
-            batch.reserve(batchElementCount);
-
-            auto endIterator = localClusters.end();
-
-            // Move elements from the localClusters vector to the batch vector and erase them
-            // from the localClusters vector
-            std::move(startIterator, endIterator, std::back_inserter(batch));
-            localClusters.erase(startIterator, endIterator);
-
-            {
-                std::unique_lock<std::mutex> lock(produceMutex);
-                clusterBatches.push(std::move(batch));
-                conditionVariable.notify_all();
-            }
-        }
-
-        {
-            std::unique_lock<std::mutex> lock(produceMutex);
-            doneProducing = true;
-            conditionVariable.notify_all();
-        }
-    };
-
-    auto clusterBatchConsumer = [&]() {
+    auto clusterGroupConsumer = [&]() {
         while (true) {
-            std::vector<InteractionCluster> batch;
+            std::vector<InteractionCluster> clusterGroup;
 
             {
-                std::unique_lock<std::mutex> lock(produceMutex);
-                conditionVariable.wait(lock,
-                                       [&] { return !clusterBatches.empty() || doneProducing; });
-
-                if (clusterBatches.empty() && doneProducing) {
+                std::lock_guard<std::mutex> lock(groupMutex);
+                if (nextGroupIndex >= clusterGroups.size()) {
                     break;
                 }
 
-                batch = std::move(clusterBatches.front());
-                clusterBatches.pop();
+                clusterGroup = std::move(clusterGroups[nextGroupIndex]);
+                ++nextGroupIndex;
             }
 
             InteractionClusterGenerator clusterGenerator{featureAnnotator, parameters};
 
-            auto result = clusterGenerator.mergeClusters(std::move(batch));
+            auto result = clusterGenerator.mergeClusterGroup(std::move(clusterGroup));
 
             {
                 std::lock_guard<std::mutex> lock(mergeMutex);
@@ -114,16 +70,13 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
         }
     };
 
-    std::thread producerThread(clusterBatchProducer);
-
     std::vector<std::thread> consumerThreads;
-    consumerThreads.reserve(threadCount);
+    const size_t workerCount = (std::max)(size_t{1}, threadCount);
+    consumerThreads.reserve(workerCount);
 
-    for (size_t i = 0; i < threadCount; ++i) {
-        consumerThreads.emplace_back(clusterBatchConsumer);
+    for (size_t i = 0; i < workerCount; ++i) {
+        consumerThreads.emplace_back(clusterGroupConsumer);
     }
-
-    producerThread.join();
 
     for (std::thread& consumerThread : consumerThreads) {
         consumerThread.join();
