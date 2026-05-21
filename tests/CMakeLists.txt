@@ -38,8 +38,11 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FeatureParserTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterGeneratorTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/InteractionsWriterTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ParallelInteractionClusterGeneratorTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SamFileUtilityTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
@@ -56,6 +59,7 @@ add_executable(tests
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionCluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionClusterGenerator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionsWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/ParallelInteractionClusterGenerator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/StatisticEvaluator.cpp
 

@@ -43,7 +43,21 @@ struct AnalyzeOptions {
             {.shortName = std::nullopt, .longName = "mincount"},
             "minimum weighted split-read contribution assigned to an interaction"sv};
 
+    static constexpr ParameterOption<double, true> minimumSupportPerEffectiveBp{
+        {.shortName = std::nullopt, .longName = "mineffdens"},
+        "optional minimum weighted split-read support per effective coverage base pair"sv};
+
+    static constexpr ParameterOption<size_t, true> maximumCoverageComponents{
+        {.shortName = std::nullopt, .longName = "maxcovcomp"},
+        "optional maximum number of thresholded coverage islands across both interaction arms"sv};
+
+    static constexpr ParameterOption<double, true> minimumArmBalance{
+        {.shortName = std::nullopt, .longName = "minarmbal"},
+        "optional minimum ratio between weaker and stronger integrated arm coverage"sv};
+
     static constexpr auto allOptions =
         std::make_tuple(maxSelfOverlap, clusteringStrandSpecificity, clusteringDistanceTolerance,
-                        clusterFractionOverlap, maxPadjValue, minimumClusterTranscriptContribution);
+                        clusterFractionOverlap, maxPadjValue, minimumClusterTranscriptContribution,
+                        minimumSupportPerEffectiveBp, maximumCoverageComponents,
+                        minimumArmBalance);
 };

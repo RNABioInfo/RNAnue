@@ -13,6 +13,7 @@
 #include <ios>
 #include <limits>
 #include <memory>
+#include <optional>
 #include <sstream>
 #include <string>
 #include <utility>
@@ -99,9 +100,10 @@ void Analyze::processSample(const AnalyzeSample &sample,
         sample.input.unassignedContiguousAlignmentsPath,
         mergingResult.supplementaryFeatureAnnotator, backgroundContributions);
 
-    const auto evaluatedClusters =
+    auto evaluatedClusters =
         StatisticEvaluator::evaluate(mergingResult.annotatedClusters, backgroundContributions,
                                      parameters.padjThreshold);
+    evaluatedClusters = filterByCoverageMetrics(std::move(evaluatedClusters));
 
     writeTranscriptCounts(backgroundContributions, sample.output.interactionsTranscriptCountsPath);
 
@@ -113,10 +115,72 @@ void Analyze::processSample(const AnalyzeSample &sample,
         .interactionsOutputPath = sample.output.interactionsPath,
         .interactionReadIDsOutputPath = sample.output.interactionsReadIDsPath,
         .interactionsBEDOutputPath = sample.output.interactionsBEDPath,
-        .interactionsBEDArcOutputPath = sample.output.interactionsBEDARCPath};
+        .interactionsBEDArcOutputPath = sample.output.interactionsBEDARCPath,
+        .interactionArmCoverageBedGraphOutputPath =
+            sample.output.interactionsArmCoverageBedGraphPath};
 
     InteractionsWriter::writeInteractions(sample.input.sampleName, outputPaths, referenceIDs,
                                           evaluatedClusters);
+}
+
+auto Analyze::filterByCoverageMetrics(std::vector<EvaluatedInteractionCluster> &&clusters) const
+    -> std::vector<EvaluatedInteractionCluster> {
+    if (!parameters.minimumSupportPerEffectiveBp && !parameters.maximumCoverageComponents &&
+        !parameters.minimumArmBalance) {
+        return std::move(clusters);
+    }
+
+    std::vector<EvaluatedInteractionCluster> filteredClusters;
+    filteredClusters.reserve(clusters.size());
+
+    size_t supportDensityFilteredCount = 0;
+    size_t coverageComponentsFilteredCount = 0;
+    size_t armBalanceFilteredCount = 0;
+
+    for (auto &cluster : clusters) {
+        const CoverageShapeMetrics metrics = cluster.coverageShapeMetrics();
+        bool keepCluster = true;
+
+        if (parameters.minimumSupportPerEffectiveBp &&
+            metrics.supportPerEffectiveBp < *parameters.minimumSupportPerEffectiveBp) {
+            keepCluster = false;
+            ++supportDensityFilteredCount;
+        }
+
+        if (parameters.maximumCoverageComponents &&
+            metrics.coverageComponents > *parameters.maximumCoverageComponents) {
+            keepCluster = false;
+            ++coverageComponentsFilteredCount;
+        }
+
+        if (parameters.minimumArmBalance && metrics.armBalance < *parameters.minimumArmBalance) {
+            keepCluster = false;
+            ++armBalanceFilteredCount;
+        }
+
+        if (keepCluster) {
+            filteredClusters.emplace_back(std::move(cluster));
+        }
+    }
+
+    Logger::log("Coverage-shaped support filters kept ", filteredClusters.size(), " of ",
+                clusters.size(), " interactions");
+    if (parameters.minimumSupportPerEffectiveBp) {
+        Logger::log("Filtered ", supportDensityFilteredCount,
+                    " interactions below minimum support_per_effective_bp: ",
+                    *parameters.minimumSupportPerEffectiveBp);
+    }
+    if (parameters.maximumCoverageComponents) {
+        Logger::log("Filtered ", coverageComponentsFilteredCount,
+                    " interactions above maximum coverage_components: ",
+                    *parameters.maximumCoverageComponents);
+    }
+    if (parameters.minimumArmBalance) {
+        Logger::log("Filtered ", armBalanceFilteredCount,
+                    " interactions below minimum arm_balance: ", *parameters.minimumArmBalance);
+    }
+
+    return filteredClusters;
 }
 
 void Analyze::parseAnnotatedContiguousFragmentCountsToTranscripts(

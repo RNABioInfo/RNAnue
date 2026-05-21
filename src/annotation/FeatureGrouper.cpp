@@ -193,6 +193,52 @@ auto buildTreeGroup(std::string_view groupKey, const std::vector<std::size_t>& f
     return std::move(buildResult.group);
 }
 
+auto copyWithoutParent(const GroupingFeature& feature) -> dataTypes::GenomicFeature {
+    return dataTypes::GenomicFeature{feature.getType(),
+                                     feature.getGenomicRegion(),
+                                     feature.getID(),
+                                     std::nullopt,
+                                     feature.getGeneName(),
+                                     feature.getAttributes()};
+}
+
+auto buildDirectParentGroup(std::string_view groupKey,
+                            const std::vector<std::size_t>& featureIndices,
+                            const std::vector<GroupingFeature>& groupingFeatures)
+    -> dataTypes::GenomicFeatureGroup {
+    std::vector<dataTypes::GenomicFeature> groupFeatures;
+    groupFeatures.reserve(featureIndices.size());
+
+    const bool groupContainsParent =
+        std::ranges::any_of(featureIndices, [&](const std::size_t featureIndex) {
+            return groupingFeatures[featureIndex].getID() == groupKey;
+        });
+
+    for (const std::size_t featureIndex : featureIndices) {
+        const auto& feature = groupingFeatures[featureIndex];
+        if (groupContainsParent) {
+            groupFeatures.emplace_back(feature);
+        } else {
+            groupFeatures.emplace_back(copyWithoutParent(feature));
+        }
+    }
+
+    auto buildResult =
+        dataTypes::GenomicFeatureGroup::buildFromFlat(std::move(groupFeatures), groupKey);
+    logBuildIssues(std::string{groupKey}, buildResult.issues);
+
+    return std::move(buildResult.group);
+}
+
+auto directParentGroupKey(const GroupingFeature& feature) -> const std::string& {
+    const auto& parentId = feature.getParentID();
+    if (parentId && !parentId->empty()) {
+        return *parentId;
+    }
+
+    return feature.getID();
+}
+
 }  // namespace
 
 auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {
@@ -212,6 +258,28 @@ auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> Groupi
         result.groupKeys.insert(groupKey);
         result.groups.try_emplace(groupKey,
                                   buildTreeGroup(groupKey, featureIndices, groupingFeatures));
+    }
+
+    return result;
+}
+
+auto groupByDirectParentID(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {
+    GroupKeyToIndicesMap groupKeyToIndices;
+    groupKeyToIndices.reserve(groupingFeatures.size());
+
+    for (std::size_t featureIndex = 0; featureIndex < groupingFeatures.size(); ++featureIndex) {
+        groupKeyToIndices[directParentGroupKey(groupingFeatures[featureIndex])].push_back(
+            featureIndex);
+    }
+
+    GroupingResult result{};
+    result.groups.reserve(groupKeyToIndices.size());
+    result.groupKeys.reserve(groupKeyToIndices.size());
+
+    for (auto& [groupKey, featureIndices] : groupKeyToIndices) {
+        result.groupKeys.insert(groupKey);
+        result.groups.try_emplace(
+            groupKey, buildDirectParentGroup(groupKey, featureIndices, groupingFeatures));
     }
 
     return result;

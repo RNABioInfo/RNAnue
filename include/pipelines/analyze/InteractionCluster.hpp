@@ -11,6 +11,7 @@
 #include <vector>
 
 // Internal
+#include "ArmCoverage.hpp"
 #include "GenomicOrientation.hpp"
 #include "GenomicRegion.hpp"
 #include "GenomicStrandSpecificity.hpp"
@@ -20,6 +21,17 @@
 namespace pipelines::analyze {
 
 using namespace dataTypes;
+
+struct CoverageShapeMetrics {
+    size_t totalSpanBp{};
+    double effectiveCoverageSpanBp{};
+    double supportPerTotalBp{};
+    double supportPerEffectiveBp{};
+    double coverageConcentration{};
+    size_t coverageComponents{};
+    double armBalance{};
+    std::string coverageProfile;
+};
 
 class InteractionCluster {
    public:
@@ -36,11 +48,13 @@ class InteractionCluster {
           crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)),
           transcriptContribution(transcriptContribution),
           transcriptContributionSquaredSum(estimateContributionSquareSum(
-              this->recordIDs.size(), transcriptContribution)) {};
+              this->recordIDs.size(), transcriptContribution)) {
+        addFullSpanCoverage(transcriptContribution);
+    };
 
-    constexpr InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
-                                 double complementarityScore, double hybridizationEnergy,
-                                 int crosslinkingSiteCount, float transcriptContribution)
+    InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
+                       double complementarityScore, double hybridizationEnergy,
+                       int crosslinkingSiteCount, float transcriptContribution)
         : sortedSegments(sortedSegments),
           recordIDs({std::move(recordID)}),
           complementarityScores({complementarityScore}),
@@ -49,12 +63,14 @@ class InteractionCluster {
           minHybridizationEnergy(hybridizationEnergy),
           crosslinkingSiteCounts({crosslinkingSiteCount}),
           transcriptContribution(transcriptContribution),
-          transcriptContributionSquaredSum(transcriptContribution * transcriptContribution) {};
+          transcriptContributionSquaredSum(transcriptContribution * transcriptContribution) {
+        addFullSpanCoverage(transcriptContribution);
+    };
 
     InteractionCluster() = delete;
 
-    static constexpr auto fromRecordFragments(const RecordFragment &firstFragment,
-                                              const RecordFragment &secondFragment) noexcept
+    static auto fromRecordFragments(const RecordFragment &firstFragment,
+                                    const RecordFragment &secondFragment)
         -> InteractionCluster {
         assert((firstFragment.recordID == secondFragment.recordID) &&
                (firstFragment.complementarityScore == secondFragment.complementarityScore) &&
@@ -63,12 +79,14 @@ class InteractionCluster {
                 secondFragment.interCrosslinkingSiteCount) &&
                (firstFragment.transcriptContribution == secondFragment.transcriptContribution));
 
-        return {{firstFragment.genomicRegion, secondFragment.genomicRegion},
-                firstFragment.recordID,
-                firstFragment.complementarityScore,
-                firstFragment.hybridizationEnergy,
-                firstFragment.interCrosslinkingSiteCount,
-                firstFragment.transcriptContribution};
+        InteractionCluster cluster{{firstFragment.genomicRegion, secondFragment.genomicRegion},
+                                   firstFragment.recordID,
+                                   firstFragment.complementarityScore,
+                                   firstFragment.hybridizationEnergy,
+                                   firstFragment.interCrosslinkingSiteCount,
+                                   firstFragment.transcriptContribution};
+        cluster.replaceCoverageFromFragments(firstFragment, secondFragment);
+        return cluster;
     };
 
     // Getters
@@ -114,6 +132,24 @@ class InteractionCluster {
 
     [[nodiscard]] auto getTranscriptContributionSquaredSum() const -> double {
         return transcriptContributionSquaredSum;
+    }
+
+    [[nodiscard]] auto totalSpanBp() const noexcept -> size_t {
+        return getFirstSegment().length() + getSecondSegment().length();
+    }
+
+    [[nodiscard]] auto maxArmSpanBp() const noexcept -> size_t {
+        return std::max(getFirstSegment().length(), getSecondSegment().length());
+    }
+
+    [[nodiscard]] auto coverageShapeMetrics() const -> CoverageShapeMetrics;
+
+    [[nodiscard]] auto getFirstArmCoverageRuns() const -> std::vector<CoverageRun> {
+        return firstArmCoverage.runs();
+    }
+
+    [[nodiscard]] auto getSecondArmCoverageRuns() const -> std::vector<CoverageRun> {
+        return secondArmCoverage.runs();
     }
 
     // Comparisons
@@ -190,6 +226,8 @@ class InteractionCluster {
     std::vector<int32_t> crosslinkingSiteCounts;
     float transcriptContribution;
     double transcriptContributionSquaredSum;
+    ArmCoverage firstArmCoverage;
+    ArmCoverage secondArmCoverage;
 
     [[nodiscard]] static constexpr auto estimateContributionSquareSum(
         size_t recordCount, float transcriptContribution) noexcept -> double {
@@ -207,6 +245,16 @@ class InteractionCluster {
         return (strandSpecificity == GenomicStrandSpecificity::SPECIFIC) ? GenomicOrientation::SAME
                                                                          : GenomicOrientation::BOTH;
     };
+
+    void addFullSpanCoverage(double weight) {
+        firstArmCoverage.addInterval(getFirstSegment().getStart(), getFirstSegment().getEnd(),
+                                     weight);
+        secondArmCoverage.addInterval(getSecondSegment().getStart(), getSecondSegment().getEnd(),
+                                      weight);
+    }
+
+    void replaceCoverageFromFragments(const RecordFragment &firstFragment,
+                                      const RecordFragment &secondFragment);
 };
 
 auto operator<<(std::ostream &outputStream, const InteractionCluster &interactionCluster)

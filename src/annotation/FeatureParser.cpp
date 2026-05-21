@@ -49,6 +49,54 @@ auto FeatureParser::parseGroupedByParentID(const fs::path& featureFilePath,
     return parseFlatAndGrouped(featureFilePath, referenceToIndex).groupedByParentID;
 }
 
+auto FeatureParser::parseGroupedByHierarchy(const fs::path& featureFilePath,
+                                            const ReferenceIndexMapping& referenceToIndex) const
+    -> ParentIDToFeatureGroupMap {
+    static_assert(columnCount == expectedAnnotationFileTokenCount);
+
+    const auto fileType = getFileType(featureFilePath);
+
+    ParseSettings settings{
+        .fileType = fileType,
+        .idKey = std::string_view{featureIDFlag.value_or(fileType.defaultIDKey())},
+        .keys =
+            AttributeKeys{
+                .parentKey = std::string_view{fileType.defaultGroupKey()},
+                .geneNameKey = std::string_view{FileType::defaultGeneNameKey()},
+            },
+    };
+
+    ParentIDToFeatureGroupMap result{};
+    const auto stats = scanFile(FileScanInput{
+        .featureFilePath = featureFilePath,
+        .settings = settings,
+        .referenceToIndex = referenceToIndex,
+        .flatMap = nullptr,
+        .groupMap = &result,
+        .groupingMode = GroupingMode::Hierarchy,
+    });
+
+    const auto includedText = buildIncludedFeatureTypesText(includedFeatures);
+    if (stats.parsedCount == 0) {
+        Logger::log<LogLevel::WARNING>(
+            std::format("No features parsed from file {}. Check your feature file and included "
+                        "features flag: {}",
+                        featureFilePath.string(), includedText));
+    } else {
+        const auto groupInfo =
+            stats.parentIDs.empty()
+                ? std::string{}
+                : (std::string{" Found "} + std::to_string(stats.parentIDs.size()) +
+                   " parent groups.");
+
+        Logger::log(
+            std::format("Parsed {} features of type: {}.{}", stats.parsedCount, includedText,
+                        groupInfo));
+    }
+
+    return result;
+}
+
 auto FeatureParser::parseFlatAndGrouped(const fs::path& featureFilePath,
                                         const ReferenceIndexMapping& referenceToIndex) const
     -> Results {
@@ -73,6 +121,7 @@ auto FeatureParser::parseFlatAndGrouped(const fs::path& featureFilePath,
         .referenceToIndex = referenceToIndex,
         .flatMap = &result.flatByChromosomeIndex,
         .groupMap = &result.groupedByParentID,
+        .groupingMode = GroupingMode::DirectParentID,
     });
 
     const auto includedText = buildIncludedFeatureTypesText(includedFeatures);
@@ -391,6 +440,10 @@ auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
             vecRef.emplace_back(*parsedOpt);
         }
 
+        if (const auto& parentId = parsedOpt->getParentID()) {
+            scanStats.parentIDs.insert(*parentId);
+        }
+
         if (input.groupMap != nullptr) {
             groupingFeatures.emplace_back(std::move(*parsedOpt));
         }
@@ -400,7 +453,9 @@ auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
 
     if (input.groupMap != nullptr) {
         auto groupingResult =
-            annotation::FeatureGrouper::groupByHierarchy(std::move(groupingFeatures));
+            input.groupingMode == GroupingMode::Hierarchy
+                ? annotation::FeatureGrouper::groupByHierarchy(std::move(groupingFeatures))
+                : annotation::FeatureGrouper::groupByDirectParentID(std::move(groupingFeatures));
 
         *input.groupMap = std::move(groupingResult.groups);
         scanStats.parentIDs = std::move(groupingResult.groupKeys);
@@ -471,11 +526,46 @@ auto FeatureParser::popParentId(AttributeMap& attributes, FileType fileType,
 
     return normalized;
 }
+
+auto FeatureParser::inferParentId(AttributeMap const& attributes, FileType fileType,
+                                  std::string const& identifier) -> std::optional<std::string> {
+    auto getNormalizedAttribute = [&](std::string_view key) -> std::optional<std::string> {
+        const auto iterator = attributes.find(key);
+        if (iterator == attributes.end()) {
+            return std::nullopt;
+        }
+
+        auto value = normalizeAttributeValue(fileType, iterator->second);
+        if (value.empty() || value == identifier) {
+            return std::nullopt;
+        }
+        return value;
+    };
+
+    if (auto transcriptId = getNormalizedAttribute("transcript_id")) {
+        return transcriptId;
+    }
+
+    constexpr std::string_view exonPrefix{"exon:"};
+    if (identifier.starts_with(exonPrefix)) {
+        const auto transcriptStart = exonPrefix.size();
+        const auto exonNumberDelimiter = identifier.find(':', transcriptStart);
+        if (exonNumberDelimiter != std::string::npos && exonNumberDelimiter != transcriptStart) {
+            return identifier.substr(transcriptStart, exonNumberDelimiter - transcriptStart);
+        }
+    }
+
+    return getNormalizedAttribute("gene_id");
+}
+
 auto FeatureParser::popSpecificAttributes(AttributeMap& attributes,
                                           AttributeParseInput const& input) -> ExtractedAttributes {
     ExtractedAttributes extracted;
     extracted.identifier = popNormalized(attributes, input.fileType, input.idKey);
     extracted.parentID = popParentId(attributes, input.fileType, input.keys.parentKey);
+    if (!extracted.parentID && extracted.identifier) {
+        extracted.parentID = inferParentId(attributes, input.fileType, *extracted.identifier);
+    }
     extracted.geneName = popNormalized(attributes, input.fileType, input.keys.geneNameKey);
     extracted.attributes = std::move(attributes);
     return extracted;

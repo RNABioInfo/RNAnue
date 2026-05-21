@@ -7,8 +7,10 @@
 #include <cstdint>
 #include <cstdlib>
 #include <ios>
+#include <limits>
 #include <numeric>
 #include <ostream>
+#include <string>
 #include <vector>
 
 // Internal
@@ -20,6 +22,71 @@
 #include "Utility.hpp"
 
 namespace pipelines::analyze {
+namespace {
+
+constexpr double defaultMinSupportPerEffectiveBp = 0.02;
+constexpr double minBalancedArmRatio = 0.25;
+constexpr double diffuseConcentrationMax = 0.25;
+constexpr size_t compactTotalSpanMaxBp = 300;
+constexpr size_t expectedSingleComponentCount = 2;
+
+[[nodiscard]] auto safeDivide(double numerator, double denominator) noexcept -> double {
+    if (!std::isfinite(numerator) || !std::isfinite(denominator) || denominator <= 0.0) {
+        return 0.0;
+    }
+
+    return numerator / denominator;
+}
+
+[[nodiscard]] auto clampUnitInterval(double value) noexcept -> double {
+    if (!std::isfinite(value)) {
+        return 0.0;
+    }
+
+    return std::clamp(value, 0.0, 1.0);
+}
+
+[[nodiscard]] auto fallbackIntervalForRegion(const GenomicRegion &region)
+    -> std::vector<CoverageInterval> {
+    return {{.start = region.getStart(), .end = region.getEnd()}};
+}
+
+[[nodiscard]] auto coverageIntervalsForFragment(const RecordFragment &fragment)
+    -> std::vector<CoverageInterval> {
+    if (!fragment.coverageIntervals.empty()) {
+        return fragment.coverageIntervals;
+    }
+
+    return fallbackIntervalForRegion(fragment.genomicRegion);
+}
+
+void addFragmentCoverage(ArmCoverage &coverage, const RecordFragment &fragment) {
+    coverage.addIntervals(coverageIntervalsForFragment(fragment), fragment.transcriptContribution);
+}
+
+[[nodiscard]] auto classifyCoverageProfile(const CoverageShapeMetrics &metrics) -> std::string {
+    if (metrics.effectiveCoverageSpanBp <= 0.0 ||
+        metrics.supportPerEffectiveBp < defaultMinSupportPerEffectiveBp) {
+        return "low_support_density";
+    }
+
+    if (metrics.armBalance < minBalancedArmRatio) {
+        return "imbalanced_support";
+    }
+
+    if (metrics.coverageComponents > expectedSingleComponentCount) {
+        return "multi_peak_refine";
+    }
+
+    if (metrics.totalSpanBp > compactTotalSpanMaxBp &&
+        metrics.coverageConcentration <= diffuseConcentrationMax) {
+        return "broad_diffuse";
+    }
+
+    return "compact_dense";
+}
+
+}  // namespace
 
 auto InteractionCluster::operator<(const InteractionCluster &other) const noexcept -> bool {
     if (getSecondSegment().getReferenceIDIndex() < other.getSecondSegment().getReferenceIDIndex()) {
@@ -104,6 +171,9 @@ auto InteractionCluster::merge(const InteractionCluster &other,
         transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
     }
 
+    firstArmCoverage.merge(other.firstArmCoverage);
+    secondArmCoverage.merge(other.secondArmCoverage);
+
     return true;
 }
 
@@ -135,6 +205,51 @@ void InteractionCluster::absorbValidatedComponentMember(const InteractionCluster
 
     transcriptContribution += other.transcriptContribution;
     transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
+    firstArmCoverage.merge(other.firstArmCoverage);
+    secondArmCoverage.merge(other.secondArmCoverage);
+}
+
+auto InteractionCluster::coverageShapeMetrics() const -> CoverageShapeMetrics {
+    const ArmCoverageSummary firstSummary = firstArmCoverage.summary();
+    const ArmCoverageSummary secondSummary = secondArmCoverage.summary();
+
+    const double integratedCoverage =
+        firstSummary.integratedCoverage + secondSummary.integratedCoverage;
+    const double squaredCoverageIntegral =
+        firstSummary.squaredCoverageIntegral + secondSummary.squaredCoverageIntegral;
+    const double effectiveCoverageSpanBp =
+        safeDivide(integratedCoverage * integratedCoverage, squaredCoverageIntegral);
+    const size_t totalSpan = totalSpanBp();
+
+    CoverageShapeMetrics metrics{
+        .totalSpanBp = totalSpan,
+        .effectiveCoverageSpanBp = effectiveCoverageSpanBp,
+        .supportPerTotalBp = safeDivide(getTranscriptContribution(), static_cast<double>(totalSpan)),
+        .supportPerEffectiveBp =
+            safeDivide(getTranscriptContribution(), effectiveCoverageSpanBp),
+        .coverageConcentration =
+            clampUnitInterval(1.0 - safeDivide(effectiveCoverageSpanBp,
+                                               static_cast<double>(totalSpan))),
+        .coverageComponents = firstSummary.components + secondSummary.components,
+        .armBalance = safeDivide(std::min(firstSummary.integratedCoverage,
+                                          secondSummary.integratedCoverage),
+                                 std::max(firstSummary.integratedCoverage,
+                                          secondSummary.integratedCoverage)),
+        .coverageProfile = {}};
+    metrics.coverageProfile = classifyCoverageProfile(metrics);
+    return metrics;
+}
+
+void InteractionCluster::replaceCoverageFromFragments(const RecordFragment &firstFragment,
+                                                      const RecordFragment &secondFragment) {
+    firstArmCoverage = {};
+    secondArmCoverage = {};
+
+    const bool firstFragmentIsFirstArm = firstFragment.genomicRegion == sortedSegments.firstRegion;
+    addFragmentCoverage(firstFragmentIsFirstArm ? firstArmCoverage : secondArmCoverage,
+                        firstFragment);
+    addFragmentCoverage(firstFragmentIsFirstArm ? secondArmCoverage : firstArmCoverage,
+                        secondFragment);
 }
 
 auto InteractionCluster::complementarityStatistics() const -> double {

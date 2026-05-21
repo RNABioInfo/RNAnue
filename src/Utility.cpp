@@ -85,6 +85,27 @@ auto looks_like_bam(const fs::path& path) -> bool {
     return SamFileUtility::inspect(path).isReadable();
 }
 
+auto temporarySamOutputPath(const fs::path& outputPath, const std::string& operation) -> fs::path {
+    return outputPath.parent_path() /
+           (outputPath.filename().string() + "." + operation + "." + getUUID() + ".bam");
+}
+
+auto validateSamOutput(const fs::path& path) -> SamFileUtility::SamFileInspection {
+    return SamFileUtility::inspectWithRetries(path, 6, 500);
+}
+
+void moveSamOutputIntoPlace(const fs::path& tempPath, const fs::path& outputPath) {
+    try {
+        fs::rename(tempPath, outputPath);
+    } catch (const std::exception& exception) {
+        std::error_code ignoredError;
+        fs::remove(tempPath, ignoredError);
+        Logger::log<SourceLocation{}, LogLevel::ERROR>(
+            "Could not move SAM/BAM output into place; temp_output=", tempPath,
+            "; final_output=", outputPath, "; reason=", exception.what());
+    }
+}
+
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath,
                    const std::optional<dataTypes::SamReference>& reference) {
     Logger::log("Merging files into: ", outputPath);
@@ -96,7 +117,7 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
     bool hasRecordInput = false;
 
     for (const auto& inputPath : inputPaths) {
-        auto inspection = SamFileUtility::inspect(inputPath);
+        auto inspection = SamFileUtility::inspectWithRetries(inputPath);
 
         if (!inspection.isReadable()) {
             Logger::log<SourceLocation{}, LogLevel::ERROR>(
@@ -127,7 +148,19 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
         }
 
         Logger::log<LogLevel::INFO>("Creating header-only SAM/BAM output: ", outputPath);
-        SamFileUtility::writeHeaderOnlyFile(outputPath, *outputReference);
+        const auto tempOutputPath = temporarySamOutputPath(outputPath, "header_only");
+        SamFileUtility::writeHeaderOnlyFile(tempOutputPath, *outputReference);
+
+        const auto outputInspection = validateSamOutput(tempOutputPath);
+        if (!outputInspection.isReadable() || outputInspection.hasMissingEof()) {
+            std::error_code ignoredError;
+            fs::remove(tempOutputPath, ignoredError);
+            Logger::log<SourceLocation{}, LogLevel::ERROR>(
+                "Header-only SAM/BAM output is invalid: ",
+                SamFileUtility::describe(outputInspection));
+        }
+
+        moveSamOutputIntoPlace(tempOutputPath, outputPath);
         return;
     }
 
@@ -136,36 +169,73 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
             "Could not determine SAM/BAM reference header for merge output: ", outputPath);
     }
 
-    try {
-        seqan3::sam_file_output outputFile{outputPath, outputReference->referenceIDs,
-                                           outputReference->referenceLengths};
+    constexpr size_t MERGE_WRITE_ATTEMPTS = 2;
+    SamFileUtility::SamFileInspection outputInspection{};
+    for (size_t attempt = 1; attempt <= MERGE_WRITE_ATTEMPTS; ++attempt) {
+        const auto tempOutputPath = temporarySamOutputPath(outputPath, "merging");
+        try {
+            {
+                seqan3::sam_file_output outputFile{tempOutputPath, outputReference->referenceIDs,
+                                                   outputReference->referenceLengths};
 
-        for (const auto& inspection : validInputs) {
-            if (!inspection.hasRecords()) {
-                Logger::log<LogLevel::DEBUG>("Skipping header-only SAM/BAM while merging records: ",
-                                             inspection.path);
-                continue;
+                for (const auto& inspection : validInputs) {
+                    if (!inspection.hasRecords()) {
+                        Logger::log<LogLevel::DEBUG>(
+                            "Skipping header-only SAM/BAM while merging records: ",
+                            inspection.path);
+                        continue;
+                    }
+
+                    Logger::log<LogLevel::DEBUG>("Merging: ", inspection.path);
+
+                    seqan3::sam_file_input inputFile{inspection.path};
+                    inputFile | outputFile;
+                }
             }
 
-            Logger::log<LogLevel::DEBUG>("Merging: ", inspection.path);
+            outputInspection = validateSamOutput(tempOutputPath);
+            if (outputInspection.isReadable() && !outputInspection.hasMissingEof()) {
+                moveSamOutputIntoPlace(tempOutputPath, outputPath);
+                return;
+            }
 
-            seqan3::sam_file_input inputFile{inspection.path};
-            inputFile | outputFile;
+            std::error_code ignoredError;
+            fs::remove(tempOutputPath, ignoredError);
+            if (attempt < MERGE_WRITE_ATTEMPTS) {
+                Logger::log<LogLevel::WARNING>(
+                    "Merged SAM/BAM output failed validation; retrying merge: ",
+                    SamFileUtility::describe(outputInspection));
+                continue;
+            }
+        } catch (const std::exception& exception) {
+            std::error_code ignoredError;
+            fs::remove(tempOutputPath, ignoredError);
+            if (attempt < MERGE_WRITE_ATTEMPTS) {
+                Logger::log<LogLevel::WARNING>(
+                    "Could not write merged SAM/BAM output; retrying merge; temp_output=",
+                    tempOutputPath, "; reason=", exception.what());
+                continue;
+            }
+            Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
+                                                           outputPath, "; reason: ",
+                                                           exception.what());
+        } catch (...) {
+            std::error_code ignoredError;
+            fs::remove(tempOutputPath, ignoredError);
+            if (attempt < MERGE_WRITE_ATTEMPTS) {
+                Logger::log<LogLevel::WARNING>(
+                    "Could not write merged SAM/BAM output; retrying merge; temp_output=",
+                    tempOutputPath);
+                continue;
+            }
+            Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
+                                                           outputPath);
         }
-    } catch (const std::exception& exception) {
-        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
-                                                       outputPath, "; reason: ",
-                                                       exception.what());
-    } catch (...) {
-        Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
-                                                       outputPath);
     }
 
-    const auto outputInspection = SamFileUtility::inspect(outputPath);
-    if (!outputInspection.isReadable() || outputInspection.hasMissingEof()) {
-        Logger::log<SourceLocation{}, LogLevel::ERROR>(
-            "Merged SAM/BAM output is invalid: ", SamFileUtility::describe(outputInspection));
-    }
+    Logger::log<SourceLocation{}, LogLevel::ERROR>(
+        "Merged SAM/BAM output is invalid after retry: ",
+        SamFileUtility::describe(outputInspection), "; final_output=", outputPath);
 }
 
 void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {

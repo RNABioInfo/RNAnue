@@ -25,4 +25,7 @@ struct GroupingResult {
 [[nodiscard]] auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures)
     -> GroupingResult;
 
+[[nodiscard]] auto groupByDirectParentID(std::vector<GroupingFeature>&& groupingFeatures)
+    -> GroupingResult;
+
 }  // namespace annotation::FeatureGrouper

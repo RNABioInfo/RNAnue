@@ -42,8 +42,8 @@ class GenomePreprocessor {
 
         GeneCopyMasker geneCopyMasker{
             params.geneCopyMaskerParams,
-            parser.parseGroupedByParentID(input.annotationPath,
-                                          referenceGenome.getReferenceIndexMapping()),
+            parser.parseGroupedByHierarchy(input.annotationPath,
+                                           referenceGenome.getReferenceIndexMapping()),
             std::move(referenceGenome)};
         auto result = geneCopyMasker.process();
         writeResults(output, result);

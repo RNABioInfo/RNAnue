@@ -3,8 +3,10 @@
 // Standard
 #include <cstddef>
 #include <filesystem>
+#include <limits>
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 #include <utility>
 #include <vector>
 
@@ -42,8 +44,23 @@ class InteractionParser {
         csv::CSVFormat format{};
         format.delimiter('\t').header_row(0);
         csv::CSVReader reader{interactionsInputPath.string()};
+        const auto colNames = reader.get_col_names();
+        const std::unordered_set<std::string> columns{colNames.begin(), colNames.end()};
 
         using namespace constants::interaction;
+        const auto hasColumn = [&columns](const std::string& columnName) -> bool {
+            return columns.contains(columnName);
+        };
+        const auto optionalFloat = [&hasColumn](const csv::CSVRow& entry,
+                                                const std::string& columnName) -> float {
+            return hasColumn(columnName) ? entry[columnName].get<float>()
+                                         : std::numeric_limits<float>::quiet_NaN();
+        };
+        const auto optionalString = [&hasColumn](const csv::CSVRow& entry,
+                                                 const std::string& columnName) -> std::string {
+            return hasColumn(columnName) ? entry[columnName].get<std::string>() : std::string{};
+        };
+
         for (const auto& entry : reader) {
             int firstReferenceIndex{
                 getReferenceIndexForID(entry[firstSegmentReferenceHeader].get<std::string>())};
@@ -70,6 +87,15 @@ class InteractionParser {
                     .secondFeature = entry[secondFeatureIDHeader].get<std::string>()},
                 InteractionMetrics{
                     .contributionScore = entry[transcriptContributionHeader].get<float>(),
+                    .totalSpanBp = optionalFloat(entry, totalSpanBpHeader),
+                    .effectiveCoverageSpanBp =
+                        optionalFloat(entry, effectiveCoverageSpanBpHeader),
+                    .supportPerTotalBp = optionalFloat(entry, supportPerTotalBpHeader),
+                    .supportPerEffectiveBp = optionalFloat(entry, supportPerEffectiveBpHeader),
+                    .coverageConcentration = optionalFloat(entry, coverageConcentrationHeader),
+                    .coverageComponents = optionalFloat(entry, coverageComponentsHeader),
+                    .armBalance = optionalFloat(entry, armBalanceHeader),
+                    .coverageProfile = optionalString(entry, coverageProfileHeader),
                     .meanInterCrosslinkCount = entry[meanInterCrosslinkCountHeader].get<float>(),
                     .sdInterCrosslinkCount = entry[sdInterCrosslinksHeader].get<float>(),
                     .globalComplementarityScore =

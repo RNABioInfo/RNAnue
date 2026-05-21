@@ -4,6 +4,7 @@
 #include <cstddef>
 #include <filesystem>
 #include <memory>
+#include <vector>
 
 // Boost
 #include <boost/math/distributions/binomial.hpp>
@@ -18,6 +19,7 @@
 #include "AnalyzeData.hpp"
 #include "AnalyzeParameters.hpp"
 #include "AnalyzeSample.hpp"
+#include "EvaluatedInteractionCluster.hpp"
 #include "FeatureAnnotator.hpp"
 #include "TranscriptContributionsByID.hpp"
 
@@ -37,6 +39,10 @@ class Analyze {
     AnalyzeParameters parameters;
     void processSample(const AnalyzeSample &sample,
                        std::shared_ptr<const FeatureAnnotator> featureAnnotator);
+
+    [[nodiscard]] auto filterByCoverageMetrics(
+        std::vector<EvaluatedInteractionCluster> &&clusters) const
+        -> std::vector<EvaluatedInteractionCluster>;
 
     static void parseAnnotatedContiguousFragmentCountsToTranscripts(
         const fs::path &contiguousTranscriptCountsInPath,

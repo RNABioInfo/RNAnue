@@ -3,6 +3,7 @@
 // Standard
 #include <algorithm>
 #include <cstddef>
+#include <limits>
 #include <ostream>
 #include <ranges>
 #include <string>
@@ -28,6 +29,14 @@ struct InteractionID {
 
 struct InteractionMetrics {
     float contributionScore;
+    float totalSpanBp = std::numeric_limits<float>::quiet_NaN();
+    float effectiveCoverageSpanBp = std::numeric_limits<float>::quiet_NaN();
+    float supportPerTotalBp = std::numeric_limits<float>::quiet_NaN();
+    float supportPerEffectiveBp = std::numeric_limits<float>::quiet_NaN();
+    float coverageConcentration = std::numeric_limits<float>::quiet_NaN();
+    float coverageComponents = std::numeric_limits<float>::quiet_NaN();
+    float armBalance = std::numeric_limits<float>::quiet_NaN();
+    std::string coverageProfile;
     float meanInterCrosslinkCount;
     float sdInterCrosslinkCount;
     float globalComplementarityScore;
@@ -273,6 +282,14 @@ inline auto operator<<(std::ostream& ostream, const Interaction& interaction) ->
     if (!interaction.interactionMetrics.empty()) {
         for (const auto& metric : interaction.interactionMetrics) {
             ostream << "    { contributionScore: " << metric.contributionScore
+                    << ", totalSpanBp: " << metric.totalSpanBp
+                    << ", effectiveCoverageSpanBp: " << metric.effectiveCoverageSpanBp
+                    << ", supportPerTotalBp: " << metric.supportPerTotalBp
+                    << ", supportPerEffectiveBp: " << metric.supportPerEffectiveBp
+                    << ", coverageConcentration: " << metric.coverageConcentration
+                    << ", coverageComponents: " << metric.coverageComponents
+                    << ", armBalance: " << metric.armBalance
+                    << ", coverageProfile: " << metric.coverageProfile
                     << ", meanInterCrosslinkCount: " << metric.meanInterCrosslinkCount
                     << ", sdInterCrosslinkCount: " << metric.sdInterCrosslinkCount
                     << ", globalComplementarityScore: " << metric.globalComplementarityScore

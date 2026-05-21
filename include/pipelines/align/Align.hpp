@@ -55,6 +55,8 @@ class Align {
 
     [[nodiscard]] auto getGeneralAlignmentArgs(size_t threadCount) const
         -> std::vector<std::string>;
+    void runSegemehlAlignment(std::vector<std::string> args, const fs::path &outputPath,
+                              const std::string &errorMessage) const;
     void alignReads(const std::string &query, const std::string &mate,
                     const std::string &matched) const;
     void alignSingleReads(const fs::path &queryFastqInPath,

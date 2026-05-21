@@ -48,6 +48,9 @@ namespace pipelines::analyze {
             outputDirSample / (inputSample.sampleName + outInteractionsBEDSuffix);
         const fs::path interactionsBEDARCPath =
             outputDirSample / (inputSample.sampleName + outInteractionsBEDARCSuffix);
+        const fs::path interactionsArmCoverageBedGraphPath =
+            outputDirSample /
+            (inputSample.sampleName + outInteractionsArmCoverageBedGraphSuffix);
         const fs::path supplementaryFeaturesPath =
             outputDirSample / (inputSample.sampleName + outSupplementaryFeaturesSuffix);
 
@@ -58,6 +61,8 @@ namespace pipelines::analyze {
                           .interactionsTranscriptCountsPath = interactionsTranscriptCountsPath,
                           .interactionsBEDPath = interactionsBEDPath,
                           .interactionsBEDARCPath = interactionsBEDARCPath,
+                          .interactionsArmCoverageBedGraphPath =
+                              interactionsArmCoverageBedGraphPath,
                           .supplementaryFeaturesPath = supplementaryFeaturesPath}));
     }
 

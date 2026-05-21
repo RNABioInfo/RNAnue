@@ -218,6 +218,49 @@ void Align::writeEmptyAlignments(const fs::path& alignmentsOutPath,
     SamFileUtility::writeHeaderOnlyFile(alignmentsOutPath, referenceFromGenome());
 }
 
+void Align::runSegemehlAlignment(std::vector<std::string> args, const fs::path& outputPath,
+                                 const std::string& errorMessage) const {
+    constexpr size_t VALIDATION_ATTEMPTS = 6;
+    constexpr size_t INITIAL_RETRY_DELAY_MS = 500;
+    constexpr size_t ALIGNMENT_ATTEMPTS = 2;
+
+    for (size_t attempt = 1; attempt <= ALIGNMENT_ATTEMPTS; ++attempt) {
+        auto c_args = convertToCStrings(args);
+
+        const int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
+
+        if (result != 0) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(errorMessage);
+        }
+
+        const auto inspection =
+            SamFileUtility::inspectWithRetries(outputPath, VALIDATION_ATTEMPTS,
+                                               INITIAL_RETRY_DELAY_MS);
+        if (inspection.isReadable()) {
+            if (inspection.hasMissingEof()) {
+                Logger::log<LogLevel::WARNING>(
+                    "Alignment output is readable but missing the BGZF EOF marker; sorting will "
+                    "repair it: ",
+                    SamFileUtility::describe(inspection));
+            }
+            return;
+        }
+
+        if (attempt == ALIGNMENT_ATTEMPTS) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+                errorMessage, "; output failed validation after retry: ",
+                SamFileUtility::describe(inspection));
+        }
+
+        Logger::log<LogLevel::WARNING>(
+            "Alignment output failed validation after segemehl; regenerating once: ",
+            SamFileUtility::describe(inspection));
+
+        std::error_code ignoredError;
+        fs::remove(outputPath, ignoredError);
+    }
+}
+
 void Align::alignSingleReads(const fs::path &queryFastqInPath,
                              const fs::path &alignmentsFastqOutPath) const {
     const size_t threads = threadsAdaptedToEntries(queryFastqInPath);
@@ -233,13 +276,7 @@ void Align::alignSingleReads(const fs::path &queryFastqInPath,
                 {"-q", queryFastqInPath.string(), "-o", alignmentsFastqOutPath.string(), "-H",
                  std::to_string(static_cast<int>(!parameters.multimapAlignments))});
 
-    auto c_args = convertToCStrings(args);
-
-    int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
-
-    if (result != 0) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not align reads");
-    }
+    runSegemehlAlignment(std::move(args), alignmentsFastqOutPath, "Could not align reads");
 }
 
 void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
@@ -264,13 +301,7 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
                  "-o", alignmentsFastqOutPath.string(), "-H",
                  std::to_string(static_cast<int>(!parameters.multimapAlignments))});
 
-    auto c_args = convertToCStrings(args);
-
-    int result = segemehl(static_cast<int>(c_args.size()) - 1, c_args.data());
-
-    if (result != 0) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not align reads");
-    }
+    runSegemehlAlignment(std::move(args), alignmentsFastqOutPath, "Could not align reads");
 }
 
 void Align::sortAlignmentsByQueryName(const fs::path &alignmentsPath,

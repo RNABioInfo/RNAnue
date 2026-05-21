@@ -5,8 +5,10 @@
 #include <optional>
 #include <ostream>
 #include <string>
+#include <vector>
 
 // Internal
+#include "ArmCoverage.hpp"
 #include "GenomicFeature.hpp"
 #include "GenomicRegion.hpp"
 #include "SamRecord.hpp"
@@ -22,6 +24,7 @@ struct RecordFragment {
     double hybridizationEnergy;
     int32_t interCrosslinkingSiteCount;
     float transcriptContribution{1.0F};
+    std::vector<pipelines::analyze::CoverageInterval> coverageIntervals{};
 
     [[nodiscard]] static auto fromSamRecord(const SamRecord &record)
         -> std::optional<RecordFragment>;

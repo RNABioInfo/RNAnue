@@ -6,6 +6,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <vector>
 
 // seqan3
 #include <seqan3/io/sam_file/sam_flag.hpp>
@@ -19,6 +20,35 @@
 #include "Utility.hpp"
 
 namespace dataTypes {
+namespace {
+
+[[nodiscard]] auto alignedCoverageIntervals(const SamRecord &record)
+    -> std::vector<pipelines::analyze::CoverageInterval> {
+    std::vector<pipelines::analyze::CoverageInterval> intervals;
+
+    const auto start = record.reference_position();
+    if (!start.has_value()) {
+        return intervals;
+    }
+
+    int32_t referencePosition = *start;
+    for (const auto &cigar : record.cigar_sequence()) {
+        const auto length = static_cast<int32_t>(get<0>(cigar));
+
+        if (cigar == 'M'_cigar_operation || cigar == '='_cigar_operation ||
+            cigar == 'X'_cigar_operation) {
+            intervals.push_back(
+                {.start = referencePosition, .end = referencePosition + length});
+            referencePosition += length;
+        } else if (cigar == 'D'_cigar_operation || cigar == 'N'_cigar_operation) {
+            referencePosition += length;
+        }
+    }
+
+    return intervals;
+}
+
+}  // namespace
 
 auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<RecordFragment> {
     const std::optional<GenomicRegion> genomicRegion = GenomicRegion::fromSamRecord(record);
@@ -37,7 +67,8 @@ auto RecordFragment::fromSamRecord(const SamRecord &record) -> std::optional<Rec
                           .complementarityScore = complementarityScore,
                           .hybridizationEnergy = hybridizationEnergy,
                           .interCrosslinkingSiteCount = interCrosslinkingSiteCount,
-                          .transcriptContribution = transcriptContribution};
+                          .transcriptContribution = transcriptContribution,
+                          .coverageIntervals = alignedCoverageIntervals(record)};
 }
 
 auto RecordFragment::toFeature(const std::string &featureID, const std::string &featureType) const
@@ -52,6 +83,8 @@ auto RecordFragment::toFeature(const std::string &featureID, const std::string &
 
     complementarityScore = std::max(complementarityScore, other.complementarityScore);
     hybridizationEnergy = std::min(hybridizationEnergy, other.hybridizationEnergy);
+    coverageIntervals.insert(coverageIntervals.end(), other.coverageIntervals.begin(),
+                             other.coverageIntervals.end());
 
     return true;
 }

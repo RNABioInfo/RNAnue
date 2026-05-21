@@ -2,6 +2,7 @@
 
 // Standard
 #include <cstddef>
+#include <optional>
 
 // Boost
 #include <boost/program_options.hpp>
@@ -12,6 +13,8 @@
 #include "ClusteringParameters.hpp"
 #include "GeneralParameters.hpp"
 #include "GenomicStrandSpecificity.hpp"
+#include "LogLevel.hpp"
+#include "Logger.hpp"
 
 namespace pipelines::analyze {
 
@@ -24,6 +27,9 @@ class AnalyzeParameters : public GeneralParameters {
     double maxClusterSelfOverlapFraction;
     double padjThreshold;
     float minimumClusterTranscriptContribution;
+    std::optional<double> minimumSupportPerEffectiveBp;
+    std::optional<size_t> maximumCoverageComponents;
+    std::optional<double> minimumArmBalance;
 
     AnalyzeParameters(const po::variables_map& params)
         : GeneralParameters(params),
@@ -33,7 +39,15 @@ class AnalyzeParameters : public GeneralParameters {
           maxClusterSelfOverlapFraction(AnalyzeOptions::maxSelfOverlap.extractValue(params)),
           padjThreshold(AnalyzeOptions::maxPadjValue.extractValue(params)),
           minimumClusterTranscriptContribution(
-              AnalyzeOptions::minimumClusterTranscriptContribution.extractValue(params)) {};
+              AnalyzeOptions::minimumClusterTranscriptContribution.extractValue(params)),
+          minimumSupportPerEffectiveBp(validateNonNegativeOptional(
+              AnalyzeOptions::minimumSupportPerEffectiveBp.extractValue(params),
+              AnalyzeOptions::minimumSupportPerEffectiveBp.getLongName())),
+          maximumCoverageComponents(
+              AnalyzeOptions::maximumCoverageComponents.extractValue(params)),
+          minimumArmBalance(validateUnitIntervalOptional(
+              AnalyzeOptions::minimumArmBalance.extractValue(params),
+              AnalyzeOptions::minimumArmBalance.getLongName())) {};
 
     static auto validateClusteringOrientation(const po::variables_map& params)
         -> GenomicStrandSpecificity {
@@ -62,6 +76,29 @@ class AnalyzeParameters : public GeneralParameters {
         return ClusterOverlapToleranceMergeParameter{
             clusterDistanceToOverlapTolerance(
                 AnalyzeOptions::clusteringDistanceTolerance.extractValue(params))};
+    }
+
+    [[nodiscard]] static auto validateNonNegativeOptional(std::optional<double> value,
+                                                          const std::string& name)
+        -> std::optional<double> {
+        if (value && *value < 0.0) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(name,
+                                                                " must be greater than or equal "
+                                                                "to 0.");
+        }
+
+        return value;
+    }
+
+    [[nodiscard]] static auto validateUnitIntervalOptional(std::optional<double> value,
+                                                           const std::string& name)
+        -> std::optional<double> {
+        if (value && (*value < 0.0 || *value > 1.0)) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(name,
+                                                                " must be between 0 and 1.");
+        }
+
+        return value;
     }
 };
 

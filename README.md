@@ -186,6 +186,16 @@ duplex.
 
 The interaction table reports `no_splits` as the weighted split-read contribution assigned to an
 interaction cluster; this can be fractional when a read group is shared across competing hit groups.
+RNAnue also reports coverage-shaped support density metrics. `support_per_total_bp` is the simple
+weighted support divided by the merged arm span. `effective_coverage_span_bp` is derived from
+weighted per-base arm coverage as `(sum coverage)^2 / sum(coverage^2)`, and
+`support_per_effective_bp` divides `no_splits` by this effective span. This keeps the intuitive
+support-per-base idea while making broad, permissively merged intervals visible through
+`coverage_concentration`, `coverage_components`, `arm_balance`, and `coverage_profile`. These
+metrics are reported by default; filtering by them is opt-in through the analyze options.
+The optional coverage filters are `mineffdens`, `maxcovcomp`, and `minarmbal`.
+Each sample also gets an aggregate weighted bedGraph of retained interaction-arm coverage for
+visual inspection.
 The `p_value` column is an analytic within-sample enrichment statistic: among the candidate
 interaction clusters detected in the sample, RNAnue tests whether a cluster has more weighted
 split-read support than expected from independent feature abundance estimated from contiguous

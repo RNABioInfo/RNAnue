@@ -12,6 +12,7 @@
 #include <memory>
 #include <optional>
 #include <string>
+#include <thread>
 #include <vector>
 
 // htslib
@@ -159,6 +160,22 @@ TEST_F(SamFileUtilityTest, InspectTruncatedMidBlockBam) {
 
     EXPECT_EQ(inspection.status, SamFileUtility::SamFileStatus::UnreadableOrTruncated);
     EXPECT_FALSE(inspection.isReadable());
+}
+
+TEST_F(SamFileUtilityTest, InspectWithRetriesAcceptsFileThatAppearsLate) {
+    const auto delayedPath = path("delayed.bam");
+    const auto tempPath = path("delayed.tmp.bam");
+    std::thread writer{[delayedPath, tempPath] {
+        std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        SamFileUtility::writeHeaderOnlyFile(tempPath, testReference());
+        fs::rename(tempPath, delayedPath);
+    }};
+
+    const auto inspection = SamFileUtility::inspectWithRetries(delayedPath, 8, 5);
+    writer.join();
+
+    EXPECT_EQ(inspection.status, SamFileUtility::SamFileStatus::HeaderOnly);
+    EXPECT_TRUE(inspection.isReadable());
 }
 
 TEST_F(SamFileUtilityTest, MergeEmptyInputListWithReferenceCreatesHeaderOnlyBam) {

@@ -13,6 +13,7 @@
 #include <sstream>
 #include <string>
 #include <string_view>
+#include <thread>
 #include <vector>
 
 // htslib
@@ -78,6 +79,26 @@ auto uniqueSortToken() -> std::string {
     static std::atomic_uint64_t counter{0};
     const auto timestamp = std::chrono::steady_clock::now().time_since_epoch().count();
     return std::to_string(timestamp) + "." + std::to_string(counter++);
+}
+
+auto shouldRetryInspection(const SamFileInspection& inspection) -> bool {
+    if (inspection.isReadable()) {
+        return false;
+    }
+
+    if (inspection.status == SamFileStatus::Missing || inspection.status == SamFileStatus::ZeroByte) {
+        return true;
+    }
+
+    // A present EOF marker with a failed middle read is often an OS/storage read failure rather
+    // than a semantically truncated BAM. Give the filesystem a few chances before failing.
+    return inspection.status == SamFileStatus::UnreadableOrTruncated &&
+           (inspection.eofCheck == 1 || inspection.recordCount > 0);
+}
+
+auto nextDelay(size_t currentDelayMs) -> size_t {
+    constexpr size_t MAX_DELAY_MS = 4000;
+    return std::min(currentDelayMs * 2, MAX_DELAY_MS);
 }
 
 void removeSortTemporaryFiles(const fs::path& tempPrefix, const fs::path& tempOutput) {
@@ -246,13 +267,41 @@ auto inspect(const fs::path& path) -> SamFileInspection {
     return inspection;
 }
 
+auto inspectWithRetries(const fs::path& path, const size_t attempts, const size_t initialDelayMs)
+    -> SamFileInspection {
+    const size_t normalizedAttempts = std::max<size_t>(attempts, 1);
+    size_t delayMs = std::max<size_t>(initialDelayMs, 1);
+
+    SamFileInspection inspection{};
+    for (size_t attempt = 1; attempt <= normalizedAttempts; ++attempt) {
+        inspection = inspect(path);
+
+        if (!shouldRetryInspection(inspection) || attempt == normalizedAttempts) {
+            return inspection;
+        }
+
+        Logger::log<LogLevel::WARNING>("SAM/BAM validation failed, retrying in ", delayMs,
+                                       " ms (attempt ", attempt, "/",
+                                       normalizedAttempts, "): ", describe(inspection));
+        std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+        delayMs = nextDelay(delayMs);
+    }
+
+    return inspection;
+}
+
 void writeHeaderOnlyFile(const fs::path& path, const dataTypes::SamReference& reference) {
     seqan3::sam_file_output out{path, reference.referenceIDs, reference.referenceLengths};
 }
 
 void sortByQueryName(const fs::path& inputPath, const fs::path& outputPath,
                      const size_t threadCount) {
-    const auto inputInspection = inspect(inputPath);
+    constexpr size_t SORT_ATTEMPTS = 3;
+    constexpr size_t INSPECTION_ATTEMPTS = 6;
+    constexpr size_t INITIAL_RETRY_DELAY_MS = 500;
+
+    auto inputInspection =
+        inspectWithRetries(inputPath, INSPECTION_ATTEMPTS, INITIAL_RETRY_DELAY_MS);
     if (!inputInspection.isReadable()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
             "Could not sort unreadable alignments; ", describe(inputInspection),
@@ -284,11 +333,38 @@ void sortByQueryName(const fs::path& inputPath, const fs::path& outputPath,
     const auto tempOutputString = tempOutput.string();
     const int sortThreadCount = static_cast<int>(std::max<size_t>(threadCount, 1));
 
-    // NOLINTBEGIN
-    int ret = bam_sort_core_ext(QueryName, emptyStr, 0, true, true, inputPathString.c_str(),
+    int ret = 1;
+    size_t delayMs = INITIAL_RETRY_DELAY_MS;
+    for (size_t attempt = 1; attempt <= SORT_ATTEMPTS; ++attempt) {
+        // NOLINTBEGIN
+        ret = bam_sort_core_ext(QueryName, emptyStr, 0, true, true, inputPathString.c_str(),
                                 tempPrefixString.c_str(), tempOutputString.c_str(), wbStr, maxMem,
                                 sortThreadCount, &inFmt, &outFmt, emptyStr, 1, 0);
-    // NOLINTEND
+        // NOLINTEND
+
+        if (ret == 0) {
+            break;
+        }
+
+        removeSortTemporaryFiles(tempPrefix, tempOutput);
+        if (attempt == SORT_ATTEMPTS) {
+            break;
+        }
+
+        Logger::log<LogLevel::WARNING>("Sorting alignments failed, retrying in ", delayMs,
+                                       " ms (attempt ", attempt, "/", SORT_ATTEMPTS,
+                                       "); input=", inputPath);
+        std::this_thread::sleep_for(std::chrono::milliseconds(delayMs));
+        delayMs = nextDelay(delayMs);
+
+        inputInspection =
+            inspectWithRetries(inputPath, INSPECTION_ATTEMPTS, INITIAL_RETRY_DELAY_MS);
+        if (!inputInspection.isReadable()) {
+            Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+                "Could not retry sorting unreadable alignments; ", describe(inputInspection),
+                "; output=", outputPath);
+        }
+    }
 
     if (ret != 0) {
         removeSortTemporaryFiles(tempPrefix, tempOutput);
@@ -297,7 +373,8 @@ void sortByQueryName(const fs::path& inputPath, const fs::path& outputPath,
             "; temp_output=", tempOutput, "; input_status=", describe(inputInspection));
     }
 
-    const auto sortedInspection = inspect(tempOutput);
+    const auto sortedInspection =
+        inspectWithRetries(tempOutput, INSPECTION_ATTEMPTS, INITIAL_RETRY_DELAY_MS);
     if (!sortedInspection.isReadable() || sortedInspection.hasMissingEof()) {
         removeSortTemporaryFiles(tempPrefix, tempOutput);
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>(

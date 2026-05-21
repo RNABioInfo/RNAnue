@@ -1,10 +1,13 @@
 #include "InteractionsWriter.hpp"
 
 // Standard
+#include <cmath>
 #include <cstddef>
+#include <cstdint>
 #include <deque>
 #include <format>
 #include <fstream>
+#include <map>
 #include <string>
 #include <string_view>
 #include <vector>
@@ -49,6 +52,8 @@ void InteractionsWriter::writeInteractions(
     writeInteractionsBEDHeader(interactionsBEDOutput, sampleName);
     writeInteractionsBEDArcHeader(interactionsBEDArcOutput, sampleName);
     writeInteractionReadIDsHeader(interactionReadIDsOutput);
+    writeInteractionArmCoverageBedGraph(sampleName, evaluatedClusters, referenceIDs,
+                                        outputPaths.interactionArmCoverageBedGraphOutputPath);
 
     size_t intramolecularCount = 0;
     size_t intermolecularCount = 0;
@@ -81,8 +86,10 @@ void InteractionsWriter::writeInteractionsHeader(std::ofstream& interactionsOut)
     interactionsOut
         << "cluster_ID\tfst_feat_id\tfst_seg_chr\tfst_seg_strt\tfst_seg_"
            "end\tfst_seg_strd\tsec_feat_id\t"
-           "sec_seg_chr\tsec_seg_strt\tsec_seg_end\tsec_seg_strd\tno_splits\tmean_inter_"
-           "crosslinks\tsd_inter_crosslinks\t"
+           "sec_seg_chr\tsec_seg_strt\tsec_seg_end\tsec_seg_strd\tno_splits\t"
+           "total_span_bp\teffective_coverage_span_bp\tsupport_per_total_bp\t"
+           "support_per_effective_bp\tcoverage_concentration\tcoverage_components\tarm_balance\t"
+           "coverage_profile\tmean_inter_crosslinks\tsd_inter_crosslinks\t"
            "gcs\tghs\tp_value\tpadj_value\n";
 }
 
@@ -125,7 +132,17 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
     interactionOut << cluster.getSecondSegment().getEnd() << "\t";
     interactionOut << static_cast<char>(cluster.getSecondSegment().getStrand()) << "\t";
 
+    const CoverageShapeMetrics coverageMetrics = cluster.coverageShapeMetrics();
+
     interactionOut << std::format("{:.2f}", cluster.getTranscriptContribution()) << "\t";
+    interactionOut << coverageMetrics.totalSpanBp << "\t";
+    interactionOut << std::format("{:.2f}", coverageMetrics.effectiveCoverageSpanBp) << "\t";
+    interactionOut << std::format("{:.6f}", coverageMetrics.supportPerTotalBp) << "\t";
+    interactionOut << std::format("{:.6f}", coverageMetrics.supportPerEffectiveBp) << "\t";
+    interactionOut << std::format("{:.4f}", coverageMetrics.coverageConcentration) << "\t";
+    interactionOut << coverageMetrics.coverageComponents << "\t";
+    interactionOut << std::format("{:.4f}", coverageMetrics.armBalance) << "\t";
+    interactionOut << coverageMetrics.coverageProfile << "\t";
     interactionOut << std::format("{:.2f}", cluster.meanCrosslinkingSiteCount()) << "\t";
     interactionOut << std::format("{:.2f}", cluster.standardDeviationCrosslinkingSiteCount())
                    << "\t";
@@ -175,6 +192,84 @@ void InteractionsWriter::writeInteractionBEDArc(const EvaluatedInteractionCluste
     bedArcOut << cluster.getFirstSegment().getStart() << "\t";
     bedArcOut << cluster.getSecondSegment().getStart() << "\t";
     bedArcOut << "cluster" << clusterID << "\n";
+}
+
+void InteractionsWriter::writeInteractionArmCoverageBedGraph(
+    const std::string& sampleName,
+    const std::vector<EvaluatedInteractionCluster>& evaluatedClusters,
+    const std::deque<std::string>& referenceIDs,
+    const fs::path& interactionArmCoverageBedGraphOutputPath) {
+    struct CoverageEvent {
+        int32_t position{};
+        double delta{};
+    };
+
+    std::map<int32_t, std::vector<CoverageEvent>> coverageEventsByReference;
+    auto addCoverageRuns = [&coverageEventsByReference](int32_t referenceIDIndex,
+                                                        const std::vector<CoverageRun>& runs) {
+        auto& events = coverageEventsByReference[referenceIDIndex];
+        events.reserve(events.size() + runs.size() * 2);
+
+        for (const auto& run : runs) {
+            if (run.start >= run.end || run.coverage <= 0.0) {
+                continue;
+            }
+
+            events.push_back({.position = run.start, .delta = run.coverage});
+            events.push_back({.position = run.end, .delta = -run.coverage});
+        }
+    };
+
+    for (const auto& cluster : evaluatedClusters) {
+        addCoverageRuns(cluster.getFirstSegment().getReferenceIDIndex(),
+                        cluster.getFirstArmCoverageRuns());
+        addCoverageRuns(cluster.getSecondSegment().getReferenceIDIndex(),
+                        cluster.getSecondArmCoverageRuns());
+    }
+
+    std::ofstream bedGraphOut(interactionArmCoverageBedGraphOutputPath);
+    if (!bedGraphOut.is_open()) {
+        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
+            "Could not open file: ", interactionArmCoverageBedGraphOutputPath);
+    }
+
+    bedGraphOut << "track type=bedGraph name=\"" << sampleName
+                << " weighted interaction arm coverage\" description=\"Weighted per-base "
+                   "coverage across retained RNAnue interaction arms\"\n";
+
+    constexpr double coverageEpsilon = 1e-12;
+    for (const auto& [referenceIDIndex, events] : coverageEventsByReference) {
+        std::vector<CoverageEvent> sortedEvents = events;
+        std::ranges::sort(sortedEvents, [](const CoverageEvent& lhs, const CoverageEvent& rhs) {
+            return lhs.position < rhs.position;
+        });
+
+        double currentCoverage = 0.0;
+        int32_t previousPosition = sortedEvents.empty() ? 0 : sortedEvents.front().position;
+        size_t index = 0;
+
+        while (index < sortedEvents.size()) {
+            const int32_t position = sortedEvents[index].position;
+
+            if (position > previousPosition && currentCoverage > coverageEpsilon) {
+                bedGraphOut << getReferenceID(referenceIDIndex, referenceIDs) << "\t"
+                            << previousPosition << "\t" << position << "\t"
+                            << std::format("{:.6f}", currentCoverage) << "\n";
+            }
+
+            double delta = 0.0;
+            while (index < sortedEvents.size() && sortedEvents[index].position == position) {
+                delta += sortedEvents[index].delta;
+                ++index;
+            }
+
+            currentCoverage += delta;
+            if (std::abs(currentCoverage) <= coverageEpsilon) {
+                currentCoverage = 0.0;
+            }
+            previousPosition = position;
+        }
+    }
 }
 
 void InteractionsWriter::writeInteractionReadIDs(const EvaluatedInteractionCluster& cluster,

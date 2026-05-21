@@ -26,6 +26,7 @@ struct AnalyzeOutput {
 
     fs::path interactionsBEDPath;
     fs::path interactionsBEDARCPath;
+    fs::path interactionsArmCoverageBedGraphPath;
 
     fs::path supplementaryFeaturesPath;
 };

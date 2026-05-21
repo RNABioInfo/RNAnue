@@ -35,6 +35,8 @@ static const std::string outInteractionsTranscriptCountsSuffix =
     "_interaction_transcript_counts.tsv";
 static const std::string outInteractionsBEDSuffix = "_interaction_regions.bed";
 static const std::string outInteractionsBEDARCSuffix = "_interaction_regions.arc";
+static const std::string outInteractionsArmCoverageBedGraphSuffix =
+    "_interaction_arm_coverage.bedgraph";
 static const std::string outSupplementaryFeaturesSuffix = "_supplementary_features.gff";
 
 static const std::string pipelinePrefix = "04_analyze";

@@ -60,6 +60,10 @@ class FeatureParser {
                                               const ReferenceIndexMapping& referenceToIndex) const
         -> ResultGrouped;
 
+    [[nodiscard]] auto parseGroupedByHierarchy(const fs::path& featureFilePath,
+                                               const ReferenceIndexMapping& referenceToIndex) const
+        -> ResultGrouped;
+
     [[nodiscard]] auto parseFlatAndGrouped(const fs::path& featureFilePath,
                                            const ReferenceIndexMapping& referenceToIndex) const
         -> Results;
@@ -119,12 +123,15 @@ class FeatureParser {
         std::unordered_set<std::string> nonAdjacentParentsWarned;
     };
 
+    enum class GroupingMode : std::uint8_t { DirectParentID, Hierarchy };
+
     struct FileScanInput {
         const fs::path& featureFilePath;
         ParseSettings settings;
         const ReferenceIndexMapping& referenceToIndex;
         dataTypes::FeatureMap* flatMap;
         dataTypes::ParentIDToFeatureGroupMap* groupMap;
+        GroupingMode groupingMode = GroupingMode::DirectParentID;
     };
 
     using AttributeMap = ExtractedAttributes::AttributeMap;
@@ -153,6 +160,8 @@ class FeatureParser {
         -> std::optional<std::string>;
     static auto popParentId(AttributeMap& attributes, FileType fileType,
                             std::string_view parentKeyView) -> std::optional<std::string>;
+    static auto inferParentId(AttributeMap const& attributes, FileType fileType,
+                              std::string const& identifier) -> std::optional<std::string>;
     static auto popSpecificAttributes(AttributeMap& attributes, AttributeParseInput const& input)
         -> ExtractedAttributes;
     static auto extractAttributes(AttributeParseInput input) -> ExtractedAttributes;

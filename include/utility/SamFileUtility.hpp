@@ -47,6 +47,8 @@ struct SamFileInspection {
 [[nodiscard]] auto describe(const SamFileInspection& inspection) -> std::string;
 
 [[nodiscard]] auto inspect(const fs::path& path) -> SamFileInspection;
+[[nodiscard]] auto inspectWithRetries(const fs::path& path, size_t attempts = 5,
+                                      size_t initialDelayMs = 250) -> SamFileInspection;
 
 void writeHeaderOnlyFile(const fs::path& path, const dataTypes::SamReference& reference);
 

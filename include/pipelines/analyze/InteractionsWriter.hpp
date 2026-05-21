@@ -52,6 +52,11 @@ class InteractionsWriter {
                                        const std::string& clusterID,
                                        const std::deque<std::string>& referenceIDs,
                                        std::ofstream& bedArcOut);
+    static void writeInteractionArmCoverageBedGraph(
+        const std::string& sampleName,
+        const std::vector<EvaluatedInteractionCluster>& evaluatedClusters,
+        const std::deque<std::string>& referenceIDs,
+        const fs::path& interactionArmCoverageBedGraphOutputPath);
     static void writeInteractionReadIDs(const EvaluatedInteractionCluster& cluster,
                                         const std::string& clusterID,
                                         std::ofstream& interactionReadIDsOut);
@@ -62,6 +67,7 @@ struct InteractionsWriter::OutputPaths {
     fs::path interactionReadIDsOutputPath;
     fs::path interactionsBEDOutputPath;
     fs::path interactionsBEDArcOutputPath;
+    fs::path interactionArmCoverageBedGraphOutputPath;
 };
 
 }  // namespace pipelines::analyze
