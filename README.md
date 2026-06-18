@@ -55,6 +55,8 @@ Clone the repository and its submodules:
 
 ```bash
 git clone --recurse-submodules <git-repo-here>
+cd RNAnue
+git submodule update --init --recursive
 ```
 
 > **Information**
