@@ -14,7 +14,7 @@ LABEL authors="Christopher Adelmann and Richard A. Schaefer"
 # update sources list
 RUN apt-get update && apt-get -y upgrade
 RUN apt-get install -y curl build-essential cmake git pkg-config
-RUN apt-get install -y libbz2-dev zlib1g-dev libncurses5-dev liblzma-dev
+RUN apt-get install -y libboost-program-options-dev libbz2-dev zlib1g-dev libncurses5-dev liblzma-dev
 
 # install htslib
 WORKDIR /
@@ -42,8 +42,8 @@ RUN git clone -b develop --recurse-submodules https://github.com/ChristopherAdel
 WORKDIR /RNAnue
 
 # install RNAnue
-WORKDIR /RNAnue/build
-RUN cmake .. -DCMAKE_BUILD_TYPE=Release
-RUN cmake --build . --parallel 10
-RUN echo 'alias RNAnue="./RNAnue/build/RNAnue"' >> ~/.bashrc
+WORKDIR /RNAnue
+RUN cmake --preset release
+RUN cmake --build --preset release --parallel 10
+RUN echo 'alias RNAnue="/RNAnue/build/release/RNAnue"' >> ~/.bashrc
 WORKDIR /

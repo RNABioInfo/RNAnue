@@ -88,7 +88,7 @@ target_include_directories(tests PRIVATE
     ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
     ${HTSlib_INCLUDE_DIRS}
     ${HTSlib_INCLUDE_DIRS}/htslib
-    ${Boost_INCLUDE_DIR}
+    ${RNANUE_BOOST_INCLUDE_DIRS}
 )
 
 target_link_libraries(tests PRIVATE
@@ -98,7 +98,7 @@ target_link_libraries(tests PRIVATE
     TBB::tbb
     ${HTSlib_LIBRARIES}
     ${VIENNA_RNA_LIBRARY}
-    ${Boost_LIBRARIES}
+    ${RNANUE_BOOST_LIBRARIES}
 )
 
 if(TARGET RNAnue_tbb)

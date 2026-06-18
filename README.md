@@ -47,6 +47,9 @@ To build RNAnue, you need `cmake (>=v3.24.0)` and GCC/G++ 14 or newer.
 RNAnue uses C++23 standard-library APIs that are not fully available in GCC 13,
 including `<print>`, `std::forward_like`, `std::ranges::to`, and
 `std::ranges::zip_view`.
+For fast local builds, install Boost.Program_options through your system package
+manager before configuring RNAnue. On Ubuntu, this package is
+`libboost-program-options-dev`.
 If you need to compile ViennaRNA, you also need `autoconf`, `automake`, and `libtool` (see [Dependencies](#dependencies)).
 
 #### Downloading
@@ -67,27 +70,49 @@ git submodule update --init --recursive
 Build and install RNAnue with the following commands:
 
 ```bash
-mkdir build
-cd build
-cmake ..
-cmake --build . --parallel <num-threds-here>
-cmake --install .
+cmake --preset release
+cmake --build --preset release --parallel <num-threads-here>
+cmake --install build/release
 ```
+
+For local debugging, use:
+
+```bash
+cmake --preset debug
+cmake --build --preset debug --parallel <num-threads-here>
+```
+
+To build and run the tests, use:
+
+```bash
+cmake --preset test
+cmake --build --preset test --parallel <num-threads-here>
+ctest --preset test
+```
+
+The presets do not require Ninja; CMake will use the default generator for your system unless you override it.
 
 > **IMPORTANT**
 > RNAnue can only be compiled with [gcc](https://gcc.gnu.org) 14 or newer (tested with v14.2.0; needs to support **C++23**)
 
 > **IMPORTANT – MacOS**
 > When building on macOS, you need to specify the GCC compiler to avoid using AppleClang:
-> `cmake -DCMAKE_CXX_COMPILER=<path-to-g++> -DCMAKE_C_COMPILER=<path-to-gcc> ..`
+> `cmake --preset release -DCMAKE_CXX_COMPILER=<path-to-g++> -DCMAKE_C_COMPILER=<path-to-gcc>`
+> System Boost packages on macOS are commonly built with AppleClang/libc++ and are
+> not ABI-compatible with RNAnue's GCC/libstdc++ build. The `release` preset will
+> use the bundled Boost fallback on macOS. If you use `debug` or `test` on macOS,
+> add `-DRNANUE_BOOST_PROVIDER=BUNDLED`.
 
 #### Dependencies
 
-RNAnue includes the following dependencies:
+RNAnue includes or uses the following dependencies:
 
-- [Boost](https://github.com/boostorg/boost) (v1.85.0)
+- [Boost.Program_options](https://github.com/boostorg/boost) (system package preferred; bundled fallback v1.86.0)
 - [Segemehl](http://www.bioinf.uni-leipzig.de/Software/segemehl/) (v0.3.4)
 - [SeqAn](https://github.com/seqan/seqan3) (v3.3.0)
+
+The `debug` and `test` presets require system Boost.Program_options and fail early if it is missing.
+The `release` preset tries system Boost.Program_options first and falls back to the bundled Boost build.
 
 The following dependencies will be used if present on the system, otherwise they will be fetched (internet connection required):
 

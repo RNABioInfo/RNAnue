@@ -230,7 +230,9 @@ endif()
 
 # # # Boost
 include(boost)
-add_dependencies(RNAnue Boost)
+if(RNANUE_BOOST_EXTERNAL_TARGET)
+    add_dependencies(RNAnue ${RNANUE_BOOST_EXTERNAL_TARGET})
+endif()
 
 # # # Matplotlib
 include(matplotplusplus)
@@ -239,14 +241,14 @@ add_dependencies(RNAnue matplot)
 # # # Dependency Include Directories
 target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
                                                     ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
-                                                    ${Boost_INCLUDE_DIR})
+                                                    ${RNANUE_BOOST_INCLUDE_DIRS})
 
 # # # Link Libraries
 target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
                                         segemehl
                                         TBB::tbb
                                         ${VIENNA_RNA_LIBRARY}
-                                        ${Boost_LIBRARIES})
+                                        ${RNANUE_BOOST_LIBRARIES})
 
 target_link_libraries (RNAnue PUBLIC matplot)
 
@@ -271,7 +273,9 @@ if (RNANUE_BUILD_TESTS)
         add_dependencies(tests htslib)
     endif()
 
-    add_dependencies(tests Boost)
+    if(RNANUE_BOOST_EXTERNAL_TARGET)
+        add_dependencies(tests ${RNANUE_BOOST_EXTERNAL_TARGET})
+    endif()
 endif()
 
 # ----------------------------------------------------------------------------

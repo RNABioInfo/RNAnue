@@ -96,9 +96,9 @@ else()
         URL https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2
         BUILD_IN_SOURCE 1
         UPDATE_COMMAND ""
-        CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} CXX=$ENV{CXX} CC=$ENV{CC} ${LOCAL_ZLIB_CONFIG}
-        BUILD_COMMAND ${MAKE_COMMAND} CXX=$ENV{CXX} CC=$ENV{CC} lib-static
-        INSTALL_COMMAND ${MAKE_COMMAND} install CXX=$ENV{CXX} CC=$ENV{CC} prefix=${htslib_INSTALL}
+        CONFIGURE_COMMAND autoreconf -i && ./configure --prefix=${htslib_PREFIX} ${disable_flags} "CXX=${CMAKE_CXX_COMPILER}" "CC=${CMAKE_C_COMPILER}" ${LOCAL_ZLIB_CONFIG}
+        BUILD_COMMAND ${MAKE_COMMAND} "CXX=${CMAKE_CXX_COMPILER}" "CC=${CMAKE_C_COMPILER}" lib-static
+        INSTALL_COMMAND ${MAKE_COMMAND} install "CXX=${CMAKE_CXX_COMPILER}" "CC=${CMAKE_C_COMPILER}" prefix=${htslib_INSTALL}
   )
 
     if (ZLIB_BUILD)
