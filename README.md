@@ -217,18 +217,57 @@ duplex.
 
 ### Interaction table
 
+#### Coverage-shaped support metrics
+
 The interaction table reports `no_splits` as the weighted split-read contribution assigned to an
 interaction cluster; this can be fractional when a read group is shared across competing hit groups.
-RNAnue also reports coverage-shaped support density metrics. `support_per_total_bp` is the simple
-weighted support divided by the merged arm span. `effective_coverage_span_bp` is derived from
-weighted per-base arm coverage as `(sum coverage)^2 / sum(coverage^2)`, and
-`support_per_effective_bp` divides `no_splits` by this effective span. This keeps the intuitive
-support-per-base idea while making broad, permissively merged intervals visible through
-`coverage_concentration`, `coverage_components`, `arm_balance`, and `coverage_profile`. These
-metrics are reported by default; filtering by them is opt-in through the analyze options.
-The optional coverage filters are `mineffdens`, `maxcovcomp`, and `minarmbal`.
-Each sample also gets an aggregate weighted bedGraph of retained interaction-arm coverage for
-visual inspection.
+RNAnue also reports coverage-shaped support metrics by default. These are structural read-support
+metrics: they describe how split-read evidence is distributed across the two interaction arms, but
+do not by themselves establish a physical RNA interaction mechanism.
+
+Input coverage is built from the aligned bases of each split-read fragment:
+
+- CIGAR `M`, `=`, and `X` blocks add covered intervals.
+- CIGAR `D` and `N` blocks move along the reference but add no covered bases.
+- Each covered interval is weighted by the fragment's `XB` split-read contribution.
+- The weighted intervals are reduced to piecewise-constant per-base coverage runs for each arm.
+
+The reported metrics are calculated from those coverage runs:
+
+- `total_span_bp`: length of the first merged arm plus length of the second merged arm.
+- `support_per_total_bp`: `no_splits / total_span_bp`.
+- `effective_coverage_span_bp`: `(sum coverage)^2 / sum(coverage^2)`, using integrated coverage
+  across both arms. Evenly spread support gives a larger effective span; sharply peaked support
+  gives a smaller effective span.
+- `support_per_effective_bp`: `no_splits / effective_coverage_span_bp`.
+- `coverage_concentration`: `1 - effective_coverage_span_bp / total_span_bp`, clamped to `[0, 1]`.
+  Values near 0 indicate coverage spread across most of the merged span; values near 1 indicate
+  coverage concentrated in a small part of a larger span.
+- `coverage_components`: number of contiguous coverage components across both arms. A run counts as
+  part of a component only when its coverage is at least `max(1.0, 0.05 * maxCoverage)`, which avoids
+  counting very weak shoulders around stronger peaks.
+- `arm_balance`: `min(first_arm_integrated_coverage, second_arm_integrated_coverage) /
+  max(first_arm_integrated_coverage, second_arm_integrated_coverage)`. Values near 1 indicate
+  balanced support on both arms; values near 0 indicate mostly one-sided support.
+
+Coverage-shaped filtering is opt-in through `mineffdens`, `maxcovcomp`, and `minarmbal`. Each sample
+also gets an aggregate weighted bedGraph of retained interaction-arm coverage for visual inspection.
+
+#### Coverage profile assignment
+
+`coverage_profile` is assigned from the metrics above using ordered labels:
+
+- `low_support_density`: zero effective span or `support_per_effective_bp < 0.02`.
+- `imbalanced_support`: `arm_balance < 0.25`.
+- `multi_peak_refine`: more than two coverage components.
+- `broad_diffuse`: span above 300 bp with `coverage_concentration <= 0.25`.
+- `compact_dense`: all other retained coverage shapes.
+
+Together, these labels flag suspicious cluster shapes after statistical scoring: broad intervals with
+localized support, multi-peak merges, and interactions supported mainly by one arm.
+
+#### Significance columns
+
 The `p_value` column is an analytic within-sample enrichment statistic: among the candidate
 interaction clusters detected in the sample, RNAnue tests whether a cluster has more weighted
 split-read support than expected from independent feature abundance estimated from contiguous
