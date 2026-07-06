@@ -59,9 +59,30 @@ if(NOT RNANUE_BOOST_LIBRARIES)
     set(RNANUE_BUNDLED_BOOST_INSTALL ${CMAKE_BINARY_DIR}/submodules/boost-install)
     set(RNANUE_BUNDLED_BOOST_INCLUDE_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}/include)
     set(RNANUE_BUNDLED_BOOST_LIB_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}/lib)
+    set(RNANUE_BUNDLED_BOOST_TOOLSET gcc)
+    set(RNANUE_BUNDLED_BOOST_CXXFLAGS "")
+
+    if(APPLE)
+        if(CMAKE_OSX_SYSROOT)
+            list(APPEND RNANUE_BUNDLED_BOOST_CXXFLAGS "-isysroot" "${CMAKE_OSX_SYSROOT}")
+        endif()
+
+        if(CMAKE_OSX_DEPLOYMENT_TARGET)
+            list(APPEND RNANUE_BUNDLED_BOOST_CXXFLAGS "-mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+        endif()
+
+        if(CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+            list(APPEND RNANUE_BUNDLED_BOOST_CXXFLAGS "-D_Static_assert=static_assert")
+        endif()
+    endif()
+
+    string(JOIN " " RNANUE_BUNDLED_BOOST_CXXFLAGS_STRING ${RNANUE_BUNDLED_BOOST_CXXFLAGS})
 
     message(STATUS "Building bundled Boost.Program_options from source")
     message(STATUS "Using Boost cxx compiler: ${CMAKE_CXX_COMPILER}")
+    if(RNANUE_BUNDLED_BOOST_CXXFLAGS_STRING)
+        message(STATUS "Using Boost cxx flags: ${RNANUE_BUNDLED_BOOST_CXXFLAGS_STRING}")
+    endif()
 
     ExternalProject_Add(
         Boost
@@ -69,21 +90,22 @@ if(NOT RNANUE_BOOST_LIBRARIES)
         BUILD_IN_SOURCE 1
         DOWNLOAD_EXTRACT_TIMESTAMP true
         URL "https://github.com/boostorg/boost/releases/download/boost-1.86.0/boost-1.86.0-cmake.tar.gz"
-        CONFIGURE_COMMAND ${CMAKE_COMMAND} -E env
-            "CXX=${CMAKE_CXX_COMPILER}"
-            ./bootstrap.sh
-            --prefix=<INSTALL_DIR>
-            --with-toolset=gcc
-            --with-libraries=program_options
-        BUILD_COMMAND ${CMAKE_COMMAND} -E env
-            "CXX=${CMAKE_CXX_COMPILER}"
-            ./b2 install
-            "--cxx=${CMAKE_CXX_COMPILER}"
-            toolset=gcc
-            link=static
-            variant=release
-            threading=multi
-            runtime-link=static
+        CONFIGURE_COMMAND ${CMAKE_COMMAND}
+            "-DRNANUE_BOOST_STEP=bootstrap"
+            "-DRNANUE_BOOST_SOURCE_DIR=<SOURCE_DIR>"
+            "-DRNANUE_BOOST_INSTALL_DIR=<INSTALL_DIR>"
+            "-DRNANUE_BOOST_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DRNANUE_BOOST_CXXFLAGS=${RNANUE_BUNDLED_BOOST_CXXFLAGS_STRING}"
+            "-DRNANUE_BOOST_TOOLSET=${RNANUE_BUNDLED_BOOST_TOOLSET}"
+            -P "${CMAKE_CURRENT_LIST_DIR}/boost_build_step.cmake"
+        BUILD_COMMAND ${CMAKE_COMMAND}
+            "-DRNANUE_BOOST_STEP=build"
+            "-DRNANUE_BOOST_SOURCE_DIR=<SOURCE_DIR>"
+            "-DRNANUE_BOOST_INSTALL_DIR=<INSTALL_DIR>"
+            "-DRNANUE_BOOST_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
+            "-DRNANUE_BOOST_CXXFLAGS=${RNANUE_BUNDLED_BOOST_CXXFLAGS_STRING}"
+            "-DRNANUE_BOOST_TOOLSET=${RNANUE_BUNDLED_BOOST_TOOLSET}"
+            -P "${CMAKE_CURRENT_LIST_DIR}/boost_build_step.cmake"
         INSTALL_COMMAND ""
         INSTALL_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}
     )

@@ -1119,8 +1119,11 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
   char leftstrand, rightstrand;
   Uint totalcover=0;
   int totalscore=0;
+  const Uint repairFragmentLen = nfo->minfragmentalignlen;
 
   MultiCharSeqAlignment *a;
+
+  if(repairFragmentLen == 0 || qrylen < repairFragmentLen) return set;
 
   //fprintf(stdout, "fix split align split of mate:%d\n", ismate);
   //bl_dumpMappingSet(stdout, set);
@@ -1137,14 +1140,14 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
 
       if((check & ( 1 << 2 | 1 << 5 | 1 << 1))) {
         //check gaps left 
-        leftseeds[0] = searchSuffixList(NULL, arr, seqs[0], nfo->fixsplitlen, nfo->maxfixsplitocc, &leftseedno[0]);
-        leftseeds[1] = searchSuffixList(NULL, arr, seqs[1], nfo->fixsplitlen, nfo->maxfixsplitocc, &leftseedno[1]);
+        leftseeds[0] = searchSuffixList(NULL, arr, seqs[0], repairFragmentLen, nfo->maxfixsplitocc, &leftseedno[0]);
+        leftseeds[1] = searchSuffixList(NULL, arr, seqs[1], repairFragmentLen, nfo->maxfixsplitocc, &leftseedno[1]);
       } 
 
       if((check & ( 1 << 4 | 1 << 3 | 1 << 1))) {
         //check gaps right
-        rightseeds[0] = searchSuffixList(NULL, arr, &seqs[0][qrylen-nfo->fixsplitlen], nfo->fixsplitlen, nfo->maxfixsplitocc, &rightseedno[0]);
-        rightseeds[1] = searchSuffixList(NULL, arr, &seqs[1][qrylen-nfo->fixsplitlen], nfo->fixsplitlen, nfo->maxfixsplitocc, &rightseedno[1]);
+        rightseeds[0] = searchSuffixList(NULL, arr, &seqs[0][qrylen-repairFragmentLen], repairFragmentLen, nfo->maxfixsplitocc, &rightseedno[0]);
+        rightseeds[1] = searchSuffixList(NULL, arr, &seqs[1][qrylen-repairFragmentLen], repairFragmentLen, nfo->maxfixsplitocc, &rightseedno[1]);
       }
 
       mylist = bl_getMappingLocusList(&set->elem[j], mseq, ismate); 
@@ -1161,7 +1164,7 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
 
         if(leftseedno[strand]) {  
           ret = binarySearch_left(leftseeds[strand], leftseedno[strand], &rpos, cmp_Uint_bin, NULL);
-          if(ret > 0 && leftseeds[strand][ret-1] + nfo->fixsplitlen + 6 <  rpos && (rpos - leftseeds[strand][ret-1] + nfo->fixsplitlen + 1) < nfo->fixsplitdist){  
+          if(ret > 0 && leftseeds[strand][ret-1] + repairFragmentLen + 6 <  rpos && (rpos - leftseeds[strand][ret-1] + repairFragmentLen + 1) < nfo->fixsplitdist){
             leftd = leftseeds[strand][ret-1];
           }
         }
@@ -1200,7 +1203,7 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
 
 
          if(leftstrand) {
-            mystart[mysize] = qrylen-nfo->fixsplitlen;
+            mystart[mysize] = qrylen-repairFragmentLen;
             myends[mysize] = qrylen-1;
             mypos[mysize] = leftd;
             myrc[mysize] = leftstrand;
@@ -1211,7 +1214,7 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
             memmove(&mypos[1], &mypos[0], sizeof(uint64_t)*mysize);
             
             mystart[0] = 0;
-            myends[0] = nfo->fixsplitlen;
+            myends[0] = repairFragmentLen;
             mypos[0] = leftd;
             myrc[0] = leftstrand;
           }
@@ -1234,12 +1237,12 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
             memmove(&mypos[1], &mypos[0], sizeof(uint64_t)*mysize);
 
             mystart[0] = 0;
-            myends[0] = nfo->fixsplitlen;
+            myends[0] = repairFragmentLen;
             mypos[0] = rightd;
             myrc[0] = rightstrand;
           } else { 
             
-            mystart[mysize] = qrylen-nfo->fixsplitlen;
+            mystart[mysize] = qrylen-repairFragmentLen;
             myends[mysize] = qrylen-1;
             mypos[mysize] = rightd;
             myrc[mysize] = rightstrand;
@@ -1264,17 +1267,8 @@ bl_fixSplitAlignHoffmann (Suffixarray *arr, mappingset_t *set, MultiCharSeq *mse
           tmp = ALLOCMEMORY(NULL, NULL, mappingset_t, 1);
           bl_initMappingSet(tmp);
 
-          Uint savelen = nfo->minfragmentalignlen;
-          Uint savescr = nfo->minfragmentalignscore;
-
-          nfo->minfragmentalignlen = 10;
-          nfo->minfragmentalignscore = 10;
-
           se_kdAlignEvalSplitAlign (mseq, a,  tmp, &totalcover, &totalscore, 
               &trans, nfo->scores, nfo->scores[2], mysize, ismate, seqs, quals, nfo);
-     
-          nfo->minfragmentalignlen = savelen;
-          nfo->minfragmentalignscore = savescr;
           Uint mindist = -1;
 
           if(tmp->n ==1) { 
@@ -1357,6 +1351,9 @@ void bl_fixSplitAlignBrendel (Suffixarray *arr, mappingset_t *set, MultiCharSeq 
   Uint leftmargin, rightmargin;
   //Uint nooffrags;
   char checkcnt = 0;
+  const Uint repairFragmentLen = nfo->minfragmentalignlen;
+
+  if(repairFragmentLen == 0 || qrylen < repairFragmentLen) return;
 
   bl_sortMappingSetByScore(set, scores, indel);
 
@@ -1375,14 +1372,14 @@ void bl_fixSplitAlignBrendel (Suffixarray *arr, mappingset_t *set, MultiCharSeq 
 
         if((check & ( 1 << 2 | 1 << 5 | 1 << 1))) {
           //check gaps left 
-          leftseeds[0] = searchSuffixList(NULL, arr, seqs[0], 10, 30000, &leftseedno[0]);
-          leftseeds[1] = searchSuffixList(NULL, arr, seqs[1], 10, 30000, &leftseedno[1]);
+          leftseeds[0] = searchSuffixList(NULL, arr, seqs[0], repairFragmentLen, 30000, &leftseedno[0]);
+          leftseeds[1] = searchSuffixList(NULL, arr, seqs[1], repairFragmentLen, 30000, &leftseedno[1]);
         } 
 
         if((check & ( 1 << 4 | 1 << 3 | 1 << 1))) {
           //check gaps right
-          rightseeds[0] = searchSuffixList(NULL, arr, &seqs[0][qrylen-10], 10, 30000, &rightseedno[0]);
-          rightseeds[1] = searchSuffixList(NULL, arr, &seqs[1][qrylen-10], 10, 30000, &rightseedno[1]);
+          rightseeds[0] = searchSuffixList(NULL, arr, &seqs[0][qrylen-repairFragmentLen], repairFragmentLen, 30000, &rightseedno[0]);
+          rightseeds[1] = searchSuffixList(NULL, arr, &seqs[1][qrylen-repairFragmentLen], repairFragmentLen, 30000, &rightseedno[1]);
         }
 
 
@@ -1423,9 +1420,9 @@ void bl_fixSplitAlignBrendel (Suffixarray *arr, mappingset_t *set, MultiCharSeq 
                 //          fprintf(stdout, "searching in string (%d): %s\n", strand, seqs[strand]);
                 ret = binarySearch_left(leftseeds[strand], leftseedno[strand], &rpos, cmp_Uint_bin, NULL);
                 //          fprintf(stdout, "returned %d of %d\n", ret, leftseedno[strand]);
-                if(ret > 0 && rpos > leftseeds[strand][ret-1] + 11 + 5) {
+                if(ret > 0 && rpos > leftseeds[strand][ret-1] + repairFragmentLen + 1 + 5) {
 
-                  leftd = rpos - leftseeds[strand][ret-1] + 11; 
+                  leftd = rpos - leftseeds[strand][ret-1] + repairFragmentLen + 1;
 
                   //                 fprintf(stdout, "this is %u ; d1:%" PRIu64 "\n", leftseeds[strand][ret-1], leftd);
                 }
@@ -1442,7 +1439,7 @@ void bl_fixSplitAlignBrendel (Suffixarray *arr, mappingset_t *set, MultiCharSeq 
                 //          fprintf(stdout, "returned %d of %d\n", ret, rightseedno[strand]);
                 if(ret < rightseedno[strand] && rpos + rlen - 1 + 5 < rightseeds[strand][ret] ) {
 
-                  rightd = rightseeds[strand][ret] - rpos + 11; 
+                  rightd = rightseeds[strand][ret] - rpos + repairFragmentLen + 1;
                   /*            
                                 if(ret >0) fprintf(stdout, "prev %" PRId64 " (%" PRId64 ")\n", (int64_t) rightseeds[strand][ret-1], ((int64_t)rpos - rightseeds[strand][ret-1]));
                                 fprintf(stdout,"cur  %" PRId64 " (%" PRId64 ")\n", (int64_t) rightseeds[strand][ret], ((int64_t)rpos - rightseeds[strand][ret]));
@@ -1736,5 +1733,4 @@ bl_crosscorrection(Suffixarray *arr, mappingset_t *set, MultiCharSeq *mseq, char
 
   return corrected;
 }
-
 

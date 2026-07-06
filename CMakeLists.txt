@@ -1,39 +1,9 @@
 cmake_minimum_required(VERSION 3.24)
 
-if(CMAKE_HOST_APPLE AND NOT DEFINED CMAKE_CXX_COMPILER)
-    if(DEFINED ENV{CXX} AND NOT "$ENV{CXX}" MATCHES "^/usr/bin/"
-       AND "$ENV{CXX}" MATCHES "g\\+\\+(-[0-9]+)?$")
-        if(IS_ABSOLUTE "$ENV{CXX}")
-            set(RNANUE_MACOS_GXX "$ENV{CXX}")
-        else()
-            find_program(RNANUE_MACOS_GXX
-                         NAMES "$ENV{CXX}"
-                         HINTS /opt/homebrew/bin /usr/local/bin /opt/local/bin)
-        endif()
-    else()
-        find_program(RNANUE_MACOS_GXX
-                     NAMES g++-14 g++-13 g++-12
-                     HINTS /opt/homebrew/bin /usr/local/bin /opt/local/bin)
-    endif()
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/select_compilers.cmake)
+rnanue_select_compatible_compilers()
 
-    if(RNANUE_MACOS_GXX)
-        set(CMAKE_CXX_COMPILER "${RNANUE_MACOS_GXX}" CACHE FILEPATH "C++ compiler" FORCE)
-
-        get_filename_component(RNANUE_MACOS_GXX_DIR "${RNANUE_MACOS_GXX}" DIRECTORY)
-        get_filename_component(RNANUE_MACOS_GXX_NAME "${RNANUE_MACOS_GXX}" NAME)
-        string(REPLACE "g++" "gcc" RNANUE_MACOS_GCC_NAME "${RNANUE_MACOS_GXX_NAME}")
-        find_program(RNANUE_MACOS_GCC
-                     NAMES "${RNANUE_MACOS_GCC_NAME}"
-                     HINTS "${RNANUE_MACOS_GXX_DIR}"
-                     NO_DEFAULT_PATH)
-
-        if(RNANUE_MACOS_GCC)
-            set(CMAKE_C_COMPILER "${RNANUE_MACOS_GCC}" CACHE FILEPATH "C compiler" FORCE)
-        endif()
-    endif()
-endif()
-
-project(RNAnue VERSION 1.0.0)
+project(RNAnue VERSION 1.0.0 LANGUAGES C CXX)
 
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)

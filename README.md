@@ -75,6 +75,11 @@ cmake --build --preset release --parallel <num-threads-here>
 cmake --install build/release
 ```
 
+The presets test the default C++ compiler before the main CMake language
+configuration. If the default compiler is not compatible but a compatible
+`g++-14` or newer compiler is on `PATH`, RNAnue selects that compiler and the
+matching `gcc` automatically.
+
 For local debugging, use:
 
 ```bash
@@ -96,7 +101,8 @@ The presets do not require Ninja; CMake will use the default generator for your 
 > RNAnue can only be compiled with [gcc](https://gcc.gnu.org) 14 or newer (tested with v14.2.0; needs to support **C++23**)
 
 > **IMPORTANT – MacOS**
-> When building on macOS, you need to specify the GCC compiler to avoid using AppleClang:
+> RNAnue will try to select Homebrew or MacPorts GCC automatically to avoid AppleClang.
+> If auto-detection cannot find GCC, specify the compiler explicitly:
 > `cmake --preset release -DCMAKE_CXX_COMPILER=<path-to-g++> -DCMAKE_C_COMPILER=<path-to-gcc>`
 > System Boost packages on macOS are commonly built with AppleClang/libc++ and are
 > not ABI-compatible with RNAnue's GCC/libstdc++ build. The `release` preset will
