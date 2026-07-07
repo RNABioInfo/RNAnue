@@ -47,9 +47,10 @@ To build RNAnue, you need `cmake (>=v3.24.0)` and GCC/G++ 14 or newer.
 RNAnue uses C++23 standard-library APIs that are not fully available in GCC 13,
 including `<print>`, `std::forward_like`, `std::ranges::to`, and
 `std::ranges::zip_view`.
-For fast local builds, install Boost.Program_options through your system package
-manager before configuring RNAnue. On Ubuntu, this package is
-`libboost-program-options-dev`.
+For fast local builds, install available dependencies through your system package
+manager before configuring RNAnue. On Ubuntu, useful packages include
+`libboost-program-options-dev`, `libtbb-dev`, `zlib1g-dev`, `libpng-dev`,
+`libbz2-dev`, and `liblzma-dev`.
 If you need to compile ViennaRNA, you also need `autoconf`, `automake`, and `libtool` (see [Dependencies](#dependencies)).
 
 #### Downloading
@@ -105,27 +106,58 @@ The presets do not require Ninja; CMake will use the default generator for your 
 > If auto-detection cannot find GCC, specify the compiler explicitly:
 > `cmake --preset release -DCMAKE_CXX_COMPILER=<path-to-g++> -DCMAKE_C_COMPILER=<path-to-gcc>`
 > System Boost packages on macOS are commonly built with AppleClang/libc++ and are
-> not ABI-compatible with RNAnue's GCC/libstdc++ build. The `release` preset will
-> use the bundled Boost fallback on macOS. If you use `debug` or `test` on macOS,
-> add `-DRNANUE_BOOST_PROVIDER=BUNDLED`.
+> not ABI-compatible with RNAnue's GCC/libstdc++ build. The presets use AUTO-first
+> dependency discovery and fall back to bundled Boost.Program_options on macOS
+> when the installed Boost package is not safe for the selected compiler.
 
 #### Dependencies
 
 RNAnue includes or uses the following dependencies:
 
-- [Boost.Program_options](https://github.com/boostorg/boost) (system package preferred; bundled fallback v1.86.0)
+- [Boost.Program_options](https://github.com/boostorg/boost) (installed package preferred; bundled fallback v1.86.0)
 - [Segemehl](http://www.bioinf.uni-leipzig.de/Software/segemehl/) (v0.3.4)
 - [SeqAn](https://github.com/seqan/seqan3) (v3.3.0)
+- [Matplot++](https://github.com/alandefreitas/matplotplusplus) (installed package preferred; pinned bundled fallback)
 
-The `debug` and `test` presets require system Boost.Program_options and fail early if it is missing.
-The `release` preset tries system Boost.Program_options first and falls back to the bundled Boost build.
+RNAnue uses an AUTO-first dependency policy by default. CMake first tries
+installed packages from system paths, Conda, Homebrew, MacPorts, and paths passed
+through `CMAKE_PREFIX_PATH`; missing dependencies then use pinned bundled
+fallbacks where available.
 
-The following dependencies will be used if present on the system, otherwise they will be fetched (internet connection required):
+The following dependencies will be used if present, otherwise they will be fetched
+in AUTO mode (internet connection required):
 
 - [htslib](https://github.com/samtools/htslib.git) (v1.20)
 - [Vienna Package](https://www.tbi.univie.ac.at/RNA/#binary_packages) (v2.6.4)
+- [oneTBB](https://github.com/oneapi-src/oneTBB) (v2022.0.0)
+- [zlib](https://github.com/madler/zlib) (v1.3.1, only when needed by bundled htslib)
 
-On Linux, [oneTBB](https://github.com/oneapi-src/oneTBB) is also fetched and built automatically if no system CMake package is found.
+Dependency provider controls:
+
+```bash
+cmake --preset release -DRNANUE_DEPENDENCY_PROVIDER=AUTO
+cmake --preset release -DRNANUE_DEPENDENCY_PROVIDER=SYSTEM
+cmake --preset release -DRNANUE_DEPENDENCY_PROVIDER=BUNDLED
+```
+
+`AUTO` is the default. `SYSTEM` never downloads fallbacks and fails with install
+guidance if a required dependency is missing. `BUNDLED` forces pinned bundled
+fallbacks where RNAnue provides one. Individual dependencies can override the
+global default with `RNANUE_BOOST_PROVIDER`, `RNANUE_VIENNARNA_PROVIDER`,
+`RNANUE_HTSLIB_PROVIDER`, `RNANUE_TBB_PROVIDER`, `RNANUE_MATPLOT_PROVIDER`, and
+`RNANUE_ZLIB_PROVIDER`.
+
+When building inside Conda or another non-system prefix, inspect the final
+runtime bindings if CMake warns about hidden implicit libraries:
+
+```bash
+ldd build/release/RNAnue | egrep 'libz|libgomp|libomp|libtbb|libRNA|libhts'
+otool -L build/release/RNAnue
+```
+
+Use one dependency prefix consistently when possible, for example by passing
+`-DCMAKE_PREFIX_PATH=/path/to/env -DZLIB_ROOT=/path/to/env` for Conda-style
+builds.
 
 ## Overview
 

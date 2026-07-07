@@ -2,6 +2,7 @@
 # Testing
 # ----------------------------------------------------------------------------
 include(FetchContent)
+include(${CMAKE_CURRENT_LIST_DIR}/../cmake/dependency_providers.cmake)
 
 # The top-level project still uses directory-wide include paths, but fetched
 # dependencies should not inherit RNAnue's headers or Conda-injected SDK
@@ -21,20 +22,43 @@ endforeach()
 set(BUILD_GMOCK OFF CACHE BOOL "" FORCE)
 set(INSTALL_GTEST OFF CACHE BOOL "" FORCE)
 
-FetchContent_Declare(
-    googletest
-    DOWNLOAD_EXTRACT_TIMESTAMP true
-    URL https://github.com/google/googletest/archive/1d17ea141d2c11b8917d2c7d029f1c4e2b9769b2.zip
-)
+rnanue_provider_allows_system(RNANUE_DEPENDENCY_PROVIDER RNANUE_GTEST_ALLOW_SYSTEM)
+rnanue_provider_allows_bundled(RNANUE_DEPENDENCY_PROVIDER RNANUE_GTEST_ALLOW_BUNDLED)
 
-FetchContent_MakeAvailable(googletest)
+if(RNANUE_GTEST_ALLOW_SYSTEM)
+    find_package(GTest QUIET)
+endif()
+
+if(NOT TARGET GTest::gtest_main)
+    if(RNANUE_DEPENDENCY_PROVIDER STREQUAL "SYSTEM")
+        message(FATAL_ERROR
+            "RNANUE_DEPENDENCY_PROVIDER=SYSTEM requires installed GoogleTest when "
+            "RNANUE_BUILD_TESTS=ON. Install GTest, set CMAKE_PREFIX_PATH, disable tests "
+            "with -DRNANUE_BUILD_TESTS=OFF, or use AUTO/BUNDLED dependency mode.")
+    elseif(RNANUE_GTEST_ALLOW_BUNDLED)
+        FetchContent_Declare(
+            googletest
+            DOWNLOAD_EXTRACT_TIMESTAMP true
+            URL https://github.com/google/googletest/archive/1d17ea141d2c11b8917d2c7d029f1c4e2b9769b2.zip
+        )
+
+        FetchContent_MakeAvailable(googletest)
+        rnanue_record_dependency("GoogleTest" "${RNANUE_DEPENDENCY_PROVIDER}" "" "GTest::gtest_main")
+    endif()
+else()
+    rnanue_record_dependency("GoogleTest" "${RNANUE_DEPENDENCY_PROVIDER}" "" "GTest::gtest_main")
+endif()
 
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
     # Newer Apple SDK Mach headers use the C11 spelling in headers that
     # GoogleTest includes from C++ sources. Clang accepts it; GCC needs the
     # C++ spelling. Scope the workaround to GoogleTest only.
-    target_compile_definitions(gtest PRIVATE _Static_assert=static_assert)
-    target_compile_definitions(gtest_main PRIVATE _Static_assert=static_assert)
+    if(TARGET gtest)
+        target_compile_definitions(gtest PRIVATE _Static_assert=static_assert)
+    endif()
+    if(TARGET gtest_main)
+        target_compile_definitions(gtest_main PRIVATE _Static_assert=static_assert)
+    endif()
 endif()
 
 add_executable(tests
@@ -97,7 +121,7 @@ target_link_libraries(tests PRIVATE
     segemehl
     TBB::tbb
     ${HTSlib_LIBRARIES}
-    ${VIENNA_RNA_LIBRARY}
+    ${VIENNA_RNA_LIBRARIES}
     ${RNANUE_BOOST_LIBRARIES}
 )
 

@@ -1,18 +1,7 @@
-set(RNANUE_BOOST_PROVIDER "AUTO" CACHE STRING
-    "Boost provider: AUTO tries system Boost first, SYSTEM requires it, BUNDLED builds Boost from source")
-set_property(CACHE RNANUE_BOOST_PROVIDER PROPERTY STRINGS AUTO SYSTEM BUNDLED)
+include(${CMAKE_CURRENT_LIST_DIR}/dependency_providers.cmake)
 
-string(TOUPPER "${RNANUE_BOOST_PROVIDER}" RNANUE_BOOST_PROVIDER)
-set(RNANUE_BOOST_PROVIDER "${RNANUE_BOOST_PROVIDER}" CACHE STRING
-    "Boost provider: AUTO tries system Boost first, SYSTEM requires it, BUNDLED builds Boost from source" FORCE)
-
-set(RNANUE_BOOST_PROVIDER_VALUES AUTO SYSTEM BUNDLED)
-list(FIND RNANUE_BOOST_PROVIDER_VALUES "${RNANUE_BOOST_PROVIDER}" RNANUE_BOOST_PROVIDER_INDEX)
-if(RNANUE_BOOST_PROVIDER_INDEX EQUAL -1)
-    message(FATAL_ERROR
-        "Invalid RNANUE_BOOST_PROVIDER='${RNANUE_BOOST_PROVIDER}'. "
-        "Use AUTO, SYSTEM, or BUNDLED.")
-endif()
+rnanue_configure_dependency_provider(RNANUE_BOOST_PROVIDER
+    "Boost provider: AUTO tries installed Boost first, SYSTEM requires it, BUNDLED builds Boost.Program_options from source")
 
 set(RNANUE_BOOST_INCLUDE_DIRS "")
 set(RNANUE_BOOST_LIBRARIES "")
@@ -24,10 +13,21 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 if(NOT RNANUE_BOOST_PROVIDER STREQUAL "BUNDLED" AND RNANUE_CAN_USE_SYSTEM_BOOST)
-    find_package(Boost QUIET COMPONENTS program_options)
+    find_package(Boost CONFIG QUIET COMPONENTS program_options)
+
+    if(NOT Boost_FOUND)
+        if(POLICY CMP0167)
+            cmake_policy(PUSH)
+            cmake_policy(SET CMP0167 OLD)
+            find_package(Boost MODULE QUIET COMPONENTS program_options)
+            cmake_policy(POP)
+        else()
+            find_package(Boost QUIET COMPONENTS program_options)
+        endif()
+    endif()
 
     if(Boost_FOUND)
-        message(STATUS "Using Boost.Program_options from system")
+        message(STATUS "Using Boost.Program_options from installed package")
         set(RNANUE_BOOST_INCLUDE_DIRS ${Boost_INCLUDE_DIRS})
 
         if(TARGET Boost::program_options)
@@ -35,6 +35,8 @@ if(NOT RNANUE_BOOST_PROVIDER STREQUAL "BUNDLED" AND RNANUE_CAN_USE_SYSTEM_BOOST)
         else()
             set(RNANUE_BOOST_LIBRARIES ${Boost_PROGRAM_OPTIONS_LIBRARY})
         endif()
+
+        rnanue_record_dependency("Boost.Program_options" "${RNANUE_BOOST_PROVIDER}" "${RNANUE_BOOST_INCLUDE_DIRS}" "${RNANUE_BOOST_LIBRARIES}")
     elseif(RNANUE_BOOST_PROVIDER STREQUAL "SYSTEM")
         message(FATAL_ERROR
             "RNANUE_BOOST_PROVIDER=SYSTEM requires Boost.Program_options. "
@@ -116,4 +118,5 @@ if(NOT RNANUE_BOOST_LIBRARIES)
 
     message(STATUS "Bundled Boost static libs: ${RNANUE_BOOST_LIBRARIES}")
     message(STATUS "Bundled Boost include dir: ${RNANUE_BOOST_INCLUDE_DIRS}")
+    rnanue_record_dependency("Boost.Program_options" "${RNANUE_BOOST_PROVIDER}" "${RNANUE_BOOST_INCLUDE_DIRS}" "${RNANUE_BOOST_LIBRARIES}")
 endif()

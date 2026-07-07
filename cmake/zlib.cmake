@@ -7,8 +7,7 @@ ExternalProject_Add(
   zlib
   PREFIX ${zlib_PREFIX}
   DOWNLOAD_EXTRACT_TIMESTAMP true
-  GIT_REPOSITORY "https://github.com/madler/zlib.git"
-  GIT_TAG "v1.3.1"
+  URL "https://github.com/madler/zlib/archive/refs/tags/v1.3.1.tar.gz"
   UPDATE_COMMAND ""
   # BUILD_IN_SOURCE 1 CONFIGURE_COMMAND ${zlib_PREFIX}/src/zlib/configure --prefix=${zlib_INSTALL} --static
   INSTALL_DIR ${zlib_INSTALL}

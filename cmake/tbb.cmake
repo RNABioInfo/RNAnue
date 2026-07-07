@@ -1,4 +1,5 @@
 include(ExternalProject)
+include(${CMAKE_CURRENT_LIST_DIR}/dependency_providers.cmake)
 
 set(RNANUE_TBB_VERSION "2022.0.0" CACHE STRING "oneTBB version to build when TBB is not installed")
 set(RNANUE_TBB_PREFIX "${CMAKE_BINARY_DIR}/submodules/tbb-prefix")
@@ -39,3 +40,5 @@ set_target_properties(TBB::tbb PROPERTIES
     IMPORTED_LOCATION "${RNANUE_TBB_LIBRARY}"
     INTERFACE_INCLUDE_DIRECTORIES "${RNANUE_TBB_INCLUDE_DIR}"
 )
+
+rnanue_record_dependency("oneTBB" "${RNANUE_TBB_PROVIDER}" "${RNANUE_TBB_INCLUDE_DIR}" "${RNANUE_TBB_LIBRARY}")

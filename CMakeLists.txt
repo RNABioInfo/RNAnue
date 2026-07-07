@@ -10,40 +10,40 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    foreach(RNANUE_CXX_FLAG_VAR
+  foreach(RNANUE_CXX_FLAG_VAR
             CMAKE_CXX_FLAGS
             CMAKE_CXX_FLAGS_DEBUG
             CMAKE_CXX_FLAGS_RELEASE
             CMAKE_CXX_FLAGS_RELWITHDEBINFO
             CMAKE_CXX_FLAGS_MINSIZEREL)
-        string(REPLACE "-stdlib=libc++" "" ${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}")
-        set(${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}" CACHE STRING "" FORCE)
-    endforeach()
+    string(REPLACE "-stdlib=libc++" "" ${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}")
+    set(${RNANUE_CXX_FLAG_VAR} "${${RNANUE_CXX_FLAG_VAR}}" CACHE STRING "" FORCE)
+  endforeach()
 endif()
 
 include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/compiler_features.cmake)
 
 if(APPLE AND NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-    message(FATAL_ERROR
+  message(FATAL_ERROR
         "RNAnue requires GCC with C++23 support on macOS. Reconfigure a fresh build directory "
         "with -DCMAKE_CXX_COMPILER=/path/to/g++ and -DCMAKE_C_COMPILER=/path/to/gcc, "
         "or set CXX and CC before the first CMake configure step.")
 endif()
 
 if(APPLE AND NOT CMAKE_C_COMPILER_ID STREQUAL "GNU")
-    message(FATAL_ERROR
+  message(FATAL_ERROR
         "RNAnue requires a GCC C compiler on macOS. Reconfigure a fresh build directory "
         "with -DCMAKE_C_COMPILER=/path/to/gcc, or set CC before the first CMake configure step.")
 endif()
 
 if(NOT CMAKE_CONFIGURATION_TYPES AND NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
+  set(CMAKE_BUILD_TYPE Release CACHE STRING "Build type" FORCE)
 endif()
 
 if(CMAKE_CXX_COMPILER MATCHES "^(/opt/homebrew|/usr/local|/opt/local)/")
-    get_filename_component(RNANUE_COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
-    get_filename_component(RNANUE_COMPILER_PREFIX "${RNANUE_COMPILER_BIN_DIR}" DIRECTORY)
-    list(PREPEND CMAKE_PREFIX_PATH "${RNANUE_COMPILER_PREFIX}")
+  get_filename_component(RNANUE_COMPILER_BIN_DIR "${CMAKE_CXX_COMPILER}" DIRECTORY)
+  get_filename_component(RNANUE_COMPILER_PREFIX "${RNANUE_COMPILER_BIN_DIR}" DIRECTORY)
+  list(PREPEND CMAKE_PREFIX_PATH "${RNANUE_COMPILER_PREFIX}")
 endif()
 
 # Configure header file to pass the version number to the source code
@@ -54,35 +54,112 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/Config.hpp.in ${CMAKE_CURRENT
 # ----------------------------------------------------------------------------
 # # # CMake Modules
 list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
+include(dependency_providers)
+rnanue_configure_dependency_provider(RNANUE_ZLIB_PROVIDER
+    "zlib provider: AUTO tries installed zlib first, SYSTEM requires it, BUNDLED builds zlib from source when a bundled dependency needs it")
+
+set(CPM_USE_LOCAL_PACKAGES ON CACHE BOOL "Try find_package before downloading CPM dependencies" FORCE)
+if(RNANUE_DEPENDENCY_PROVIDER STREQUAL "SYSTEM")
+  set(FETCHCONTENT_FULLY_DISCONNECTED ON CACHE BOOL
+        "Disable FetchContent downloads in strict system dependency mode" FORCE)
+  set(SEQAN3_NO_CEREAL ON CACHE BOOL
+        "Disable optional SeqAn3 cereal support in strict system dependency mode" FORCE)
+  find_path(SEQAN3_SDSL_INCLUDE_DIR
+        NAMES sdsl/version.hpp
+        PATH_SUFFIXES include
+    )
+  if(NOT SEQAN3_SDSL_INCLUDE_DIR)
+    message(FATAL_ERROR
+            "RNANUE_DEPENDENCY_PROVIDER=SYSTEM requires installed SDSL headers for SeqAn3. "
+            "Install SDSL, set CMAKE_PREFIX_PATH/CMAKE_INCLUDE_PATH to its prefix, or use "
+            "-DRNANUE_DEPENDENCY_PROVIDER=AUTO.")
+  endif()
+else()
+  set(FETCHCONTENT_FULLY_DISCONNECTED OFF CACHE BOOL
+        "Allow FetchContent downloads outside strict system dependency mode" FORCE)
+endif()
 
 # # # SeqAn3
 list(APPEND CMAKE_PREFIX_PATH ${CMAKE_CURRENT_SOURCE_DIR}/submodules/seqan3/cmake)
 find_package(seqan3 3.3.0 REQUIRED)
 
 # # # ViennaRNA
-find_package(ViennaRNA)
+rnanue_configure_dependency_provider(RNANUE_VIENNARNA_PROVIDER
+    "ViennaRNA provider: AUTO tries installed ViennaRNA first, SYSTEM requires it, BUNDLED builds ViennaRNA from source")
+rnanue_provider_allows_system(RNANUE_VIENNARNA_PROVIDER RNANUE_VIENNARNA_ALLOW_SYSTEM)
+rnanue_provider_allows_bundled(RNANUE_VIENNARNA_PROVIDER RNANUE_VIENNARNA_ALLOW_BUNDLED)
+if(RNANUE_VIENNARNA_ALLOW_SYSTEM)
+  find_package(ViennaRNA)
+else()
+  set(VIENNA_RNA_FOUND FALSE)
+endif()
+if(VIENNA_RNA_FOUND)
+  rnanue_record_dependency("ViennaRNA" "${RNANUE_VIENNARNA_PROVIDER}" "${VIENNA_RNA_INCLUDE_DIR}" "${VIENNA_RNA_LIBRARIES}")
+elseif(RNANUE_VIENNARNA_PROVIDER STREQUAL "SYSTEM")
+  message(FATAL_ERROR
+        "RNANUE_VIENNARNA_PROVIDER=SYSTEM requires an installed ViennaRNA package. "
+        "Install ViennaRNA, set CMAKE_PREFIX_PATH to its prefix, or configure with "
+        "-DRNANUE_VIENNARNA_PROVIDER=AUTO or BUNDLED.")
+endif()
 
 # # # htslib
-find_package(HTSlib)
+rnanue_configure_dependency_provider(RNANUE_HTSLIB_PROVIDER
+    "HTSlib provider: AUTO tries installed htslib first, SYSTEM requires it, BUNDLED builds htslib from source")
+rnanue_provider_allows_system(RNANUE_HTSLIB_PROVIDER RNANUE_HTSLIB_ALLOW_SYSTEM)
+rnanue_provider_allows_bundled(RNANUE_HTSLIB_PROVIDER RNANUE_HTSLIB_ALLOW_BUNDLED)
+if(RNANUE_HTSLIB_ALLOW_SYSTEM)
+  find_package(HTSlib)
+else()
+  set(HTSlib_FOUND FALSE)
+endif()
+if(HTSlib_FOUND)
+  rnanue_record_dependency("HTSlib" "${RNANUE_HTSLIB_PROVIDER}" "${HTSlib_INCLUDE_DIRS}" "${HTSlib_LIBRARIES}")
+elseif(RNANUE_HTSLIB_PROVIDER STREQUAL "SYSTEM")
+  message(FATAL_ERROR
+        "RNANUE_HTSLIB_PROVIDER=SYSTEM requires an installed htslib package. "
+        "Install htslib, set CMAKE_PREFIX_PATH/HTSLIB_ROOT to its prefix, or configure with "
+        "-DRNANUE_HTSLIB_PROVIDER=AUTO or BUNDLED.")
+elseif(RNANUE_HTSLIB_ALLOW_BUNDLED)
+  message(STATUS "Building static htslib from source")
+  include(htslib)
+  set(RNANUE_HTSLIB_EXTERNAL_TARGET htslib)
+  rnanue_record_dependency("HTSlib" "${RNANUE_HTSLIB_PROVIDER}" "${HTSlib_INCLUDE_DIRS}" "${HTSlib_LIBRARIES}")
+else()
+  message(FATAL_ERROR "HTSlib was not found and bundled HTSlib is disabled.")
+endif()
 
 # # # Intel oneTBB
-find_package(TBB QUIET COMPONENTS tbb)
-if(TBB_FOUND)
-    message(STATUS "Using oneTBB from system")
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    message(STATUS "Building bundled oneTBB from source")
-    include(tbb)
+rnanue_configure_dependency_provider(RNANUE_TBB_PROVIDER
+    "oneTBB provider: AUTO tries installed oneTBB first, SYSTEM requires it, BUNDLED builds oneTBB from source")
+rnanue_provider_allows_system(RNANUE_TBB_PROVIDER RNANUE_TBB_ALLOW_SYSTEM)
+rnanue_provider_allows_bundled(RNANUE_TBB_PROVIDER RNANUE_TBB_ALLOW_BUNDLED)
+if(RNANUE_TBB_ALLOW_SYSTEM)
+  find_package(TBB QUIET COMPONENTS tbb)
 else()
-    message(FATAL_ERROR
-        "oneTBB was not found. Install oneTBB or set TBB_DIR to its CMake package directory. "
-        "On Linux, RNAnue can fetch and build bundled oneTBB automatically.")
+  set(TBB_FOUND FALSE)
+endif()
+if(TBB_FOUND)
+  message(STATUS "Using oneTBB from installed package")
+  rnanue_record_dependency("oneTBB" "${RNANUE_TBB_PROVIDER}" "" "TBB::tbb")
+elseif(RNANUE_TBB_PROVIDER STREQUAL "SYSTEM")
+  message(FATAL_ERROR
+        "RNANUE_TBB_PROVIDER=SYSTEM requires installed oneTBB. Install oneTBB, set TBB_DIR, "
+        "or configure with -DRNANUE_TBB_PROVIDER=AUTO or BUNDLED.")
+elseif(RNANUE_TBB_ALLOW_BUNDLED)
+  message(STATUS "Building bundled oneTBB from source")
+  include(tbb)
 endif()
 
 # # # bam_sort
 set(BAM_SORT_DIR ${CMAKE_CURRENT_SOURCE_DIR}/submodules/bam_sort)
 
 # # # segemehl
+set(RNANUE_SAVED_DISABLE_FIND_PACKAGE_HTSlib "${CMAKE_DISABLE_FIND_PACKAGE_HTSlib}")
+if(RNANUE_HTSLIB_EXTERNAL_TARGET)
+  set(CMAKE_DISABLE_FIND_PACKAGE_HTSlib TRUE)
+endif()
 add_subdirectory(submodules/segemehl)
+set(CMAKE_DISABLE_FIND_PACKAGE_HTSlib "${RNANUE_SAVED_DISABLE_FIND_PACKAGE_HTSlib}")
 
 # ----------------------------------------------------------------------------
 # Build Setup
@@ -174,14 +251,12 @@ target_sources(RNAnue PRIVATE
 
 # # # htslib
 if(NOT HTSlib_FOUND)
-    message(STATUS "Building static htslib from source")
-    include(htslib)
-    add_dependencies(RNAnue htslib)
-    add_dependencies(segemehl htslib)
+  add_dependencies(RNAnue ${RNANUE_HTSLIB_EXTERNAL_TARGET})
+  add_dependencies(segemehl ${RNANUE_HTSLIB_EXTERNAL_TARGET})
 
-    target_include_directories(segemehl PUBLIC include ${HTSlib_INCLUDE_DIRS})
+  target_include_directories(segemehl PUBLIC include ${HTSlib_INCLUDE_DIRS})
 else()
-    message(STATUS "Using htslib from system")
+  message(STATUS "Using htslib from installed package")
 endif()
 
 target_link_libraries(RNAnue PRIVATE ${HTSlib_LIBRARIES})
@@ -190,23 +265,26 @@ target_include_directories(RNAnue PRIVATE ${HTSlib_INCLUDE_DIRS} ${HTSlib_INCLUD
 # # # ViennaRNA
 message(STATUS "Finding ViennaRNA status: ${VIENNA_RNA_FOUND}")
 if (NOT VIENNA_RNA_FOUND)
-    message(STATUS "Building static ViennaRNA from source")
-    include(viennaRNA)
-    add_dependencies(RNAnue viennaRNA)
+  if(NOT RNANUE_VIENNARNA_ALLOW_BUNDLED)
+    message(FATAL_ERROR "ViennaRNA was not found and bundled ViennaRNA is disabled.")
+  endif()
+  message(STATUS "Building static ViennaRNA from source")
+  include(viennaRNA)
+  add_dependencies(RNAnue viennaRNA)
+  rnanue_record_dependency("ViennaRNA" "${RNANUE_VIENNARNA_PROVIDER}" "${VIENNA_RNA_INCLUDE_DIR}" "${VIENNA_RNA_LIBRARIES}")
 else()
-    message(STATUS "Using ViennaRNA from system")
+  message(STATUS "Using ViennaRNA from installed package")
 endif()
 
 
 # # # Boost
 include(boost)
 if(RNANUE_BOOST_EXTERNAL_TARGET)
-    add_dependencies(RNAnue ${RNANUE_BOOST_EXTERNAL_TARGET})
+  add_dependencies(RNAnue ${RNANUE_BOOST_EXTERNAL_TARGET})
 endif()
 
 # # # Matplotlib
 include(matplotplusplus)
-add_dependencies(RNAnue matplot)
 
 # # # Dependency Include Directories
 target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
@@ -217,14 +295,16 @@ target_include_directories (RNAnue SYSTEM PRIVATE   ${VIENNA_RNA_INCLUDE_DIR}
 target_link_libraries (RNAnue PRIVATE   seqan3::seqan3
                                         segemehl
                                         TBB::tbb
-                                        ${VIENNA_RNA_LIBRARY}
+                                        ${VIENNA_RNA_LIBRARIES}
                                         ${RNANUE_BOOST_LIBRARIES})
 
 target_link_libraries (RNAnue PUBLIC matplot)
 
 if(TARGET RNAnue_tbb)
-    add_dependencies(RNAnue RNAnue_tbb)
+  add_dependencies(RNAnue RNAnue_tbb)
 endif()
+
+rnanue_print_dependency_summary()
 
 # ----------------------------------------------------------------------------
 # Testing
@@ -232,20 +312,20 @@ endif()
 option(RNANUE_BUILD_TESTS "Build RNAnue tests" ON)
 
 if (RNANUE_BUILD_TESTS)
-    enable_testing()
-    add_subdirectory(tests)
+  enable_testing()
+  add_subdirectory(tests)
 
-    if (NOT VIENNA_RNA_FOUND)
-        add_dependencies(tests viennaRNA)
-    endif()
+  if (NOT VIENNA_RNA_FOUND)
+    add_dependencies(tests viennaRNA)
+  endif()
 
-    if(NOT HTSlib_FOUND)
-        add_dependencies(tests htslib)
-    endif()
+  if(NOT HTSlib_FOUND)
+    add_dependencies(tests htslib)
+  endif()
 
-    if(RNANUE_BOOST_EXTERNAL_TARGET)
-        add_dependencies(tests ${RNANUE_BOOST_EXTERNAL_TARGET})
-    endif()
+  if(RNANUE_BOOST_EXTERNAL_TARGET)
+    add_dependencies(tests ${RNANUE_BOOST_EXTERNAL_TARGET})
+  endif()
 endif()
 
 # ----------------------------------------------------------------------------
@@ -278,14 +358,14 @@ set(CPACK_PACKAGE_CONTACT "Christopher Adelmann; RNA Biology & Bioinformatics; I
 set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
 
 if(APPLE)
-    message(STATUS "Building for MacOS")
-    set(CPACK_GENERATOR TGZ productbuild)
+  message(STATUS "Building for MacOS")
+  set(CPACK_GENERATOR TGZ productbuild)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    message(STATUS "Building for Linux")
-    set(CPACK_GENERATOR TGZ DEB)
+  message(STATUS "Building for Linux")
+  set(CPACK_GENERATOR TGZ DEB)
 else()
-    message(STATUS "Building for Other OS")
-    set(CPACK_GENERATOR TGZ)
+  message(STATUS "Building for Other OS")
+  set(CPACK_GENERATOR TGZ)
 endif()
 
 include(CPack)

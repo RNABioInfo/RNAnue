@@ -9,34 +9,52 @@
     {
       "name": "debug",
       "displayName": "Debug",
-      "description": "Debug build for fast local iteration with system Boost.Program_options.",
+      "description": "Debug build for fast local iteration with AUTO-first dependency discovery.",
       "binaryDir": "${sourceDir}/build/debug",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Debug",
         "RNANUE_BUILD_TESTS": "OFF",
-        "RNANUE_BOOST_PROVIDER": "SYSTEM"
+        "RNANUE_DEPENDENCY_PROVIDER": "AUTO",
+        "RNANUE_BOOST_PROVIDER": "AUTO",
+        "RNANUE_VIENNARNA_PROVIDER": "AUTO",
+        "RNANUE_HTSLIB_PROVIDER": "AUTO",
+        "RNANUE_TBB_PROVIDER": "AUTO",
+        "RNANUE_MATPLOT_PROVIDER": "AUTO",
+        "RNANUE_ZLIB_PROVIDER": "AUTO"
       }
     },
     {
       "name": "release",
       "displayName": "Release",
-      "description": "Optimized release build; uses system Boost when available and bundled Boost otherwise.",
+      "description": "Optimized release build with AUTO-first dependency discovery.",
       "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
         "RNANUE_BUILD_TESTS": "OFF",
-        "RNANUE_BOOST_PROVIDER": "AUTO"
+        "RNANUE_DEPENDENCY_PROVIDER": "AUTO",
+        "RNANUE_BOOST_PROVIDER": "AUTO",
+        "RNANUE_VIENNARNA_PROVIDER": "AUTO",
+        "RNANUE_HTSLIB_PROVIDER": "AUTO",
+        "RNANUE_TBB_PROVIDER": "AUTO",
+        "RNANUE_MATPLOT_PROVIDER": "AUTO",
+        "RNANUE_ZLIB_PROVIDER": "AUTO"
       }
     },
     {
       "name": "test",
       "displayName": "Test",
-      "description": "RelWithDebInfo build with tests enabled and system Boost.Program_options.",
+      "description": "RelWithDebInfo build with tests enabled and AUTO-first dependency discovery.",
       "binaryDir": "${sourceDir}/build/test",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",
         "RNANUE_BUILD_TESTS": "ON",
-        "RNANUE_BOOST_PROVIDER": "SYSTEM"
+        "RNANUE_DEPENDENCY_PROVIDER": "AUTO",
+        "RNANUE_BOOST_PROVIDER": "AUTO",
+        "RNANUE_VIENNARNA_PROVIDER": "AUTO",
+        "RNANUE_HTSLIB_PROVIDER": "AUTO",
+        "RNANUE_TBB_PROVIDER": "AUTO",
+        "RNANUE_MATPLOT_PROVIDER": "AUTO",
+        "RNANUE_ZLIB_PROVIDER": "AUTO"
       }
     }
   ],
