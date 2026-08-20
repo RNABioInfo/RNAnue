@@ -17,6 +17,7 @@
 #include <vector>
 
 // Internal
+#include "AnnotationHierarchyResolver.hpp"
 #include "Constants.hpp"
 #include "FeatureGrouper.hpp"
 #include "FileType.hpp"
@@ -332,7 +333,8 @@ auto FeatureParser::extractAllAttributes(AttributeParseInput const& input) -> At
 
 auto FeatureParser::tryParseFeature(const ColumnViews& columns, const ParseSettings& settings,
                                     const ReferenceIndexMapping& referenceToIndex,
-                                    LookupBuffers& buffers) const -> std::optional<ParsedFeature> {
+                                    LookupBuffers& buffers, std::size_t lineNumber) const
+    -> std::optional<ParsedFeature> {
     const auto& cols = columns.cols;
 
     const std::string_view refView = cols[0];
@@ -389,8 +391,17 @@ auto FeatureParser::tryParseFeature(const ColumnViews& columns, const ParseSetti
         getGenomicStrand(*strandOpt),
     };
 
-    return ParsedFeature{std::string(typView), region,         *attrs.identifier,
-                         attrs.parentID,       attrs.geneName, attrs.attributes};
+    return ParsedFeature{
+        .feature = GenomicFeature{std::string(typView), region, *attrs.identifier, std::nullopt,
+                                  attrs.geneName, attrs.attributes},
+        .explicitParentIds = attrs.parentIDs,
+        .lineNumber = lineNumber,
+        .parentOrigin = attrs.parentIDs.empty()
+                            ? ParsedParentOrigin::None
+                            : (settings.fileType == FileType::GTF
+                                   ? ParsedParentOrigin::GtfTranscriptId
+                                   : ParsedParentOrigin::GffParent),
+    };
 }
 
 auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
@@ -403,11 +414,9 @@ auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
     ScanStats scanStats{};
     LookupBuffers buffers{};
 
-    std::vector<annotation::FeatureGrouper::GroupingFeature> groupingFeatures;
-    if (input.groupMap != nullptr) {
-        constexpr std::size_t initialReserve = 1'024;
-        groupingFeatures.reserve(initialReserve);
-    }
+    std::vector<ParsedFeatureRecord> parsedRecords;
+    constexpr std::size_t initialReserve = 1'024;
+    parsedRecords.reserve(initialReserve);
 
     std::string lineData;
     std::size_t lineIndex = 0;
@@ -428,34 +437,35 @@ auto FeatureParser::scanFile(FileScanInput input) const -> ScanStats {
             continue;
         }
 
-        auto parsedOpt =
-            tryParseFeature(*columnsOpt, input.settings, input.referenceToIndex, buffers);
+        auto parsedOpt = tryParseFeature(*columnsOpt, input.settings, input.referenceToIndex,
+                                         buffers, lineIndex);
         if (!parsedOpt) {
             continue;
         }
 
-        if (input.flatMap != nullptr) {
-            auto& featureMap = *input.flatMap;
-            auto& vecRef = featureMap[parsedOpt->getGenomicRegion().getReferenceIDIndex()];
-            vecRef.emplace_back(*parsedOpt);
-        }
+        parsedRecords.emplace_back(std::move(*parsedOpt));
+    }
 
-        if (const auto& parentId = parsedOpt->getParentID()) {
-            scanStats.parentIDs.insert(*parentId);
-        }
+    auto resolution = AnnotationHierarchyResolver::resolve(
+        std::move(parsedRecords), input.featureFilePath, input.settings.fileType, includedFeatures);
+    scanStats.parsedCount = resolution.features.size();
 
-        if (input.groupMap != nullptr) {
-            groupingFeatures.emplace_back(std::move(*parsedOpt));
+    if (input.flatMap != nullptr) {
+        for (const auto& feature : resolution.features) {
+            auto& vecRef = (*input.flatMap)[feature.getGenomicRegion().getReferenceIDIndex()];
+            vecRef.emplace_back(feature);
         }
-
-        ++scanStats.parsedCount;
     }
 
     if (input.groupMap != nullptr) {
         auto groupingResult =
             input.groupingMode == GroupingMode::Hierarchy
-                ? annotation::FeatureGrouper::groupByHierarchy(std::move(groupingFeatures))
-                : annotation::FeatureGrouper::groupByDirectParentID(std::move(groupingFeatures));
+                ? (input.settings.fileType == FileType::GFF
+                       ? annotation::FeatureGrouper::groupByValidatedHierarchy(
+                             std::move(resolution.features))
+                       : annotation::FeatureGrouper::groupByHierarchy(
+                             std::move(resolution.features)))
+                : annotation::FeatureGrouper::groupByDirectParentID(std::move(resolution.features));
 
         *input.groupMap = std::move(groupingResult.groups);
         scanStats.parentIDs = std::move(groupingResult.groupKeys);
@@ -510,62 +520,34 @@ auto FeatureParser::popNormalized(AttributeMap& attributes, FileType fileType,
     }
     return normalizeAttributeValue(fileType, std::string_view{*rawValue});
 }
-auto FeatureParser::popParentId(AttributeMap& attributes, FileType fileType,
-                                std::string_view parentKeyView) -> std::optional<std::string> {
+auto FeatureParser::popParentIds(AttributeMap& attributes, FileType fileType,
+                                 std::string_view parentKeyView) -> std::vector<std::string> {
     auto normalized = popNormalized(attributes, fileType, parentKeyView);
     if (!normalized) {
-        return std::nullopt;
+        return {};
     }
 
-    const auto commaPosition = normalized->find(',');
-    if (commaPosition != std::string::npos) {
-        Logger::log<LogLevel::WARNING>(
-            "Feature has multiple Parent values ('{}'); using the first one.", *normalized);
-        normalized->resize(commaPosition);
-    }
-
-    return normalized;
-}
-
-auto FeatureParser::inferParentId(AttributeMap const& attributes, FileType fileType,
-                                  std::string const& identifier) -> std::optional<std::string> {
-    auto getNormalizedAttribute = [&](std::string_view key) -> std::optional<std::string> {
-        const auto iterator = attributes.find(key);
-        if (iterator == attributes.end()) {
-            return std::nullopt;
+    std::vector<std::string> parentIds;
+    std::string_view remaining{*normalized};
+    while (!remaining.empty()) {
+        const auto commaPosition = remaining.find(',');
+        const auto value = trim(remaining.substr(0, commaPosition));
+        if (!value.empty()) {
+            parentIds.emplace_back(value);
         }
-
-        auto value = normalizeAttributeValue(fileType, iterator->second);
-        if (value.empty() || value == identifier) {
-            return std::nullopt;
+        if (commaPosition == std::string_view::npos) {
+            break;
         }
-        return value;
-    };
-
-    if (auto transcriptId = getNormalizedAttribute("transcript_id")) {
-        return transcriptId;
+        remaining.remove_prefix(commaPosition + 1);
     }
-
-    constexpr std::string_view exonPrefix{"exon:"};
-    if (identifier.starts_with(exonPrefix)) {
-        const auto transcriptStart = exonPrefix.size();
-        const auto exonNumberDelimiter = identifier.find(':', transcriptStart);
-        if (exonNumberDelimiter != std::string::npos && exonNumberDelimiter != transcriptStart) {
-            return identifier.substr(transcriptStart, exonNumberDelimiter - transcriptStart);
-        }
-    }
-
-    return getNormalizedAttribute("gene_id");
+    return parentIds;
 }
 
 auto FeatureParser::popSpecificAttributes(AttributeMap& attributes,
                                           AttributeParseInput const& input) -> ExtractedAttributes {
     ExtractedAttributes extracted;
     extracted.identifier = popNormalized(attributes, input.fileType, input.idKey);
-    extracted.parentID = popParentId(attributes, input.fileType, input.keys.parentKey);
-    if (!extracted.parentID && extracted.identifier) {
-        extracted.parentID = inferParentId(attributes, input.fileType, *extracted.identifier);
-    }
+    extracted.parentIDs = popParentIds(attributes, input.fileType, input.keys.parentKey);
     extracted.geneName = popNormalized(attributes, input.fileType, input.keys.geneNameKey);
     extracted.attributes = std::move(attributes);
     return extracted;

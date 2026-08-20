@@ -13,6 +13,7 @@
 #include <utility>
 
 // Internal
+#include "AnnotationHierarchyResolver.hpp"
 #include "Constants.hpp"
 #include "FileType.hpp"
 #include "GenomicFeature.hpp"
@@ -103,14 +104,14 @@ class FeatureParser {
 
     struct ExtractedAttributes {
         std::optional<std::string> identifier;
-        std::optional<std::string> parentID;
+        std::vector<std::string> parentIDs;
         std::optional<std::string> geneName;
 
         using AttributeMap = util::TransparentStringMap;
         AttributeMap attributes;
     };
 
-    using ParsedFeature = GenomicFeature;
+    using ParsedFeature = ParsedFeatureRecord;
 
     struct LookupBuffers {
         std::string referenceID;
@@ -158,17 +159,15 @@ class FeatureParser {
 
     static auto popNormalized(AttributeMap& attributes, FileType fileType, std::string_view keyView)
         -> std::optional<std::string>;
-    static auto popParentId(AttributeMap& attributes, FileType fileType,
-                            std::string_view parentKeyView) -> std::optional<std::string>;
-    static auto inferParentId(AttributeMap const& attributes, FileType fileType,
-                              std::string const& identifier) -> std::optional<std::string>;
+    static auto popParentIds(AttributeMap& attributes, FileType fileType,
+                             std::string_view parentKeyView) -> std::vector<std::string>;
     static auto popSpecificAttributes(AttributeMap& attributes, AttributeParseInput const& input)
         -> ExtractedAttributes;
     static auto extractAttributes(AttributeParseInput input) -> ExtractedAttributes;
 
     [[nodiscard]] auto tryParseFeature(const ColumnViews& columns, const ParseSettings& settings,
                                        const ReferenceIndexMapping& referenceToIndex,
-                                       LookupBuffers& buffers) const
+                                       LookupBuffers& buffers, std::size_t lineNumber) const
         -> std::optional<ParsedFeature>;
 
     [[nodiscard]] auto scanFile(FileScanInput input) const -> ScanStats;

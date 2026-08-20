@@ -25,6 +25,9 @@ struct GroupingResult {
 [[nodiscard]] auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures)
     -> GroupingResult;
 
+[[nodiscard]] auto groupByValidatedHierarchy(std::vector<GroupingFeature>&& groupingFeatures)
+    -> GroupingResult;
+
 [[nodiscard]] auto groupByDirectParentID(std::vector<GroupingFeature>&& groupingFeatures)
     -> GroupingResult;
 

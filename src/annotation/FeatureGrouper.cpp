@@ -11,6 +11,7 @@
 #include <utility>
 #include <vector>
 
+#include "AnnotationHierarchyError.hpp"
 #include "GenomicFeature.hpp"
 #include "GenomicFeatureGroup.hpp"
 #include "LogLevel.hpp"
@@ -152,8 +153,15 @@ auto bucketByResolvedGroupKey(const std::vector<GroupingFeature>& groupingFeatur
 }
 
 auto logBuildIssues(const std::string& groupKey,
-                    const std::vector<dataTypes::GenomicFeatureGroup::BuildIssue>& issues) -> void {
+                    const std::vector<dataTypes::GenomicFeatureGroup::BuildIssue>& issues,
+                    bool failOnIssue) -> void {
     using Kind = dataTypes::GenomicFeatureGroup::BuildIssue::Kind;
+
+    if (failOnIssue && !issues.empty()) {
+        throw AnnotationHierarchyError{std::format(
+            "Internal annotation hierarchy invariant failed while building validated group '{}'.",
+            groupKey)};
+    }
 
     for (const auto& issue : issues) {
         switch (issue.kind) {
@@ -177,7 +185,7 @@ auto logBuildIssues(const std::string& groupKey,
 }
 
 auto buildTreeGroup(std::string_view groupKey, const std::vector<std::size_t>& featureIndices,
-                    std::vector<GroupingFeature>& groupingFeatures)
+                    std::vector<GroupingFeature>& groupingFeatures, bool failOnIssue)
     -> dataTypes::GenomicFeatureGroup {
     std::vector<dataTypes::GenomicFeature> groupFeatures;
     groupFeatures.reserve(featureIndices.size());
@@ -188,7 +196,7 @@ auto buildTreeGroup(std::string_view groupKey, const std::vector<std::size_t>& f
 
     auto buildResult =
         dataTypes::GenomicFeatureGroup::buildFromFlat(std::move(groupFeatures), groupKey);
-    logBuildIssues(std::string{groupKey}, buildResult.issues);
+    logBuildIssues(std::string{groupKey}, buildResult.issues, failOnIssue);
 
     return std::move(buildResult.group);
 }
@@ -225,7 +233,7 @@ auto buildDirectParentGroup(std::string_view groupKey,
 
     auto buildResult =
         dataTypes::GenomicFeatureGroup::buildFromFlat(std::move(groupFeatures), groupKey);
-    logBuildIssues(std::string{groupKey}, buildResult.issues);
+    logBuildIssues(std::string{groupKey}, buildResult.issues, false);
 
     return std::move(buildResult.group);
 }
@@ -241,7 +249,8 @@ auto directParentGroupKey(const GroupingFeature& feature) -> const std::string& 
 
 }  // namespace
 
-auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {
+auto groupByHierarchyImpl(std::vector<GroupingFeature>&& groupingFeatures, bool failOnIssue)
+    -> GroupingResult {
     GroupingWarnings warnings{};
 
     const IdentifierToIndexMap identifierToIndex =
@@ -256,11 +265,19 @@ auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> Groupi
 
     for (auto& [groupKey, featureIndices] : groupKeyToIndices) {
         result.groupKeys.insert(groupKey);
-        result.groups.try_emplace(groupKey,
-                                  buildTreeGroup(groupKey, featureIndices, groupingFeatures));
+        result.groups.try_emplace(
+            groupKey, buildTreeGroup(groupKey, featureIndices, groupingFeatures, failOnIssue));
     }
 
     return result;
+}
+
+auto groupByHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {
+    return groupByHierarchyImpl(std::move(groupingFeatures), false);
+}
+
+auto groupByValidatedHierarchy(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {
+    return groupByHierarchyImpl(std::move(groupingFeatures), true);
 }
 
 auto groupByDirectParentID(std::vector<GroupingFeature>&& groupingFeatures) -> GroupingResult {

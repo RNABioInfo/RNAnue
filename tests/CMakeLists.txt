@@ -72,6 +72,7 @@ add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/AnnotationHierarchyResolver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureGrouper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/GenomicFeatureTreeMerger.cpp

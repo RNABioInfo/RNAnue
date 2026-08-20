@@ -18,6 +18,10 @@
 #include "GenomicRegion.hpp"
 #include "TransparentStringMap.hpp"
 
+namespace annotation {
+class AnnotationHierarchyResolver;
+}
+
 namespace dataTypes {
 
 struct GenomicFeature {
@@ -71,6 +75,8 @@ struct GenomicFeature {
     }
 
    private:
+    friend class annotation::AnnotationHierarchyResolver;
+
     std::string type;
     GenomicRegion genomicRegion;
     std::string featureID;

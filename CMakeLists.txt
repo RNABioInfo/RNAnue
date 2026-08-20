@@ -57,6 +57,12 @@ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake)
 include(dependency_providers)
 rnanue_configure_dependency_provider(RNANUE_ZLIB_PROVIDER
     "zlib provider: AUTO tries installed zlib first, SYSTEM requires it, BUNDLED builds zlib from source when a bundled dependency needs it")
+rnanue_detect_active_dependency_prefix(RNANUE_ACTIVE_DEPENDENCY_PREFIX)
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux"
+    AND RNANUE_ACTIVE_DEPENDENCY_PREFIX
+    AND NOT RNANUE_DEPENDENCY_PROVIDER STREQUAL "BUNDLED")
+  rnanue_prefer_active_prefix_libraries("${RNANUE_ACTIVE_DEPENDENCY_PREFIX}")
+endif()
 
 set(CPM_USE_LOCAL_PACKAGES ON CACHE BOOL "Try find_package before downloading CPM dependencies" FORCE)
 if(RNANUE_DEPENDENCY_PROVIDER STREQUAL "SYSTEM")
@@ -134,7 +140,10 @@ rnanue_configure_dependency_provider(RNANUE_TBB_PROVIDER
 rnanue_provider_allows_system(RNANUE_TBB_PROVIDER RNANUE_TBB_ALLOW_SYSTEM)
 rnanue_provider_allows_bundled(RNANUE_TBB_PROVIDER RNANUE_TBB_ALLOW_BUNDLED)
 if(RNANUE_TBB_ALLOW_SYSTEM)
-  find_package(TBB QUIET COMPONENTS tbb)
+  rnanue_try_prefix_tbb(RNANUE_USED_PREFIX_TBB)
+  if(NOT RNANUE_USED_PREFIX_TBB)
+    find_package(TBB QUIET COMPONENTS tbb)
+  endif()
 else()
   set(TBB_FOUND FALSE)
 endif()
@@ -186,6 +195,7 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Runner.cpp
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureAnnotator.cpp
+                        ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/AnnotationHierarchyResolver.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureGrouper.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureParser.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/annotation/FeatureWriter.cpp

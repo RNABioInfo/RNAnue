@@ -156,8 +156,10 @@ otool -L build/release/RNAnue
 ```
 
 Use one dependency prefix consistently when possible, for example by passing
-`-DCMAKE_PREFIX_PATH=/path/to/env -DZLIB_ROOT=/path/to/env` for Conda-style
-builds.
+`-DCMAKE_PREFIX_PATH=/path/to/env -DRNANUE_DEPENDENCY_PREFIX=/path/to/env` for
+Conda-style Linux builds. RNAnue uses that active prefix to prefer common runtime
+libraries such as zlib, bzip2, libpng, and oneTBB from the same prefix instead of
+mixing them with `/usr/lib` libraries in an unsafe runtime search path.
 
 ## Overview
 
