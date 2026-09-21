@@ -193,6 +193,14 @@ auto FeatureWriter::write(const FeatureTreeMap& featureTreeMap,
 auto FeatureWriter::write(const std::vector<MaskedFeatureCluster>& featureClusters,
                           const std::deque<std::string>& sortedReferenceIDs,
                           const std::string& outputPath, FileType::Value fileType) -> void {
+    // Validate every cluster before opening/truncating the destination. In particular,
+    // a second orphan node must never be indexed as a child with parentIndex == -1.
+    for (const auto& cluster : featureClusters) {
+        cluster.baseFeatureGroup.requireRootedTree("Before writing " + outputPath);
+        for (const auto& copy : cluster.subFeatureGroups) {
+            copy.requireRootedTree("Before writing masked copy IDs to " + outputPath);
+        }
+    }
     std::ofstream outputFile(outputPath, std::ios::binary);
     if (!outputFile.is_open()) {
         throwLogged(std::string{"Could not open file for writing: "} + outputPath);

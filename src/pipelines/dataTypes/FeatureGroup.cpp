@@ -1,6 +1,7 @@
 #include <cstdint>
+#include <format>
 #include <optional>
-#include <print>
+#include <stdexcept>
 #include <string>
 #include <string_view>
 #include <unordered_map>
@@ -47,6 +48,51 @@ auto chooseRootIndex(
 }
 
 }  // namespace
+
+auto GenomicFeatureGroup::requireRootedTree(std::string_view context) const -> void {
+    auto fail = [&](std::string_view detail) {
+        throw std::invalid_argument{std::format("{}: invalid feature hierarchy: {}", context,
+                                                detail)};
+    };
+    if (rootIndex >= nodes.size()) {
+        fail("missing root");
+    }
+    if (nodes[rootIndex].parentIndex != invalidIndex ||
+        nodes[rootIndex].feature.getParentID().has_value()) {
+        fail(std::format("root '{}' still declares a Parent",
+                         nodes[rootIndex].feature.getID()));
+    }
+    for (NodeIndex index = 0; index < nodes.size(); ++index) {
+        if (index == rootIndex) {
+            continue;
+        }
+        const auto& node = nodes[index];
+        if (node.parentIndex >= nodes.size()) {
+            fail(std::format("feature '{}' has no resolved Parent (requested '{}')",
+                             node.feature.getID(), node.feature.getParentID().value_or("<none>")));
+        }
+    }
+
+    // Follow each parent chain once, including disconnected cycles. No recursive traversal.
+    std::vector<std::uint8_t> state(nodes.size(), 0);
+    state[rootIndex] = 2;
+    std::vector<NodeIndex> path;
+    for (NodeIndex index = 0; index < nodes.size(); ++index) {
+        path.clear();
+        auto current = index;
+        while (state[current] == 0) {
+            state[current] = 1;
+            path.push_back(current);
+            current = nodes[current].parentIndex;
+        }
+        if (state[current] == 1) {
+            fail(std::format("cycle involving feature '{}'", nodes[current].feature.getID()));
+        }
+        for (const auto visited : path) {
+            state[visited] = 2;
+        }
+    }
+}
 
 auto GenomicFeatureGroup::buildFromFlat(std::vector<GenomicFeature>&& features,
                                         std::string_view expectedRootId) -> BuildResult {

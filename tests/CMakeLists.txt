@@ -64,6 +64,7 @@ endif()
 add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureParserTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FeatureWriterTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterGeneratorTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionsWriterTests.cpp
@@ -75,6 +76,7 @@ add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/AnnotationHierarchyResolver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureGrouper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/GenomicFeatureTreeMerger.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp

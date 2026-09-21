@@ -59,11 +59,11 @@ auto FeatureParser::parseGroupedByHierarchy(const fs::path& featureFilePath,
 
     ParseSettings settings{
         .fileType = fileType,
-        .idKey = std::string_view{featureIDFlag.value_or(fileType.defaultIDKey())},
+        .idKey = featureIDFlag.value_or(fileType.defaultIDKey()),
         .keys =
             AttributeKeys{
-                .parentKey = std::string_view{fileType.defaultGroupKey()},
-                .geneNameKey = std::string_view{FileType::defaultGeneNameKey()},
+                .parentKey = fileType.defaultGroupKey(),
+                .geneNameKey = FileType::defaultGeneNameKey(),
             },
     };
 
@@ -107,11 +107,11 @@ auto FeatureParser::parseFlatAndGrouped(const fs::path& featureFilePath,
 
     ParseSettings settings{
         .fileType = fileType,
-        .idKey = std::string_view{featureIDFlag.value_or(fileType.defaultIDKey())},
+        .idKey = featureIDFlag.value_or(fileType.defaultIDKey()),
         .keys =
             AttributeKeys{
-                .parentKey = std::string_view{fileType.defaultGroupKey()},
-                .geneNameKey = std::string_view{FileType::defaultGeneNameKey()},
+                .parentKey = fileType.defaultGroupKey(),
+                .geneNameKey = FileType::defaultGeneNameKey(),
             },
     };
 

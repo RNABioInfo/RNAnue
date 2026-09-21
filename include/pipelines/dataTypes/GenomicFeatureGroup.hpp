@@ -41,19 +41,19 @@ class GenomicFeatureGroup final {
                                             std::string_view expectedRootId = {}) -> BuildResult;
 
     [[nodiscard]] auto getRootIndex() const noexcept -> NodeIndex { return rootIndex; }
-    [[nodiscard]] auto getRoot() const noexcept -> const Node& { return nodes.at(rootIndex); }
+    [[nodiscard]] auto getRoot() const -> const Node& { return nodes.at(rootIndex); }
 
-    [[nodiscard]] auto getNode(NodeIndex nodeIndex) const noexcept -> const Node& {
+    [[nodiscard]] auto getNode(NodeIndex nodeIndex) const -> const Node& {
         return nodes.at(nodeIndex);
     }
 
-    [[nodiscard]] auto children(NodeIndex nodeIndex) const noexcept -> std::span<const NodeIndex> {
+    [[nodiscard]] auto children(NodeIndex nodeIndex) const -> std::span<const NodeIndex> {
         const Node& node = nodes.at(nodeIndex);
         return std::span<const NodeIndex>{childIndices}.subspan(node.firstChildOffset,
                                                                 node.childCount);
     }
 
-    [[nodiscard]] auto allChildrenOfRoot() const noexcept -> std::span<const NodeIndex> {
+    [[nodiscard]] auto allChildrenOfRoot() const -> std::span<const NodeIndex> {
         const Node& node = nodes.at(rootIndex);
         return std::span<const NodeIndex>{childIndices}.subspan(node.firstChildOffset,
                                                                 node.childCount);
@@ -89,6 +89,9 @@ class GenomicFeatureGroup final {
     }
 
     [[nodiscard]] auto getNodes() const noexcept -> const std::vector<Node>& { return nodes; }
+
+    // Direct-parent groups may be forests; masking and cluster export require a tree.
+    auto requireRootedTree(std::string_view context) const -> void;
 
    private:
     std::vector<Node> nodes;

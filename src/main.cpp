@@ -4,6 +4,7 @@
 
 #include <csignal>
 #include <cstdlib>
+#include <exception>
 
 // Boost
 #include <boost/program_options.hpp>
@@ -22,6 +23,8 @@ auto main(int argc, const char* const argv[]) -> int {
         Runner::runPipeline(argc, argv);
         return EXIT_SUCCESS;
     } catch (const annotation::AnnotationHierarchyError& error) {
+        Logger::log<SourceLocation{}, LogLevel::ERROR>(error.what());
+    } catch (const std::exception& error) {
         Logger::log<SourceLocation{}, LogLevel::ERROR>(error.what());
     }
     return EXIT_FAILURE;

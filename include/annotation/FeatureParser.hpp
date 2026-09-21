@@ -76,13 +76,13 @@ class FeatureParser {
     static constexpr std::size_t columnCount = 9;
 
     struct AttributeKeys {
-        std::string_view parentKey;
-        std::string_view geneNameKey;
+        std::string parentKey;
+        std::string geneNameKey;
     };
 
     struct ParseSettings {
         FileType fileType;
-        std::string_view idKey;
+        std::string idKey;
         AttributeKeys keys;
     };
 

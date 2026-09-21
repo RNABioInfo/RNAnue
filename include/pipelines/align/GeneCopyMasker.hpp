@@ -68,6 +68,10 @@ class GeneCopyMasker {
                           .maskedClusters = std::move(clusters)};
         }
 
+        for (const auto& [groupID, group] : featureGroups) {
+            group.requireRootedTree(std::format("Before gene copy masking, group '{}'", groupID));
+        }
+
         Logger::log(
             std::format("Starting gene copy masking for {} features.", featureGroups.size()));
         const auto alignmentConfig = seqan3::align_cfg::method_global{} |
