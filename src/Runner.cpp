@@ -1,6 +1,7 @@
 #include "Runner.hpp"
 
 // Standard
+#include <optional>
 #include <variant>
 
 // Internal
@@ -15,6 +16,7 @@
 #include "Detect.hpp"
 #include "DetectData.hpp"
 #include "DetectParameters.hpp"
+#include "FeatureParser.hpp"
 #include "Logger.hpp"
 #include "ParameterParser.hpp"
 #include "PostprocessParameters.hpp"
@@ -97,6 +99,15 @@ void Runner::runPostprocessPipeline(const postprocess::PostprocessParameters &pa
 
 void Runner::runCompletePipeline(const CompleteParameters &parameters) {
     Logger::log("Running complete pipeline");
+
+    // Masking uses a broader feature set than detection. Validate the user's
+    // selection before spending time preprocessing reads, masking and aligning.
+    // Release the parsed annotation before loading the reads or reference genome.
+    {
+        Logger::log("Validating annotation hierarchy for detection feature types");
+        annotation::FeatureParser{parameters.detectParameters.featureTypes, std::nullopt}
+            .validateHierarchy(parameters.detectParameters.featuresInPath);
+    }
 
     runPreprocessPipeline(parameters.preprocessParameters);
     runAlignPipeline(parameters.alignParameters);

@@ -251,7 +251,8 @@ TEST(FeatureParserTests, InvalidHierarchyAggregatesMultipleFailures) {
         EXPECT_NE(message.find("multiple Parents"), std::string::npos);
         EXPECT_NE(message.find("outside Parent"), std::string::npos);
         EXPECT_NE(message.find("cycle detected"), std::string::npos);
-        EXPECT_NE(message.find("No masking or alignment was performed"), std::string::npos);
+        EXPECT_NE(message.find("Annotation loading failed"), std::string::npos);
+        EXPECT_EQ(message.find("No masking or alignment was performed"), std::string::npos);
     }
 
     std::filesystem::remove(annotationPath);

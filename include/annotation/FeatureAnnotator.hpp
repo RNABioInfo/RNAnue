@@ -64,7 +64,7 @@ class FeatureAnnotator {
     FeatureAnnotator(const fs::path& featureFilePath,
                      const ReferenceIDToIndexMap& referenceIDToIndex,
                      const std::unordered_set<std::string>& includedFeatures,
-                     const std::string& featureIDFlag) noexcept;
+                     const std::string& featureIDFlag);
     /**
      * @brief Construct a new Feature Annotator object using a feature file.
      *
@@ -74,13 +74,13 @@ class FeatureAnnotator {
      */
     FeatureAnnotator(const fs::path& featureFilePath,
                      const ReferenceIDToIndexMap& referenceIDToIndex,
-                     const std::unordered_set<std::string>& includedFeatures) noexcept;
+                     const std::unordered_set<std::string>& includedFeatures);
     /**
      * @brief Construct a Feature Annotator object using an in-memory feature map.
      *
      * @param featureMap Map from reference index to vector of GenomicFeature.
      */
-    explicit FeatureAnnotator(const FeatureMap& featureMap) noexcept;
+    explicit FeatureAnnotator(const FeatureMap& featureMap);
 
     explicit FeatureAnnotator() = default;
 

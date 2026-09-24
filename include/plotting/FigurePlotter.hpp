@@ -100,6 +100,11 @@ class FigurePlotter {
     template <NumericType T>
     void addStackedBar(const PlotConfig& config, const StackedBarData<T>& data) {
         auto axes = addAxes();
+        if (data.data.empty() ||
+            std::ranges::all_of(data.data, [](const auto& row) { return row.empty(); })) {
+            addNoObservations(axes, config);
+            return;
+        }
         auto groupLabels =
             data.groupLabels.value_or(std::vector<std::string>(data.data.size(), ""));
         auto plot = axes->barstacked(data.data);
@@ -124,6 +129,11 @@ class FigurePlotter {
         for (const auto& data : {datas...}) {
             const auto values =
                 subsample(data.data, this->config.maxDataPointsPerHistogram, randomDevice);
+            // Matplot's histogram bounds are undefined for an empty sample;
+            // querying them for a cutoff line can crash detection.
+            if (values.empty()) {
+                continue;
+            }
             auto plot = axes->hist(values, matplot::histogram::binning_algorithm::fd);
             plot->face_alpha(face_alpha);
             datapointLabels.push_back(data.datapointLabel);
@@ -136,7 +146,11 @@ class FigurePlotter {
         matplot::hold(matplot::off);
         addLabels(axes, config);
 
-        addLegend(axes, defaultLegendTitle, datapointLabels);
+        if (datapointLabels.empty()) {
+            addNoObservations(axes, config);
+        } else {
+            addLegend(axes, defaultLegendTitle, datapointLabels);
+        }
     }
 
     template <NumericType T>
@@ -144,6 +158,10 @@ class FigurePlotter {
         const auto [x_vals, y_vals] =
             subsample(data.x_vals, data.y_vals, this->config.maxDataPointsPerScatterPlot);
         auto axes = addAxes();
+        if (x_vals.empty() || y_vals.empty()) {
+            addNoObservations(axes, config);
+            return;
+        }
 
         constexpr double dotSize = 3;
         auto plot =
@@ -203,6 +221,13 @@ class FigurePlotter {
         axes->title(config.title);
         axes->xlabel(config.xlabel);
         axes->ylabel(config.ylabel);
+    }
+
+    static void addNoObservations(const matplot::axes_handle& axes, const PlotConfig& config) {
+        addLabels(axes, config);
+        axes->xlim({0.0, 1.0});
+        axes->ylim({0.0, 1.0});
+        axes->text(0.5, 0.5, "No observations");
     }
 
     static void addLegend(const matplot::axes_handle& axes, const std::string_view legendTitle,

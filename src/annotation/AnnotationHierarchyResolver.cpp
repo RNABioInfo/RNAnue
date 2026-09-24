@@ -273,7 +273,8 @@ auto formatFailure(const std::filesystem::path& path, const DiagnosticCollector&
         message << "\n  ... " << (diagnostics.total - diagnostics.retained.size())
                 << " additional errors omitted.";
     }
-    message << "\nNo masking or alignment was performed.";
+    message << "\nAnnotation loading failed; check the annotation and --featuretypes."
+               " Earlier pipeline stages may already have completed.";
     return message.str();
 }
 

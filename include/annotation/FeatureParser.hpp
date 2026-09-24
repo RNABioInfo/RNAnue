@@ -53,6 +53,10 @@ class FeatureParser {
         ResultGrouped groupedByParentID;
     };
 
+    // Validate the selected hierarchy using reference IDs from the annotation.
+    // This does not verify compatibility with a FASTA or BAM reference dictionary.
+    void validateHierarchy(const fs::path& featureFilePath) const;
+
     [[nodiscard]] auto parseFlatMap(const fs::path& featureFilePath,
                                     const ReferenceIndexMapping& referenceToIndex) const
         -> ResultFlat;

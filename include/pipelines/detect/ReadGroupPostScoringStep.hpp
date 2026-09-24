@@ -183,7 +183,10 @@ struct ReadGroupPostScoringStepMetrics {
     std::vector<size_t> hitGroupsPreFilter;
     std::vector<size_t> hitGroupsPostFilter;
     std::vector<double> hitGroupContributionScores;
-    std::unordered_map<SplitRecordType, double> contributionScoreByRecordType;
+    // An unobserved category contributes zero, including for empty samples or
+    // when filtering removes every hit of one category.
+    std::unordered_map<SplitRecordType, double> contributionScoreByRecordType{
+        {SplitRecordType::SINGLETON, 0.0}, {SplitRecordType::CHIMERIC, 0.0}};
     size_t readGroupCount{0};
 };
 

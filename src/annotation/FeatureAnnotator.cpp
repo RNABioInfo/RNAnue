@@ -76,17 +76,17 @@ auto loadReferenceIDToIndexMap(const std::vector<fs::path> &samFilePaths) -> Ref
 FeatureAnnotator::FeatureAnnotator(const fs::path &featureFilePath,
                                    const ReferenceIDToIndexMap &referenceIDToIndex,
                                    const std::unordered_set<std::string> &includedFeatures,
-                                   const std::string &featureIDFlag) noexcept
+                                   const std::string &featureIDFlag)
     : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
                                          featureIDFlag)) {}
 
 FeatureAnnotator::FeatureAnnotator(const fs::path &featureFilePath,
                                    const ReferenceIDToIndexMap &referenceIDToIndex,
-                                   const std::unordered_set<std::string> &includedFeatures) noexcept
+                                   const std::unordered_set<std::string> &includedFeatures)
     : featureTreeMap(buildFeatureTreeMap(featureFilePath, referenceIDToIndex, includedFeatures,
                                          std::nullopt)) {}
 
-FeatureAnnotator::FeatureAnnotator(const FeatureMap &featureMap) noexcept
+FeatureAnnotator::FeatureAnnotator(const FeatureMap &featureMap)
     : featureTreeMap(buildFeatureTreeMap(featureMap)) {}
 
 auto FeatureAnnotator::buildFeatureTreeMap(const FeatureMap &featureMap) -> FeatureTreeMap {

@@ -38,6 +38,36 @@ FeatureParser::FeatureParser(IncludedFeatureSet includedFeaturesParam,
     : includedFeatures(std::move(includedFeaturesParam)),
       featureIDFlag(std::move(featureIdFlagParam)) {}
 
+void FeatureParser::validateHierarchy(const fs::path& featureFilePath) const {
+    const auto fileType = getFileType(featureFilePath);
+    auto references = ReferenceIndexMapping::defaultCreate();
+    // The normal parser requires a pre-existing reference dictionary. Discover
+    // IDs here so preflight cannot silently discard all records as unknown.
+    {
+        std::ifstream input{featureFilePath};
+        std::string line;
+        while (std::getline(input, line)) {
+            if (shouldSkipLine(line)) {
+                continue;
+            }
+            if (const auto columns = trySplitColumns(line, '\t')) {
+                static_cast<void>(references.getIndex(columns->cols[0]));
+            }
+        }
+    }
+    const ParseSettings settings{
+        .fileType = fileType,
+        .idKey = featureIDFlag.value_or(fileType.defaultIDKey()),
+        .keys = {.parentKey = fileType.defaultGroupKey(),
+                 .geneNameKey = FileType::defaultGeneNameKey()},
+    };
+    static_cast<void>(scanFile({.featureFilePath = featureFilePath,
+                                .settings = settings,
+                                .referenceToIndex = references,
+                                .flatMap = nullptr,
+                                .groupMap = nullptr}));
+}
+
 auto FeatureParser::parseFlatMap(const fs::path& featureFilePath,
                                  const ReferenceIndexMapping& referenceToIndex) const
     -> FeatureMap {

@@ -63,6 +63,7 @@ endif()
 
 add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/FeatureAnnotatorValidationTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureParserTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureWriterTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/InteractionClusterTests.cpp
