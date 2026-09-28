@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <filesystem>
 #include <ranges>
+#include <set>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -18,9 +20,6 @@
 #include "TrimConfig.hpp"
 
 namespace pipelines::preprocess {
-
-using SingleEndAsyncInputBuffer =
-    seqan3::detail::async_input_buffer_view<std::ranges::ref_view<seqan3::sequence_file_input<>>>;
 
 class SingleEndPreprocessor {
    public:
@@ -37,6 +36,8 @@ class SingleEndPreprocessor {
 
    private:
     struct ChunkResult {
+        size_t polyGChangedRecords{};
+        size_t polyGRemovedBases{};
         void operator+=(const ChunkResult& other);
 
         [[nodiscard]] auto getPassedRecords() const -> size_t { return passedRecords; };
@@ -50,9 +51,6 @@ class SingleEndPreprocessor {
         size_t failedRecords{0};
     };
 
-    using SingleEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<
-        std::ranges::ref_view<seqan3::sequence_file_input<>>>;
-
     PreprocessParameters parameters;
 
     std::vector<Adapter> adapters5;
@@ -62,6 +60,9 @@ class SingleEndPreprocessor {
         -> ChunkResult;
     [[nodiscard]] auto processWithoutDeduplication(const PreprocessSampleSingle& sample) const
         -> ChunkResult;
+
+    auto processInput(const PreprocessSampleSingle& sample,
+                      const std::set<size_t>* retained) const -> ChunkResult;
 
     template <typename T>
     auto processChunk(T& recordIterator, const fs::path& tmpOutDir) const -> ChunkResult;

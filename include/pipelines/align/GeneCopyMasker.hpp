@@ -128,7 +128,7 @@ class GeneCopyMasker {
             allowedLengthRange(currentLength, parameters.minMultiCopyIdentity);
 
         if (const auto matchedClusterIndex = findMatchingClusterIndex(
-                querySequence, minCandidateLength, maxCandidateLength, alignmentConfig);
+                querySequence, rootRegion, minCandidateLength, maxCandidateLength, alignmentConfig);
             matchedClusterIndex.has_value()) {
             Logger::log<LogLevel::DEBUG>(
                 std::format("Found match at index: {}, for feature group: {}", *matchedClusterIndex,
@@ -144,6 +144,7 @@ class GeneCopyMasker {
 
     template <typename TAlignmentConfig>
     [[nodiscard]] auto findMatchingClusterIndex(std::span<const seqan3::dna5> currentSequence,
+                                                GenomicRegion const& currentRegion,
                                                 std::size_t minCandidateLength,
                                                 std::size_t maxCandidateLength,
                                                 TAlignmentConfig const& alignmentConfig)
@@ -154,7 +155,8 @@ class GeneCopyMasker {
             }
 
             for (const auto clusterIndex : bucketClusterIndices) {
-                if (clusterMatches(clusters[clusterIndex], currentSequence, alignmentConfig)) {
+                if (clusterMatches(clusters[clusterIndex], currentSequence, currentRegion,
+                                   alignmentConfig)) {
                     return clusterIndex;
                 }
             }
@@ -166,9 +168,16 @@ class GeneCopyMasker {
     template <typename TAlignmentConfig>
     [[nodiscard]] auto clusterMatches(MaskedFeatureCluster const& cluster,
                                       std::span<const seqan3::dna5> currentSequence,
+                                      GenomicRegion const& currentRegion,
                                       TAlignmentConfig const& alignmentConfig) const -> bool {
         const auto currentLength = currentSequence.size();
         const auto candidateLength = cluster.baseSequence.size();
+
+        const auto candidateRegion = cluster.baseFeatureGroup.getRoot().feature.getGenomicRegion();
+
+        if (candidateRegion.overlap(currentRegion) > 0) {
+            return false;
+        }
 
         const auto requiredEditsByLength = (candidateLength > currentLength)
                                                ? (candidateLength - currentLength)

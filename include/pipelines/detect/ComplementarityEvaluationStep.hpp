@@ -73,18 +73,18 @@ struct ComplementarityEvaluationStepMetrics {
     explicit ComplementarityEvaluationStepMetrics(ComplementarityEvaluationStepConfig config)
         : config(config) {}
 
-    [[nodiscard]] constexpr auto getPassedCount() const noexcept -> size_t { return passedCount; }
-    [[nodiscard]] constexpr auto getFailedCount() const noexcept -> size_t { return failedCount; }
-    [[nodiscard]] constexpr auto getComplementarityScores() const noexcept
+    [[nodiscard]] constexpr auto getPassedCount() const -> size_t { return passedCount; }
+    [[nodiscard]] constexpr auto getFailedCount() const -> size_t { return failedCount; }
+    [[nodiscard]] constexpr auto getComplementarityScores() const
         -> const std::vector<float> & {
         return complementarityScores;
     }
-    [[nodiscard]] constexpr auto getFractionScores() const noexcept -> const std::vector<float> & {
+    [[nodiscard]] constexpr auto getFractionScores() const -> const std::vector<float> & {
         return fractionScores;
     }
 
-    void operator+=(const ComplementarityEvaluationResult &result) noexcept;
-    void operator+=(const ComplementarityEvaluationStepMetrics &other) noexcept;
+    void operator+=(const ComplementarityEvaluationResult &result);
+    void operator+=(const ComplementarityEvaluationStepMetrics &other);
     void createPlots(const fs::path &outDir) const;
 
    private:
@@ -128,11 +128,11 @@ class ComplementarityEvaluationStep {
     ComplementarityEvaluationStepConfig config;
     ComplementarityEvaluationStepMetrics metrics;
 
-    [[nodiscard]] auto evaluate(const ChimericRecords &splitRecords) const noexcept
+    [[nodiscard]] auto evaluate(const ChimericRecords &splitRecords) const
         -> ComplementarityEvaluationResult;
 
     [[nodiscard]] auto isPassingFilters(
-        const CoOptimalPairwiseAligner::Result &alignmentResult) const noexcept -> bool;
+        const CoOptimalPairwiseAligner::Result &alignmentResult) const -> bool;
 
     static constexpr auto complementaryScoringScheme() -> seqan3::nucleotide_scoring_scheme<int8_t>;
 };

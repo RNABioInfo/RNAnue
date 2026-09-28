@@ -3,6 +3,7 @@
 // standard
 #include <cstdlib>
 #include <ranges>
+#include <set>
 #include <utility>
 #include <vector>
 
@@ -29,17 +30,9 @@ class PairedEndPreprocessor {
     void process(const PreprocessSamplePaired& sample) const;
 
    private:
-#if defined __cpp_lib_ranges_zip && !defined(__clang__)
-    using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
-        std::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
-                              std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
-#else
-    using PairedEndAsyncInputBuffer = seqan3::detail::async_input_buffer_view<std::views::all_t<
-        seqan::stl::ranges::zip_view<std::ranges::ref_view<seqan3::sequence_file_input<>>,
-                                     std::ranges::ref_view<seqan3::sequence_file_input<>>>>>;
-#endif
-
     struct ChunkResult {
+        size_t polyGChangedRecords{};
+        size_t polyGRemovedBases{};
         [[nodiscard]] auto getMergedRecords() const { return mergedRecords; }
         [[nodiscard]] auto getSingleFwdRecords() const { return singleFwdRecords; }
         [[nodiscard]] auto getSingleRevRecords() const { return singleRevRecords; }
@@ -84,6 +77,9 @@ class PairedEndPreprocessor {
                              const RecordTrimmer::TrimWindowedConfig& config) const;
 
     void trimAdapters(PairedFastqRecords& records) const;
+
+    auto processInput(const PreprocessSamplePaired& sample,
+                      const std::set<size_t>* retained) const -> ChunkResult;
 
     template <typename T>
     auto processChunk(T& recordIterator, const PrepocessSampleOutputPaired& tmpOutDir) const

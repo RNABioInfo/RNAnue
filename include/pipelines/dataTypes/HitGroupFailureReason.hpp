@@ -23,12 +23,18 @@ enum class HitGroupFailureReason : std::uint8_t {
     MIN_CONTRIBUTION,
     NOT_IMPLEMENTED,
     FAILED_COMPLEMENTARITY,
-    FAILED_HYBRIDIZATION
+    FAILED_HYBRIDIZATION,
+    UNSUPPORTED_PAIRED,
+    UNSUPPORTED_MULTISEGMENT
 };
 
 inline auto operator<<(std::ostream& ostream, const HitGroupFailureReason& reason)
     -> std::ostream& {
     switch (reason) {
+        case HitGroupFailureReason::UNSUPPORTED_PAIRED:
+            return ostream << "Unsupported unmerged paired alignment";
+        case HitGroupFailureReason::UNSUPPORTED_MULTISEGMENT:
+            return ostream << "Unsupported multisegment alignment";
         case HitGroupFailureReason::MALFORMED_RECORD:
             ostream << "Malformed Record";
             break;

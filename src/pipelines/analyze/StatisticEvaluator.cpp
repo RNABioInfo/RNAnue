@@ -96,22 +96,22 @@ struct CandidateContributionSummary {
 [[nodiscard]] auto summarizeCandidateContributions(
     const std::vector<AnnotatedInteractionCluster> &clusters) -> CandidateContributionSummary {
     CandidateContributionSummary summary{};
-
+    // Read names identify original observations within this sample. Multiple
+    // alignments of one read are dependent, even when assigned to different sites.
+    std::map<std::string, double> contributionByRead;
     for (const auto &cluster : clusters) {
-        const double contribution = cluster.getTranscriptContribution();
-        const double squaredContributionSum = cluster.getTranscriptContributionSquaredSum();
-
-        if (!std::isfinite(contribution) || contribution <= 0.0) {
+        if (!std::isfinite(cluster.getTranscriptContribution()) || cluster.getTranscriptContribution() <= 0.0)
             continue;
+        const auto &ids = cluster.getRecordIDs();
+        const auto &weights = cluster.getContributions();
+        for (size_t i = 0; i < ids.size(); ++i) {
+            if (!std::isfinite(weights[i]) || weights[i] < 0.0) return {};
+            contributionByRead[ids[i]] += weights[i];
         }
-
+    }
+    for (const auto &[id, contribution] : contributionByRead) {
         summary.totalContribution += contribution;
-
-        if (std::isfinite(squaredContributionSum) && squaredContributionSum > 0.0) {
-            summary.squaredContributionSum += squaredContributionSum;
-        } else {
-            summary.squaredContributionSum += contribution * contribution;
-        }
+        summary.squaredContributionSum += contribution * contribution;
     }
 
     return summary;

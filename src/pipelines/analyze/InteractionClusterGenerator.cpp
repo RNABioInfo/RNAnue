@@ -50,7 +50,7 @@ auto InteractionClusterGenerator::clustersOverlap(const InteractionCluster &clus
     return InteractionClusterComponentBuilder::clustersOverlap(cluster1, cluster2, parameters);
 };
 
-auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster) noexcept
+auto InteractionClusterGenerator::annotateCluster(InteractionCluster &&cluster)
     -> std::variant<AnnotatedInteractionCluster, PartiallyAnnotatedInteractionCluster> {
     const auto &firstSegment = cluster.getFirstSegment();
     const auto &secondSegment = cluster.getSecondSegment();
@@ -117,7 +117,7 @@ auto InteractionClusterGenerator::clusterPassesFilters(
            cluster.segmentsMaxSelfOverlapFraction() <= parameters.maxClusterSelfOverlapFraction;
 };
 
-void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &&cluster) noexcept {
+void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &&cluster) {
     // Update counts
 
     featureCountsByFeatureID[cluster.getFirstFeatureID()] += cluster.getTranscriptContribution();
@@ -131,7 +131,7 @@ void InteractionClusterGenerator::attributeCluster(AnnotatedInteractionCluster &
     }
 }
 void InteractionClusterGenerator::attributeCluster(
-    PartiallyAnnotatedInteractionCluster &&cluster) noexcept {
+    PartiallyAnnotatedInteractionCluster &&cluster) {
     if (clusterPassesFilters(cluster)) {
         partiallyAnnotatedClusters.emplace_back(std::move(cluster));
         ++includedClusterCount;
@@ -139,7 +139,7 @@ void InteractionClusterGenerator::attributeCluster(
         ++excludedClusterCount;
     }
 }
-void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) noexcept {
+void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) {
     // Perform annotation and attribution in one place
     std::visit(
         [&](auto &&resultingCluster) {
@@ -149,7 +149,7 @@ void InteractionClusterGenerator::finalizeCluster(InteractionCluster &&cluster) 
 };
 
 void InteractionClusterGenerator::finalizeMergedClusters(
-    std::vector<InteractionCluster> &&clusters) noexcept {
+    std::vector<InteractionCluster> &&clusters) {
     for (auto &cluster : clusters) {
         finalizeCluster(std::move(cluster));
     }
@@ -164,7 +164,7 @@ auto InteractionClusterGenerator::releaseResult() noexcept -> Result {
             .excludedClusterCount = excludedClusterCount};
 }
 
-void InteractionClusterGenerator::Result::merge(Result &&other) noexcept {
+void InteractionClusterGenerator::Result::merge(Result &&other) {
     // Merge finished clusters
     finishedClusters.reserve(finishedClusters.size() + other.finishedClusters.size());
     finishedClusters.insert(finishedClusters.end(),

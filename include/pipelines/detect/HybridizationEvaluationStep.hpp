@@ -84,14 +84,14 @@ struct HybridizationEvaluationStepMetrics {
    public:
     HybridizationEvaluationStepMetrics(HybridizationEvaluationStepConfig config) : config(config) {}
 
-    [[nodiscard]] constexpr auto getPassedCount() const noexcept -> size_t { return passedCount; }
-    [[nodiscard]] constexpr auto getFailedCount() const noexcept -> size_t { return failedCount; }
-    [[nodiscard]] constexpr auto getMFEValues() const noexcept -> const std::vector<double> & {
+    [[nodiscard]] constexpr auto getPassedCount() const -> size_t { return passedCount; }
+    [[nodiscard]] constexpr auto getFailedCount() const -> size_t { return failedCount; }
+    [[nodiscard]] constexpr auto getMFEValues() const -> const std::vector<double> & {
         return mfeValues;
     }
 
     template <typename T>
-    [[nodiscard]] constexpr auto getIntraCrosslinkingCounts() const noexcept -> std::vector<T> {
+    [[nodiscard]] constexpr auto getIntraCrosslinkingCounts() const -> std::vector<T> {
         std::vector<T> counts;
         // convert each char to size_t
         std::ranges::transform(crosslinkingResults, std::back_inserter(counts),
@@ -103,7 +103,7 @@ struct HybridizationEvaluationStepMetrics {
     }
 
     template <typename T>
-    [[nodiscard]] constexpr auto getInterCrosslinkingCounts() const noexcept -> std::vector<T> {
+    [[nodiscard]] constexpr auto getInterCrosslinkingCounts() const -> std::vector<T> {
         std::vector<T> counts;
         // convert each char to size_t
         std::ranges::transform(crosslinkingResults, std::back_inserter(counts),
@@ -114,7 +114,7 @@ struct HybridizationEvaluationStepMetrics {
         return counts;
     }
 
-    void operator+=(const HybridizationEvaluationResult &result) noexcept {
+    void operator+=(const HybridizationEvaluationResult &result) {
         if (result.passed) {
             passedCount++;
         } else {
@@ -130,7 +130,7 @@ struct HybridizationEvaluationStepMetrics {
         }
     };
 
-    void operator+=(const HybridizationEvaluationStepMetrics &other) noexcept {
+    void operator+=(const HybridizationEvaluationStepMetrics &other) {
         passedCount += other.passedCount;
         failedCount += other.failedCount;
 
@@ -229,7 +229,7 @@ class HybridizationEvaluationStep {
     HybridizationEvaluationStepConfig config;
     HybridizationEvaluationStepMetrics metrics;
 
-    [[nodiscard]] auto isPassingFilters(double energy) const noexcept -> bool;
+    [[nodiscard]] auto isPassingFilters(double energy) const -> bool;
 };
 
 }  // namespace pipelines::detect

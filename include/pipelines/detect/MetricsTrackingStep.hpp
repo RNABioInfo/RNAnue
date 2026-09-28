@@ -16,15 +16,15 @@ using namespace dataTypes;
 struct Metrics {
     using CountsByRecordType = std::unordered_map<SplitRecordType, size_t>;
 
-    [[nodiscard]] auto getReadCount() const noexcept -> size_t { return readCount; }
-    [[nodiscard]] auto getHitGroupCounts() const noexcept -> const CountsByRecordType& {
+    [[nodiscard]] auto getReadCount() const -> size_t { return readCount; }
+    [[nodiscard]] auto getHitGroupCounts() const -> const CountsByRecordType& {
         return hitGroupCount;
     }
 
     void incrementHitGroups(const SplitRecordType& splitRecordType) {
         hitGroupCount[splitRecordType] += 1;
     }
-    void incrementReads() noexcept { readCount++; }
+    void incrementReads() { readCount++; }
 
     void operator+=(const Metrics& other) {
         readCount += other.getReadCount();
@@ -39,7 +39,7 @@ struct Metrics {
 };
 
 struct MetricsTrackingStepResult {
-    void addTags(auto& /* unused */) const noexcept {}
+    void addTags(auto& /* unused */) const {}
 };
 
 struct MetricsTrackingStep {
@@ -59,7 +59,7 @@ struct MetricsTrackingStep {
         return std::forward_like<ctx_t>(ctx).with(MetricsTrackingStepResult{});
     }
 
-    [[nodiscard]] auto getMetrics() const noexcept -> const Metrics& { return metrics; }
+    [[nodiscard]] auto getMetrics() const -> const Metrics& { return metrics; }
 
     void operator+=(const MetricsTrackingStep& other) { metrics += other.getMetrics(); }
 

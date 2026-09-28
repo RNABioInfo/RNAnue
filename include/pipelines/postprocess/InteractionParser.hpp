@@ -51,10 +51,10 @@ class InteractionParser {
         const auto hasColumn = [&columns](const std::string& columnName) -> bool {
             return columns.contains(columnName);
         };
-        const auto optionalFloat = [&hasColumn](const csv::CSVRow& entry,
-                                                const std::string& columnName) -> float {
-            return hasColumn(columnName) ? entry[columnName].get<float>()
-                                         : std::numeric_limits<float>::quiet_NaN();
+        const auto optionalDouble = [&hasColumn](const csv::CSVRow& entry,
+                                                const std::string& columnName) -> double {
+            return hasColumn(columnName) ? entry[columnName].get<double>()
+                                         : std::numeric_limits<double>::quiet_NaN();
         };
         const auto optionalString = [&hasColumn](const csv::CSVRow& entry,
                                                  const std::string& columnName) -> std::string {
@@ -86,24 +86,24 @@ class InteractionParser {
                     .firstFeature = entry[firstFeatureIDHeader].get<std::string>(),
                     .secondFeature = entry[secondFeatureIDHeader].get<std::string>()},
                 InteractionMetrics{
-                    .contributionScore = entry[transcriptContributionHeader].get<float>(),
-                    .totalSpanBp = optionalFloat(entry, totalSpanBpHeader),
+                    .contributionScore = entry[transcriptContributionHeader].get<double>(),
+                    .totalSpanBp = optionalDouble(entry, totalSpanBpHeader),
                     .effectiveCoverageSpanBp =
-                        optionalFloat(entry, effectiveCoverageSpanBpHeader),
-                    .supportPerTotalBp = optionalFloat(entry, supportPerTotalBpHeader),
-                    .supportPerEffectiveBp = optionalFloat(entry, supportPerEffectiveBpHeader),
-                    .coverageConcentration = optionalFloat(entry, coverageConcentrationHeader),
-                    .coverageComponents = optionalFloat(entry, coverageComponentsHeader),
-                    .armBalance = optionalFloat(entry, armBalanceHeader),
+                        optionalDouble(entry, effectiveCoverageSpanBpHeader),
+                    .supportPerTotalBp = optionalDouble(entry, supportPerTotalBpHeader),
+                    .supportPerEffectiveBp = optionalDouble(entry, supportPerEffectiveBpHeader),
+                    .coverageConcentration = optionalDouble(entry, coverageConcentrationHeader),
+                    .coverageComponents = optionalDouble(entry, coverageComponentsHeader),
+                    .armBalance = optionalDouble(entry, armBalanceHeader),
                     .coverageProfile = optionalString(entry, coverageProfileHeader),
-                    .meanInterCrosslinkCount = entry[meanInterCrosslinkCountHeader].get<float>(),
-                    .sdInterCrosslinkCount = entry[sdInterCrosslinksHeader].get<float>(),
+                    .meanInterCrosslinkCount = entry[meanInterCrosslinkCountHeader].get<double>(),
+                    .sdInterCrosslinkCount = entry[sdInterCrosslinksHeader].get<double>(),
                     .globalComplementarityScore =
-                        entry[globalHybridizationScoreHeader].get<float>(),
+                        entry[globalComplementarityScoreHeader].get<double>(),
                     .globalHybridizationScore =
-                        entry[globalComplementarityScoreHeader].get<float>(),
-                    .pValue = entry[pValueHeader].get<float>(),
-                    .padjValue = entry[padjValueHeader].get<float>()});
+                        entry[globalHybridizationScoreHeader].get<double>(),
+                    .pValue = entry[pValueHeader].get<double>(),
+                    .padjValue = entry[padjValueHeader].get<double>()});
         }
     }
 

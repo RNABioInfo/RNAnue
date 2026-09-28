@@ -310,7 +310,36 @@ candidate clusters. These values are intended for prioritization and filtering; 
 themselves establish biological mechanism, physical validation, or treatment-control differential
 interaction.
 
+### Input integrity and diagnostics
+
+Paired FASTQ files must contain the same number of records in matching order. RNAnue compares
+identifiers before the first whitespace, accepts `/1` and `/2` suffixes, and checks recognizable
+mate labels. A mismatch stops the invocation with the file names, pair number, and available IDs.
+Paired preprocessing requires `--chunksize >= 2`. Sequence deduplication retains the original
+record with the highest mean quality and the first record on a tie. Read IDs must remain unique
+within each sample for downstream assignment accounting; RNAnue does not rename them or perform
+a global collision scan. Sample names must be globally unique across treatment/control groups
+used together in postprocessing.
+
+Alignment length counts only CIGAR `M`, `=`, and `X`. Unmerged paired alignments and reads with
+more than two segments remain unsupported and have separate rejection counts. Poly-G trimming
+logs changed records and removed bases. Splice filtering requires loaded exon-to-parent
+relationships; RNAnue warns when these are absent. Existing filter defaults and energy-based
+hybridization acceptance remain unchanged.
+
+The effective number of statistical trials uses original reads. Assignment weights are summed
+per read across the tested clusters before squaring: with `S = sum(read weights)` and
+`Q = sum(read weights squared)`, trials are `S*S/Q` and the success scale is `S/Q`. The existing
+abundance null model, pseudocounts, and multiple-testing correction are retained. This correction
+does not establish empirical false-discovery control. Interaction-table columns and their order
+are unchanged; floating-point values now retain sufficient precision and may use scientific notation.
+
 ### Testing
+
+Build with `RNANUE_BUILD_TESTS=ON` and Python 3 available, then run
+`ctest --test-dir <build-directory> --output-on-failure`. The [focused benchmark suite](benchmarks/focused/README.md)
+includes small published PARIS, SPLASH, and LIGR-seq subsets, source manifests, and reproducible checks.
+Interrupted-run recovery and resumption are outside these changes and remain the user's responsibility.
 
 ## Troubleshooting
 

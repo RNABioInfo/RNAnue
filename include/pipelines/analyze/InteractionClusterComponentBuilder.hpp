@@ -1,4 +1,6 @@
 #pragma once
+#include <map>
+#include <tuple>
 
 // Standard
 #include <algorithm>
@@ -23,6 +25,11 @@ namespace pipelines::analyze {
 
 class InteractionClusterComponentBuilder {
    public:
+    struct ComparisonMetrics {
+        size_t inputCount{};
+        size_t indexedCount{};
+        size_t overlapComparisons{};
+    };
     [[nodiscard]] static auto groupClusters(std::vector<InteractionCluster>&& clusters,
                                             GenomicStrandSpecificity strandSpecificity)
         -> std::vector<std::vector<InteractionCluster>> {
@@ -53,8 +60,10 @@ class InteractionClusterComponentBuilder {
     }
 
     [[nodiscard]] static auto mergeGroup(std::vector<InteractionCluster>&& clusters,
-                                         const ClusteringParameters& parameters)
+                                         const ClusteringParameters& parameters,
+                                         ComparisonMetrics* metrics = nullptr)
         -> std::vector<InteractionCluster> {
+        if (metrics) *metrics = {.inputCount = clusters.size(), .indexedCount = clusters.size()};
         if (clusters.size() < 2) {
             return std::move(clusters);
         }
@@ -62,21 +71,40 @@ class InteractionClusterComponentBuilder {
         IITree<int32_t, size_t> firstArmIndex;
         IITree<int32_t, size_t> secondArmIndex;
 
+        UnionFind components{clusters.size()};
+        using Geometry = std::tuple<int, int, int, char, int, int, int, char>;
+        std::map<Geometry, size_t> firstByGeometry;
+        std::vector<size_t> representatives;
+        representatives.reserve(clusters.size());
         for (size_t index = 0; index < clusters.size(); ++index) {
-            const auto& firstSegment = clusters[index].getFirstSegment();
-            const auto& secondSegment = clusters[index].getSecondSegment();
-            firstArmIndex.add(firstSegment.getStart(), firstSegment.getEnd(), index);
-            secondArmIndex.add(secondSegment.getStart(), secondSegment.getEnd(), index);
+            const auto& first = clusters[index].getFirstSegment();
+            const auto& second = clusters[index].getSecondSegment();
+            Geometry key{first.getReferenceIDIndex(), first.getStart(), first.getEnd(),
+                         static_cast<char>(first.getStrand()), second.getReferenceIDIndex(),
+                         second.getStart(), second.getEnd(), static_cast<char>(second.getStrand())};
+            const auto [entry, inserted] = firstByGeometry.emplace(key, index);
+            if (!inserted) {
+                if (metrics) ++metrics->overlapComparisons;
+                // Do not compress geometrically identical observations if the
+                // configured predicate does not connect them (e.g. strict tolerance).
+                if (clustersOverlap(clusters[entry->second], clusters[index], parameters)) {
+                    components.unite(entry->second, index);
+                    continue;
+                }
+            }
+            representatives.push_back(index);
+            firstArmIndex.add(first.getStart(), first.getEnd(), index);
+            secondArmIndex.add(second.getStart(), second.getEnd(), index);
         }
+        if (metrics) metrics->indexedCount = representatives.size();
 
         firstArmIndex.index();
         secondArmIndex.index();
 
-        UnionFind components{clusters.size()};
         std::vector<size_t> firstArmHits;
         std::vector<size_t> secondArmHits;
 
-        for (size_t index = 0; index < clusters.size(); ++index) {
+        for (const size_t index : representatives) {
             const auto firstQuery = queryRange(clusters[index].getFirstSegment(), parameters);
             const auto secondQuery = queryRange(clusters[index].getSecondSegment(), parameters);
 
@@ -98,6 +126,7 @@ class InteractionClusterComponentBuilder {
                     continue;
                 }
 
+                if (metrics) ++metrics->overlapComparisons;
                 if (clustersOverlap(clusters[candidateIndex], clusters[index], parameters)) {
                     components.unite(candidateIndex, index);
                 }

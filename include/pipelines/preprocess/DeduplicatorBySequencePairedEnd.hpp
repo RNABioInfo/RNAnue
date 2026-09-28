@@ -33,7 +33,7 @@ class DeduplicatorBySequencePairedEnd {
 
    private:
     struct DeduplicationRecordPairedEnd {
-        std::string recordID;
+        size_t recordOrdinal;
         double meanQuality;
     };
 };

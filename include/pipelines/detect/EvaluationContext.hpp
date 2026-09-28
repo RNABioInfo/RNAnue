@@ -29,16 +29,16 @@ struct EvaluationContext {
     template <typename T>
     static constexpr bool has_tag_v = (std::is_same_v<T, EvaluationResultsT> || ...);
 
-    explicit constexpr EvaluationContext(std::unique_ptr<Group> group) noexcept
+    explicit constexpr EvaluationContext(std::unique_ptr<Group> group)
         requires(sizeof...(EvaluationResultsT) == 0)
         : group(std::move(group)) {}
 
     constexpr EvaluationContext(std::unique_ptr<Group> group,
-                                std::tuple<EvaluationResultsT...>&& evalResults) noexcept
+                                std::tuple<EvaluationResultsT...>&& evalResults)
         : group(std::move(group)), evaluationResults(std::move(evalResults)) {}
 
     constexpr EvaluationContext(std::unique_ptr<Group> group,
-                                const std::tuple<EvaluationResultsT...>& evalResults) noexcept
+                                const std::tuple<EvaluationResultsT...>& evalResults)
         : group(std::move(group)), evaluationResults(evalResults) {}
 
     EvaluationContext(EvaluationContext const& other)
@@ -47,7 +47,7 @@ struct EvaluationContext {
           evaluationResults(other.evaluationResults)  // tuple copy
     {}
 
-    [[nodiscard]] auto getRecords() const noexcept -> Group::RecordsContainerT& {
+    [[nodiscard]] auto getRecords() const -> Group::RecordsContainerT& {
         auto& records = group->getRecordContainer();
         const auto& results = evaluationResults;
         size_t index = 0;
@@ -79,33 +79,33 @@ struct EvaluationContext {
     }
 
     template <typename T>
-    [[nodiscard]] constexpr auto hasTag() const noexcept -> bool {
+    [[nodiscard]] constexpr auto hasTag() const -> bool {
         return has_tag_v<T>;
     }
 
     template <std::size_t I>
-    constexpr auto get() & noexcept -> decltype(auto) {
+    constexpr auto get() & -> decltype(auto) {
         return std::get<I>(evaluationResults);
     }
 
     template <std::size_t I>
-    constexpr auto get() const& noexcept -> decltype(auto) {
+    constexpr auto get() const& -> decltype(auto) {
         return std::get<I>(evaluationResults);
     }
 
     template <typename T>
-    constexpr auto get() & noexcept -> decltype(auto) {
+    constexpr auto get() & -> decltype(auto) {
         return std::get<T>(evaluationResults);
     }
 
     template <typename T>
-    constexpr auto get() const& noexcept -> decltype(auto) {
+    constexpr auto get() const& -> decltype(auto) {
         return std::get<T>(evaluationResults);
     }
 
     static consteval auto isFailed() -> bool { return has_tag_v<HitGroupFailureReason>; }
 
-    [[nodiscard]] auto getDeconstructedContexts() const noexcept
+    [[nodiscard]] auto getDeconstructedContexts() const
         -> std::vector<EvaluationContext<SingletonHitGroup, EvaluationResultsT...>>
         requires(!std::same_as<hit_group_t, SingletonHitGroup>)
     {

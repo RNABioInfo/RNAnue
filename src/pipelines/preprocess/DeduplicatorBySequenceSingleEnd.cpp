@@ -13,6 +13,7 @@
 
 // Internal
 #include "DeduplicationOutput.hpp"
+#include "CheckedFastqReader.hpp"
 #include "FastqRecord.hpp"
 #include "HashDNA5Vector.hpp"
 #include "Logger.hpp"
@@ -28,17 +29,20 @@ auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
         validRecordIDsBySequence;
 
     size_t duplicateRecords = 0;
+    size_t nextOrdinal = 0;
 
-    seqan3::sequence_file_input recordInput{recordsPath};
+    CheckedFastqReader recordInput{recordsPath};
 
-    for (FastqRecord& record : recordInput) {
+    while (auto next = recordInput.next()) {
+        auto& record = *next;
+        const size_t ordinal = nextOrdinal++;
         const double meanQuality =
             SequenceQualityAlgorithms::meanQualityScore(record.base_qualities());
 
         if (validRecordIDsBySequence.find(record.sequence()) == validRecordIDsBySequence.end()) {
             validRecordIDsBySequence.emplace(
                 record.sequence(),
-                DeduplicationRecordSingleEnd{.recordID = record.id(), .meanQuality = meanQuality});
+                DeduplicationRecordSingleEnd{.recordOrdinal = ordinal, .meanQuality = meanQuality});
             continue;
         }
 
@@ -47,7 +51,7 @@ auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
         if (meanQuality > validRecordIDsBySequence[record.sequence()].meanQuality) {
             validRecordIDsBySequence.insert_or_assign(
                 record.sequence(),
-                DeduplicationRecordSingleEnd{.recordID = record.id(), .meanQuality = meanQuality});
+                DeduplicationRecordSingleEnd{.recordOrdinal = ordinal, .meanQuality = meanQuality});
         }
     }
 
@@ -56,10 +60,10 @@ auto DeduplicatorBySequenceSingleEnd::deduplicate(const fs::path& recordsPath)
 
     auto validRecordIDsView =
         validRecordIDsBySequence | std::views::values |
-        std::views::transform([](DeduplicationRecordSingleEnd& record) { return record.recordID; });
+        std::views::transform([](DeduplicationRecordSingleEnd& record) { return record.recordOrdinal; });
 
     return DeduplicationOutputSingle{
-        .validRecordIDs = {validRecordIDsView.begin(), validRecordIDsView.end()}};
+        .validRecordOrdinals = {validRecordIDsView.begin(), validRecordIDsView.end()}};
 }  // namespace DeduplicatorBySequenceSingleEnd::deduplicate(constfs::path&recordsPath)
 
 }  // namespace pipelines::preprocess

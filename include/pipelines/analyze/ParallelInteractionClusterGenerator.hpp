@@ -49,7 +49,7 @@ class ParallelInteractionClusterGenerator {
     std::shared_ptr<const FeatureAnnotator> featureAnnotator;
 
     void annotatePartiallyAnnotatedClusters(
-        const FeatureAnnotator& supplementaryFeatureAnnotator) noexcept;
+        const FeatureAnnotator& supplementaryFeatureAnnotator);
 
     void logClusteringStatus() const noexcept;
 };

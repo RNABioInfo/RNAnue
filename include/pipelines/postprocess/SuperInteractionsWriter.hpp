@@ -75,7 +75,7 @@ void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
 
     for (const auto& sampleName : sampleIDs) {
         lineTokens.emplace_back(
-            std::format("{:.2f}", superInteraction.getContributionScore(sampleName)));
+            std::format("{:.17g}", superInteraction.getContributionScore(sampleName)));
     }
 
     writer << lineTokens;

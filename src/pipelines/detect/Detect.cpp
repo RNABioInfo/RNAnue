@@ -72,6 +72,19 @@ void Detect::process(const DetectData& data) {
         std::make_shared<const FeatureAnnotator>(annotationFilePath, referenceIDToIndex,
                                                  params.featureTypes)};
 
+    if (params.removeSplicingEvents) {
+        bool hasExonRelationships = false;
+        for (const auto& [referenceID, tree] : featureAnnotator->getFeatureTreeMap()) {
+            for (size_t i = 0; i < tree.size(); ++i) {
+                const auto& feature = tree.getData(i);
+                hasExonRelationships |= feature.getType() == "exon" && feature.getParentID().has_value();
+            }
+        }
+        if (!hasExonRelationships) Logger::log<LogLevel::WARNING>(
+            "Splice filtering is enabled but the loaded annotation has no usable exon relationships. "
+            "Include exons and their parent hierarchy with --featuretypes; --altsplice alone does not enable filtering.");
+    }
+
     const auto evaluationParameters =
         ReadGroupEvaluationParameters::makeParams(params, featureAnnotator);
 
@@ -116,22 +129,8 @@ void Detect::processSample(const DetectSample& sample, const ParamT& evaluationP
     AsyncGroupBufferType recordInputBuffer =
         alignmentsIn | AsyncSplitReadGroupBuffer(params.threadCount + 1);
 
-    // Process and store results in a chunked process
-    std::vector<std::future<Result>> results;
-
-    for (size_t i = 1; i < params.threadCount; ++i) {
-        results.emplace_back(std::async(std::launch::async,
-                                        &Detect::template processRecordChunk<ParamT>, this,
-                                        std::cref(outTmpDirs), std::ref(recordInputBuffer),
-                                        std::ref(reference), std::cref(evaluationParams)));
-    }
-
-    Detect::Result mergedResults =
-        processRecordChunk(outTmpDirs, recordInputBuffer, reference, evaluationParams);
-
-    for (auto& resultFuture : results) {
-        mergedResults += resultFuture.get();
-    }
+    auto mergedResults = utility::consumeConcurrently(recordInputBuffer, params.threadCount - 1,
+        [&] { return processRecordChunk(outTmpDirs, recordInputBuffer, reference, evaluationParams); });
 
     mergedResults.createPlots(outputParentDir);
 

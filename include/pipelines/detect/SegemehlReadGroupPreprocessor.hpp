@@ -1,4 +1,5 @@
 #pragma once
+#include <map>
 
 // Standard
 #include <algorithm>
@@ -29,11 +30,13 @@ namespace pipelines::detect {
 namespace fs = std::filesystem;
 
 struct SegemehlReadGroupPreprocessorMetrics {
-    [[nodiscard]] constexpr auto getPassedHitGroupsPerReadGroup() const noexcept
+    std::map<dataTypes::HitGroupFailureReason, size_t> failures;
+
+    [[nodiscard]] constexpr auto getPassedHitGroupsPerReadGroup() const
         -> const std::vector<size_t>& {
         return passedHitGroupsPerReadGroup;
     }
-    [[nodiscard]] constexpr auto getFailedHitGroupsPerReadGroup() const noexcept
+    [[nodiscard]] constexpr auto getFailedHitGroupsPerReadGroup() const
         -> const std::vector<size_t>& {
         return failedHitGroupsPerReadGroup;
     }
@@ -47,7 +50,8 @@ struct SegemehlReadGroupPreprocessorMetrics {
         return passedReadGroupCount + totalFailReadGroupCount;
     }
 
-    void operator+=(const SegemehlReadGroupPreprocessorMetrics& other) noexcept {
+    void operator+=(const SegemehlReadGroupPreprocessorMetrics& other) {
+        for (const auto& [reason, count] : other.failures) failures[reason] += count;
         passedHitGroupsPerReadGroup.insert(passedHitGroupsPerReadGroup.end(),
                                            other.passedHitGroupsPerReadGroup.begin(),
                                            other.passedHitGroupsPerReadGroup.end());
@@ -80,12 +84,13 @@ struct SegemehlReadGroupPreprocessorMetrics {
         plotter.save();
     }
 
-    void addContext(ConstructedEvaluationContextVariant& contextVariant) noexcept {
+    void addContext(ConstructedEvaluationContextVariant& contextVariant) {
         std::visit(
             [&](const auto& context) {
                 using CtxT = std::remove_cvref_t<decltype(context)>;
                 if constexpr (CtxT::isFailed()) {
                     ++currentFailedHitGroupCount;
+                    ++failures[context.template get<dataTypes::HitGroupFailureReason>()];
                 } else {
                     ++currentPassedHitGroupCount;
                 }
@@ -93,7 +98,7 @@ struct SegemehlReadGroupPreprocessorMetrics {
             contextVariant);
     }
 
-    void finalizeReadGroup() noexcept {
+    void finalizeReadGroup() {
         passedHitGroupsPerReadGroup.push_back(currentPassedHitGroupCount);
         failedHitGroupsPerReadGroup.push_back(currentFailedHitGroupCount);
 
@@ -108,7 +113,7 @@ struct SegemehlReadGroupPreprocessorMetrics {
         currentFailedHitGroupCount = 0;
     }
 
-    void finalizeReadGroupAllFailed() noexcept {
+    void finalizeReadGroupAllFailed() {
         size_t sumHitGroups = currentPassedHitGroupCount + currentFailedHitGroupCount;
 
         passedHitGroupsPerReadGroup.push_back(0);

@@ -2,15 +2,15 @@
 
 // Standard
 #include <set>
-#include <string>
+#include <cstddef>
 #include <variant>
 
 struct DeduplicationOutputSingle {
-    std::set<std::string> validRecordIDs;
+    std::set<size_t> validRecordOrdinals;
 };
 
 struct DeduplicationOutputPaired {
-    std::set<std::string> validRecordIDs;
+    std::set<size_t> validRecordOrdinals;
 };
 
 using DeduplicationOutput = std::variant<DeduplicationOutputSingle, DeduplicationOutputPaired>;

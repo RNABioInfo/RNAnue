@@ -211,15 +211,15 @@ auto Align::referenceFromGenome() const -> dataTypes::SamReference {
     return dataTypes::SamReference{std::move(referenceIDs), std::move(referenceLengths)};
 }
 
-void Align::writeEmptyAlignments(const fs::path& alignmentsOutPath,
-                                 const fs::path& emptyInputPath) const {
+void Align::writeEmptyAlignments(const fs::path &alignmentsOutPath,
+                                 const fs::path &emptyInputPath) const {
     Logger::log("File has no entries: ", emptyInputPath,
                 "; writing header-only alignments: ", alignmentsOutPath);
     SamFileUtility::writeHeaderOnlyFile(alignmentsOutPath, referenceFromGenome());
 }
 
-void Align::runSegemehlAlignment(std::vector<std::string> args, const fs::path& outputPath,
-                                 const std::string& errorMessage) const {
+void Align::runSegemehlAlignment(std::vector<std::string> args, const fs::path &outputPath,
+                                 const std::string &errorMessage) {
     constexpr size_t VALIDATION_ATTEMPTS = 6;
     constexpr size_t INITIAL_RETRY_DELAY_MS = 500;
     constexpr size_t ALIGNMENT_ATTEMPTS = 2;
@@ -233,9 +233,8 @@ void Align::runSegemehlAlignment(std::vector<std::string> args, const fs::path& 
             Logger::log<IncludeSourceLocation, LogLevel::ERROR>(errorMessage);
         }
 
-        const auto inspection =
-            SamFileUtility::inspectWithRetries(outputPath, VALIDATION_ATTEMPTS,
-                                               INITIAL_RETRY_DELAY_MS);
+        const auto inspection = SamFileUtility::inspectWithRetries(outputPath, VALIDATION_ATTEMPTS,
+                                                                   INITIAL_RETRY_DELAY_MS);
         if (inspection.isReadable()) {
             if (inspection.hasMissingEof()) {
                 Logger::log<LogLevel::WARNING>(
@@ -248,8 +247,8 @@ void Align::runSegemehlAlignment(std::vector<std::string> args, const fs::path& 
 
         if (attempt == ALIGNMENT_ATTEMPTS) {
             Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
-                errorMessage, "; output failed validation after retry: ",
-                SamFileUtility::describe(inspection));
+                errorMessage,
+                "; output failed validation after retry: ", SamFileUtility::describe(inspection));
         }
 
         Logger::log<LogLevel::WARNING>(
@@ -286,9 +285,8 @@ void Align::alignPairedReads(const fs::path &queryForwardFastqInPath,
     const size_t reverseThreads = threadsAdaptedToEntries(queryReverseFastqInPath);
 
     if (forwardThreads == 0 || reverseThreads == 0) {
-        writeEmptyAlignments(alignmentsFastqOutPath,
-                             forwardThreads == 0 ? queryForwardFastqInPath
-                                                 : queryReverseFastqInPath);
+        writeEmptyAlignments(alignmentsFastqOutPath, forwardThreads == 0 ? queryForwardFastqInPath
+                                                                         : queryReverseFastqInPath);
         return;
     }
 

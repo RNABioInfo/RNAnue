@@ -39,7 +39,7 @@ class InteractionClusterGenerator {
         size_t includedClusterCount{0};
         size_t excludedClusterCount{0};
 
-        void merge(Result&& other) noexcept;
+        void merge(Result&& other);
 
         [[nodiscard]] constexpr auto totalClusterCount() const noexcept -> size_t {
             return includedClusterCount + excludedClusterCount;
@@ -84,16 +84,16 @@ class InteractionClusterGenerator {
     [[nodiscard]] auto clusterPassesFilters(const InteractionCluster& cluster) const noexcept
         -> bool;
 
-    [[nodiscard]] auto annotateCluster(InteractionCluster&& cluster) noexcept
+    [[nodiscard]] auto annotateCluster(InteractionCluster&& cluster)
         -> std::variant<AnnotatedInteractionCluster, PartiallyAnnotatedInteractionCluster>;
 
-    void attributeCluster(AnnotatedInteractionCluster&& cluster) noexcept;
+    void attributeCluster(AnnotatedInteractionCluster&& cluster);
 
-    void attributeCluster(PartiallyAnnotatedInteractionCluster&& cluster) noexcept;
+    void attributeCluster(PartiallyAnnotatedInteractionCluster&& cluster);
 
-    void finalizeCluster(InteractionCluster&& cluster) noexcept;
+    void finalizeCluster(InteractionCluster&& cluster);
 
-    void finalizeMergedClusters(std::vector<InteractionCluster>&& clusters) noexcept;
+    void finalizeMergedClusters(std::vector<InteractionCluster>&& clusters);
 
     [[nodiscard]] auto releaseResult() noexcept -> Result;
 };

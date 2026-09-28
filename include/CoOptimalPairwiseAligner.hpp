@@ -39,8 +39,8 @@
 class CoOptimalPairwiseAligner {
    public:
     explicit CoOptimalPairwiseAligner(
-        seqan3::nucleotide_scoring_scheme<int8_t> scoringScheme) noexcept
-        : cfg(getAlignmentConfig(scoringScheme)) {}
+        seqan3::nucleotide_scoring_scheme<int8_t> scoringScheme)
+        : scoringScheme(scoringScheme), cfg(getAlignmentConfig(scoringScheme)) {}
 
     struct Result {
         int score;
@@ -49,13 +49,13 @@ class CoOptimalPairwiseAligner {
         std::pair<std::size_t, std::size_t> beginPositions;
         std::pair<std::size_t, std::size_t> endPositions;
 
-        auto operator>(const Result &other) const noexcept -> bool {
+        auto operator>(const Result &other) const -> bool {
             return complementarity > other.complementarity ||
                    (helper::isApproxEqual(complementarity, other.complementarity) &&
                     fraction > other.fraction);
         }
 
-        auto operator<(const Result &other) const noexcept -> bool {
+        auto operator<(const Result &other) const -> bool {
             return complementarity < other.complementarity ||
                    (helper::isApproxEqual(complementarity, other.complementarity) &&
                     fraction < other.fraction);
@@ -63,7 +63,7 @@ class CoOptimalPairwiseAligner {
     };
 
     template <typename sequence_pair_t>
-    [[nodiscard]] auto getLocalAlignments(const sequence_pair_t &sequencePair) const noexcept
+    [[nodiscard]] auto getLocalAlignments(const sequence_pair_t &sequencePair) const
         -> std::vector<Result> {
         auto alignResults = seqan3::align_pairwise(sequencePair, cfg);
 
@@ -114,10 +114,11 @@ class CoOptimalPairwiseAligner {
         seqan3::detail::debug_mode<std::integral_constant<seqan3::detail::align_config_id,
                                                           seqan3::detail::align_config_id::debug>>>;
 
+    seqan3::nucleotide_scoring_scheme<int8_t> scoringScheme;
     Configuration cfg;
 
     [[nodiscard]] static constexpr auto getAlignmentConfig(
-        const seqan3::nucleotide_scoring_scheme<int8_t> &scoringScheme) noexcept -> Configuration {
+        const seqan3::nucleotide_scoring_scheme<int8_t> &scoringScheme) -> Configuration {
         return seqan3::align_cfg::method_local{} |
                seqan3::align_cfg::scoring_scheme{scoringScheme} |
                seqan3::align_cfg::gap_cost_affine{seqan3::align_cfg::open_score{-2},
@@ -130,7 +131,7 @@ class CoOptimalPairwiseAligner {
     static auto tracePath(
         const seqan3::detail::matrix_coordinate &trace_begin,
         const seqan3::detail::two_dimensional_matrix<seqan3::detail::trace_directions>
-            &complete_matrix) noexcept {
+            &complete_matrix) {
         using matrix_t = seqan3::detail::two_dimensional_matrix<seqan3::detail::trace_directions>;
         using matrix_iter_t = std::ranges::iterator_t<matrix_t const>;
         using trace_iterator_t = seqan3::detail::trace_iterator<matrix_iter_t>;
@@ -143,7 +144,7 @@ class CoOptimalPairwiseAligner {
 
     template <typename sequence_pair_t, typename score_t, typename matrix_coordinate_t>
     auto makeResult(const sequence_pair_t &sequencePair, score_t score,
-                    matrix_coordinate_t endPositions, auto const &alignmentMatrix) const noexcept
+                    matrix_coordinate_t endPositions, auto const &alignmentMatrix) const
         -> Result {
         const size_t elementsN = alignmentMatrix.rows() * alignmentMatrix.cols();
         std::vector<seqan3::detail::trace_directions> traceDirections;
@@ -178,10 +179,16 @@ class CoOptimalPairwiseAligner {
 
         assert(alignmentSize == get<1>(alignmentResult).size());
 
-        // Calculation of complementarity score
-        // TODO The number to add depends on the scoring scheme and gap penalties
-        const size_t matchingCount = gapCount > 0 ? ((score + alignmentSize + gapCount + 2) / 2)
-                                                  : ((score + alignmentSize) / 2);
+        size_t matchingCount = 0;
+        for (size_t i = 0; i < alignmentSize; ++i) {
+            const char first = seqan3::to_char(get<0>(alignmentResult)[i]);
+            const char second = seqan3::to_char(get<1>(alignmentResult)[i]);
+            if (first == '-' || second == '-' || first == 'N' || second == 'N') continue;
+            seqan3::dna5 a{}, b{};
+            seqan3::assign_char_to(first, a);
+            seqan3::assign_char_to(second, b);
+            matchingCount += scoringScheme.score(a, b) > 0;
+        }
         float complementarity = 0.0;
         if (alignmentSize != 0) {
             complementarity = (static_cast<double>(matchingCount) / alignmentSize);

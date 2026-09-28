@@ -126,7 +126,7 @@ auto InteractionCluster::segmentsMaxSelfOverlapFraction() const noexcept -> doub
 }
 
 auto InteractionCluster::merge(const InteractionCluster &other,
-                               const GenomicStrandSpecificity &strandSpecificity) noexcept -> bool {
+                               const GenomicStrandSpecificity &strandSpecificity) -> bool {
     if (!sortedSegments.merge(other.sortedSegments, strandSpecificity)) [[unlikely]] {
         Logger::log<LogLevel::WARNING>("Could not merge interaction clusters:\n", *this, other);
         return false;
@@ -168,7 +168,7 @@ auto InteractionCluster::merge(const InteractionCluster &other,
 
     {
         transcriptContribution += other.transcriptContribution;
-        transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
+        contributions.insert(contributions.end(), other.contributions.begin(), other.contributions.end());
     }
 
     firstArmCoverage.merge(other.firstArmCoverage);
@@ -177,7 +177,7 @@ auto InteractionCluster::merge(const InteractionCluster &other,
     return true;
 }
 
-void InteractionCluster::absorbValidatedComponentMember(const InteractionCluster &other) noexcept {
+void InteractionCluster::absorbValidatedComponentMember(const InteractionCluster &other) {
     auto absorbSegment = [](GenomicRegion &segment, const GenomicRegion &otherSegment) {
         assert(segment.getReferenceIDIndex() == otherSegment.getReferenceIDIndex());
 
@@ -204,7 +204,7 @@ void InteractionCluster::absorbValidatedComponentMember(const InteractionCluster
                                   other.crosslinkingSiteCounts.end());
 
     transcriptContribution += other.transcriptContribution;
-    transcriptContributionSquaredSum += other.transcriptContributionSquaredSum;
+    contributions.insert(contributions.end(), other.contributions.begin(), other.contributions.end());
     firstArmCoverage.merge(other.firstArmCoverage);
     secondArmCoverage.merge(other.secondArmCoverage);
 }

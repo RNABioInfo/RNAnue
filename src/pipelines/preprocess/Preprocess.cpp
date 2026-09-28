@@ -1,7 +1,9 @@
 #include "Preprocess.hpp"
 
 // Standard
+#include <algorithm>
 #include <cassert>
+#include <stdexcept>
 #include <utility>
 #include <variant>
 
@@ -23,6 +25,14 @@ namespace pipelines::preprocess {
 Preprocess::Preprocess(PreprocessParameters params) : parameters(std::move(params)) {}
 
 void Preprocess::process(const PreprocessData &data) const {
+    const auto isPaired = [](const PreprocessSampleType& sample) {
+        return std::holds_alternative<PreprocessSamplePaired>(sample);
+    };
+    if (parameters.chunkSize < 2 &&
+        (std::ranges::any_of(data.treatmentSamples, isPaired) ||
+         (data.controlSamples && std::ranges::any_of(*data.controlSamples, isPaired)))) {
+        throw std::invalid_argument("Paired-end preprocessing requires --chunksize >= 2");
+    }
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 
     for (const auto &sample : data.treatmentSamples) {

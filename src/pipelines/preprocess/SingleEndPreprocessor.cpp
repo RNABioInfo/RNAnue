@@ -25,6 +25,8 @@
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
+#include "CheckedFastqReader.hpp"
+#include "utility/ConcurrentInput.hpp"
 
 namespace pipelines::preprocess {
 
@@ -36,6 +38,9 @@ void SingleEndPreprocessor::process(const PreprocessSampleSingle& sample) const 
     ChunkResult totalResult = parameters.deduplicate ? processWithDeduplication(sample)
                                                      : processWithoutDeduplication(sample);
 
+    Logger::log("Poly-G trimming: ", totalResult.polyGChangedRecords, " records changed, ",
+                totalResult.polyGRemovedBases, " bases removed");
+
     Logger::log("Merging temporary files");
 
     const auto tmpFilePaths = helper::getFilePathsInDir(sample.output.tmpFastqDir);
@@ -46,64 +51,28 @@ void SingleEndPreprocessor::process(const PreprocessSampleSingle& sample) const 
                 totalResult.getFailedRecords(), " failed records");
 }
 
-auto SingleEndPreprocessor::processWithDeduplication(const PreprocessSampleSingle& sample) const
-    -> ChunkResult {
-    const auto deduplicationConfig =
-        DeduplicationBySequenceSingleConfig{sample.input.inputFastqPath};
-    auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
-
-    auto isValidRecord = [&deduplicatedResults](const FastqRecord& record) {
-        return deduplicatedResults.validRecordIDs.contains(record.id());
-    };
-
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
-
-    seqan3::sequence_file_input recIn{sample.input.inputFastqPath};
-    auto asyncInputBuffer = recIn | seqan3::views::async_input_buffer(parameters.chunkSize) |
-                            std::ranges::views::filter(isValidRecord);
-
-    for (size_t i = 1; i < parameters.threadCount; ++i) {
-        processResults.emplace_back(std::async(
-            std::launch::async, &SingleEndPreprocessor::processChunk<decltype(asyncInputBuffer)>,
-            this, std::ref(asyncInputBuffer), std::cref(sample.output.tmpFastqDir)));
-    }
-
-    // Process data in main thread
-    ChunkResult totalResult = processChunk(asyncInputBuffer, sample.output.tmpFastqDir);
-
-    // Collect results from other threads
-    for (auto& resultFuture : processResults) {
-        totalResult += resultFuture.get();
-    }
-
-    return totalResult;
+auto SingleEndPreprocessor::processWithDeduplication(const PreprocessSampleSingle& sample) const -> ChunkResult {
+    auto retained = Deduplicator::deduplicate(DeduplicationBySequenceSingleConfig{sample.input.inputFastqPath});
+    return processInput(sample, &retained.validRecordOrdinals);
 }
 
-auto SingleEndPreprocessor::processWithoutDeduplication(const PreprocessSampleSingle& sample) const
-    -> ChunkResult {
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
+auto SingleEndPreprocessor::processWithoutDeduplication(const PreprocessSampleSingle& sample) const -> ChunkResult {
+    return processInput(sample, nullptr);
+}
 
-    seqan3::sequence_file_input recIn{sample.input.inputFastqPath};
-    SingleEndAsyncInputBuffer asyncInputBuffer =
-        recIn | seqan3::views::async_input_buffer(parameters.chunkSize);
-
-    for (size_t i = 1; i < parameters.threadCount; ++i) {
-        processResults.emplace_back(std::async(
-            std::launch::async, &SingleEndPreprocessor::processChunk<SingleEndAsyncInputBuffer>,
-            this, std::ref(asyncInputBuffer), std::cref(sample.output.tmpFastqDir)));
-    }
-
-    // Process data in main thread
-    ChunkResult totalResult = processChunk(asyncInputBuffer, sample.output.tmpFastqDir);
-
-    // Collect results from other threads
-    for (auto& resultFuture : processResults) {
-        totalResult += resultFuture.get();
-    }
-
-    return totalResult;
+auto SingleEndPreprocessor::processInput(const PreprocessSampleSingle& sample,
+                                       const std::set<size_t>* retained) const -> ChunkResult {
+    CheckedFastqReader reader{sample.input.inputFastqPath};
+    size_t ordinal = 0;
+    utility::ConcurrentInput<FastqRecord> input{parameters.chunkSize, [&]() -> std::optional<FastqRecord> {
+        while (auto record = reader.next()) {
+            const size_t current = ordinal++;
+            if (!retained || retained->contains(current)) return record;
+        }
+        return std::nullopt;
+    }};
+    return utility::consumeConcurrently(input, parameters.threadCount - 1,
+        [&] { return processChunk(input, sample.output.tmpFastqDir); });
 }
 
 template <typename T>
@@ -118,7 +87,11 @@ auto SingleEndPreprocessor::processChunk(T& recordIterator, const fs::path& tmpO
 
     for (auto& record : recordIterator) {
         if (parameters.trimPolyG) {
+            const auto before = record.sequence().size();
             RecordTrimmer::trim3PolyG(record, parameters.minPolyGCount);
+            const auto removed = before - record.sequence().size();
+            result.polyGChangedRecords += removed != 0;
+            result.polyGRemovedBases += removed;
         }
 
         if (parameters.windowTrimmingSize > 0) {
@@ -150,6 +123,8 @@ auto SingleEndPreprocessor::processChunk(T& recordIterator, const fs::path& tmpO
 }
 
 void SingleEndPreprocessor::ChunkResult::operator+=(const ChunkResult& other) {
+    polyGChangedRecords += other.polyGChangedRecords;
+    polyGRemovedBases += other.polyGRemovedBases;
     passedRecords += other.passedRecords;
     failedRecords += other.failedRecords;
 }

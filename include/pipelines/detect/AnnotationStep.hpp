@@ -47,7 +47,7 @@ struct AnnotationStepConfig {
 struct AnnotationStepResult {
     std::optional<GenomicFeature> feature;
 
-    void addTags(SamRecord& record) const noexcept {
+    void addTags(SamRecord& record) const {
         if (feature) {
             record.tags()["XF"_tag] = feature->getAnnotationID();
         }

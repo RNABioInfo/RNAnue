@@ -1,4 +1,6 @@
 #pragma once
+#include <limits>
+#include <stdexcept>
 
 // Standard
 #include <cassert>
@@ -106,7 +108,7 @@ class SegemehlHitGroupConstructor {
                        std::make_move_iterator(subRecords.end()));
     }
 
-    [[nodiscard]] auto getConstructedEvalContext() noexcept -> ConstructedEvaluationContextVariant {
+    [[nodiscard]] auto getConstructedEvalContext() -> ConstructedEvaluationContextVariant {
         if (!failureReason && !hasValidSplitRecordsCount()) {
             // TODO: If read should be singleton but has more records due to being paired alignment
             // -> merge or filter
@@ -116,7 +118,7 @@ class SegemehlHitGroupConstructor {
 
         // TODO: Remove this as soon as paired end is handled
         if (static_cast<bool>(records.front().flag() & seqan3::sam_flag::paired)) {
-            failureReason = HitGroupFailureReason::NOT_IMPLEMENTED;
+            failureReason = HitGroupFailureReason::UNSUPPORTED_PAIRED;
         }
 
         switch (hitGroupType) {
@@ -147,7 +149,7 @@ class SegemehlHitGroupConstructor {
                 // TODO: Implement multimeric hit group handling
                 return EvaluationContext{
                     std::make_unique<MultimericHitGroup>(MultimericRecords{records}, hitGroupTag),
-                    std::make_tuple(HitGroupFailureReason::NOT_IMPLEMENTED)};
+                    std::make_tuple(HitGroupFailureReason::UNSUPPORTED_MULTISEGMENT)};
 
                 // if (failureReason) {
                 //     return EvaluationContext{std::make_unique<MultimericHitGroup>(
@@ -173,9 +175,9 @@ class SegemehlHitGroupConstructor {
 
     std::optional<HitGroupFailureReason> failureReason = std::nullopt;
 
-    [[nodiscard]] auto splitRecordCount() const noexcept -> size_t { return records.size(); }
+    [[nodiscard]] auto splitRecordCount() const -> size_t { return records.size(); }
 
-    [[nodiscard]] auto isValidHitGroup() const noexcept -> bool { return !failureReason; }
+    [[nodiscard]] auto isValidHitGroup() const -> bool { return !failureReason; }
 
     [[nodiscard]] static auto extractHitGroupType(const SamRecord& record) -> SplitRecordType {
         if (!record.tags().contains("XJ"_tag)) {
@@ -234,15 +236,21 @@ class SegemehlHitGroupConstructor {
         size_t startPosSplit{};
         size_t endPosSplit{};  // position in split read (e.g., XX:i to XY:i / 14 to 20)
 
-        int nextSplitReferenceShift = 0;
+        size_t referenceConsumed = 0;
 
         auto const getCurrentSplit = [&] [[nodiscard]] () -> SamRecord {
+            if (endPosRead > record.sequence().size() || startPosRead > endPosRead ||
+                (!record.base_qualities().empty() && endPosRead > record.base_qualities().size()) ||
+                referencePosition > static_cast<size_t>(std::numeric_limits<int32_t>::max()))
+                throw std::runtime_error("Invalid split CIGAR coordinates for " + record.id());
             const auto splitSeq =
                 record.sequence() | seqan3::views::slice(static_cast<ptrdiff_t>(startPosRead),
                                                          static_cast<ptrdiff_t>(endPosRead));
-            const auto splitQual =
-                record.base_qualities() | seqan3::views::slice(static_cast<ptrdiff_t>(startPosRead),
-                                                               static_cast<ptrdiff_t>(endPosRead));
+            std::vector<seqan3::phred42> splitQual;
+            if (!record.base_qualities().empty()) {
+                splitQual.assign(record.base_qualities().begin() + startPosRead,
+                                 record.base_qualities().begin() + endPosRead);
+            }
 
             seqan3::sam_tag_dictionary tags = record.tags();
             tags.get<"XX"_tag>() = static_cast<int>(startPosSplit);
@@ -256,7 +264,7 @@ class SegemehlHitGroupConstructor {
                              record.mapping_quality(),
                              currentCigar,
                              seqan3::dna5_vector(splitSeq.begin(), splitSeq.end()),
-                             std::vector<seqan3::phred42>(splitQual.begin(), splitQual.end()),
+                             std::move(splitQual),
                              std::move(tags)};
         };
 
@@ -264,6 +272,7 @@ class SegemehlHitGroupConstructor {
             const auto cigarValue = get<0>(cigar);
             endPosRead += cigarValue;
             endPosSplit += cigarValue;
+            if (cigar != 'S'_cigar_operation) referenceConsumed += cigarValue;
             currentCigar.push_back(cigar);
         };
 
@@ -271,27 +280,24 @@ class SegemehlHitGroupConstructor {
             const auto cigarValue = get<0>(cigar);
             endPosRead += cigarValue;
             endPosSplit += cigarValue;
-            nextSplitReferenceShift -= cigarValue;
             currentCigar.push_back(cigar);
         };
 
         auto const addDeletionCigar = [&](const auto& cigar) {
             currentCigar.push_back(cigar);
-            nextSplitReferenceShift += get<0>(cigar);
+            referenceConsumed += get<0>(cigar);
         };
 
         auto const addSoftClipCigar = [&](const auto& cigar) {
             const auto cigarValue = get<0>(cigar);
             if (!params.excludeSoftClipping) {
-                nextSplitReferenceShift -= cigarValue;
                 addOtherCigar(cigar);
                 return;
             }
 
             /* If current cigar is empty, we are at the beginning of the read in case
             of soft clipping at the end of the read it is just ignored */
-            if (currentCigar.empty()) {
-                nextSplitReferenceShift -= cigarValue;
+            if (endPosRead == startPosRead) {
                 startPosRead += cigarValue;
                 endPosRead += cigarValue;
                 startPosSplit += cigarValue;
@@ -308,11 +314,10 @@ class SegemehlHitGroupConstructor {
 
             // Set up positions for the next split
             const auto cigarValue = get<0>(cigar);
-            assert((cigarValue + endPosRead + nextSplitReferenceShift) >= 0);
-            referencePosition += cigarValue + endPosRead + nextSplitReferenceShift;
+            referencePosition += cigarValue + referenceConsumed;
             startPosSplit = endPosSplit;
             startPosRead = endPosRead;
-            nextSplitReferenceShift = 0;
+            referenceConsumed = 0;
             currentCigar.clear();
 
             return currentSplit;
@@ -330,6 +335,8 @@ class SegemehlHitGroupConstructor {
                 addSoftClipCigar(cigar);
             } else if (cigar == 'N'_cigar_operation) {
                 co_yield addSkipCigar(cigar);
+            } else if (cigar == 'H'_cigar_operation || cigar == 'P'_cigar_operation) {
+                currentCigar.push_back(cigar);
             }
         }
 

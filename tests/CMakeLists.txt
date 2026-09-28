@@ -62,6 +62,8 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCorrectnessTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/PipelineAnalysisRegressionTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureAnnotatorValidationTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureParserTests.cpp
@@ -90,6 +92,11 @@ add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionsWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/ParallelInteractionClusterGenerator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/StatisticEvaluator.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequenceSingleEnd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/preprocess/DeduplicatorBySequencePairedEnd.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/ComplementarityEvaluationStep.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/HybridizationEvaluationStep.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
 
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utility.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SamFileUtility.cpp
@@ -109,7 +116,11 @@ target_include_directories(tests PRIVATE
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options/optionTypes
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/analyze
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/align
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/preprocess
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/detect
+    ${CMAKE_CURRENT_SOURCE_DIR}/../include/plotting
     ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
     ${BAM_SORT_DIR}
     ${VIENNA_RNA_INCLUDE_DIR}
@@ -120,6 +131,7 @@ target_include_directories(tests PRIVATE
 )
 
 target_link_libraries(tests PRIVATE
+    matplot
     GTest::gtest_main
     seqan3::seqan3
     segemehl
@@ -134,4 +146,9 @@ if(TARGET RNAnue_tbb)
 endif()
 
 include(GoogleTest)
-gtest_discover_tests(tests)
+gtest_discover_tests(tests PROPERTIES TIMEOUT 60)
+
+find_package(Python3 COMPONENTS Interpreter REQUIRED)
+add_test(NAME PipelineCliRegressions COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCliRegressionTests.py $<TARGET_FILE:RNAnue>)
+set_tests_properties(PipelineCliRegressions PROPERTIES TIMEOUT 180)

@@ -40,7 +40,7 @@ struct EvaluationContextResultHandler {
                                 std::deque<std::string>>;
 
     EvaluationContextResultHandler(const TempOutputDirs& outDirs, SamReference& reference,
-                                   size_t bufferSize) noexcept
+                                   size_t bufferSize)
         : bufferSize(bufferSize),
           singletonUnassignedOutput{makePath(outDirs.outputTmpUnassignedSingletonDir),
                                     reference.referenceIDs, reference.referenceLengths,
@@ -60,7 +60,7 @@ struct EvaluationContextResultHandler {
     template <typename... Results>
         requires(one_of<AnnotationStepResult, Results...> &&
                  one_of<ReadGroupPostScoringResult, Results...>)
-    void operator()(const EvaluationContext<SingletonHitGroup, Results...>& context) noexcept {
+    void operator()(const EvaluationContext<SingletonHitGroup, Results...>& context) {
         const auto& annotation = context.template get<AnnotationStepResult>();
         if (annotation.feature) {
             const auto& score = context.template get<ReadGroupPostScoringResult>();
@@ -76,18 +76,18 @@ struct EvaluationContextResultHandler {
     }
 
     template <typename... Results>
-    void operator()(const EvaluationContext<ChimericHitGroup, Results...>& context) noexcept {
+    void operator()(const EvaluationContext<ChimericHitGroup, Results...>& context) {
         const auto& records = context.getRecords();
         chimericRecordBuffer.insert(chimericRecordBuffer.end(), records.begin(), records.end());
 
         checkWriteBuffers();
     }
 
-    void operator()(auto const& /* unused */) noexcept {
+    void operator()(auto const& /* unused */) {
         Logger::log<SourceLocation{}, LogLevel::ERROR>("Not all context cases have been handled!");
     }
 
-    void save() noexcept {
+    void save() {
         for (SamRecord& record : singletonRecordBuffer) {
             singletonUnassignedOutput.push_back(record);
         }
@@ -103,11 +103,11 @@ struct EvaluationContextResultHandler {
 
    private:
     // Generates output file path for each category
-    static auto makePath(const fs::path& dir) noexcept -> fs::path {
+    static auto makePath(const fs::path& dir) -> fs::path {
         return dir / (helper::getUUID() + ".bam");
     }
 
-    void checkWriteBuffers() noexcept {
+    void checkWriteBuffers() {
         if (singletonRecordBuffer.size() + chimericRecordBuffer.size() > bufferSize) {
             save();
         }

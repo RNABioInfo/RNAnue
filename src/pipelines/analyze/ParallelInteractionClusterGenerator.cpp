@@ -4,13 +4,14 @@
 #include <utils/strings.h>
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <cstddef>
 #include <functional>
+#include <future>
 #include <iterator>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <utility>
 #include <vector>
 
@@ -32,6 +33,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     -> Result {
     std::mutex mergeMutex;
     std::mutex groupMutex;
+    std::atomic<bool> cancelled{false};
     (void)batchSize;
 
     std::vector<InteractionCluster> localClusters = std::move(clusters);
@@ -45,7 +47,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     Logger::log("Finished grouping clusters into ", clusterGroups.size(), " independent groups");
 
     auto clusterGroupConsumer = [&]() {
-        while (true) {
+        while (!cancelled) {
             std::vector<InteractionCluster> clusterGroup;
 
             {
@@ -70,17 +72,31 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
         }
     };
 
-    std::vector<std::thread> consumerThreads;
+    std::vector<std::future<void>> consumerThreads;
     const size_t workerCount = (std::max)(size_t{1}, threadCount);
     consumerThreads.reserve(workerCount);
 
-    for (size_t i = 0; i < workerCount; ++i) {
-        consumerThreads.emplace_back(clusterGroupConsumer);
+    std::exception_ptr error;
+    try {
+        for (size_t i = 0; i < workerCount; ++i) {
+            consumerThreads.emplace_back(std::async(std::launch::async, [&] {
+                try { clusterGroupConsumer(); }
+                catch (...) { cancelled = true; throw; }
+            }));
+        }
+    } catch (...) {
+        error = std::current_exception();
+        cancelled = true;
     }
 
-    for (std::thread& consumerThread : consumerThreads) {
-        consumerThread.join();
+    for (auto& consumerThread : consumerThreads) {
+        try { consumerThread.get(); }
+        catch (...) {
+            if (!error) error = std::current_exception();
+            cancelled = true;
+        }
     }
+    if (error) std::rethrow_exception(error);
 
     FeatureAnnotator supplementaryFeatureAnnotator{clusteringResults.supplementaryFeatureMap};
 
@@ -98,7 +114,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
 }
 
 void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
-    const FeatureAnnotator& supplementaryFeatureAnnotator) noexcept {
+    const FeatureAnnotator& supplementaryFeatureAnnotator) {
     auto getSupplementaryFeatureIDForSegment = [&](const GenomicRegion& segment) -> std::string {
         auto features = supplementaryFeatureAnnotator.getOverlappingFeatures(
             segment, parameters.featureOrientation);

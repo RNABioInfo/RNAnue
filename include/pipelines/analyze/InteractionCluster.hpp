@@ -1,4 +1,6 @@
 #pragma once
+#include <numeric>
+#include <stdexcept>
 
 // Standard
 #include <algorithm>
@@ -38,23 +40,26 @@ class InteractionCluster {
     InteractionCluster(SortedGenomicRegionPair sortedSegments, std::vector<std::string> recordIDs,
                        std::vector<double> complementarityScores,
                        std::vector<double> hybridizationEnergies,
-                       std::vector<int32_t> crosslinkingSiteCounts, float transcriptContribution)
+                       std::vector<int32_t> crosslinkingSiteCounts, std::vector<double> contributions)
         : sortedSegments(sortedSegments),
           recordIDs(std::move(recordIDs)),
           complementarityScores(std::move(complementarityScores)),
-          maxComplementarityScore(*std::ranges::max_element(this->complementarityScores)),
+          maxComplementarityScore(this->complementarityScores.empty() ? 0 : *std::ranges::max_element(this->complementarityScores)),
           hybridizationEnergies(std::move(hybridizationEnergies)),
-          minHybridizationEnergy(*std::ranges::min_element(this->hybridizationEnergies)),
+          minHybridizationEnergy(this->hybridizationEnergies.empty() ? 0 : *std::ranges::min_element(this->hybridizationEnergies)),
           crosslinkingSiteCounts(std::move(crosslinkingSiteCounts)),
-          transcriptContribution(transcriptContribution),
-          transcriptContributionSquaredSum(estimateContributionSquareSum(
-              this->recordIDs.size(), transcriptContribution)) {
+          contributions(std::move(contributions)),
+          transcriptContribution(std::accumulate(this->contributions.begin(), this->contributions.end(), 0.0)) {
+        const size_t n = this->recordIDs.size();
+        if (n == 0 || this->contributions.size() != n || this->complementarityScores.size() != n ||
+            this->hybridizationEnergies.size() != n || this->crosslinkingSiteCounts.size() != n)
+            throw std::invalid_argument("Cluster requires one weight and each metric per assignment");
         addFullSpanCoverage(transcriptContribution);
     };
 
     InteractionCluster(SortedGenomicRegionPair sortedSegments, std::string recordID,
                        double complementarityScore, double hybridizationEnergy,
-                       int crosslinkingSiteCount, float transcriptContribution)
+                       int crosslinkingSiteCount, double transcriptContribution)
         : sortedSegments(sortedSegments),
           recordIDs({std::move(recordID)}),
           complementarityScores({complementarityScore}),
@@ -62,8 +67,8 @@ class InteractionCluster {
           hybridizationEnergies({hybridizationEnergy}),
           minHybridizationEnergy(hybridizationEnergy),
           crosslinkingSiteCounts({crosslinkingSiteCount}),
-          transcriptContribution(transcriptContribution),
-          transcriptContributionSquaredSum(transcriptContribution * transcriptContribution) {
+          contributions({transcriptContribution}),
+          transcriptContribution(transcriptContribution) {
         addFullSpanCoverage(transcriptContribution);
     };
 
@@ -128,11 +133,9 @@ class InteractionCluster {
 
     [[nodiscard]] auto standardDeviationCrosslinkingSiteCount() const -> double;
 
-    [[nodiscard]] auto getTranscriptContribution() const -> float { return transcriptContribution; }
+    [[nodiscard]] auto getTranscriptContribution() const -> double { return transcriptContribution; }
 
-    [[nodiscard]] auto getTranscriptContributionSquaredSum() const -> double {
-        return transcriptContributionSquaredSum;
-    }
+    [[nodiscard]] auto getContributions() const -> const std::vector<double>& { return contributions; }
 
     [[nodiscard]] auto totalSpanBp() const noexcept -> size_t {
         return getFirstSegment().length() + getSecondSegment().length();
@@ -208,9 +211,9 @@ class InteractionCluster {
     [[nodiscard]] auto segmentsMaxSelfOverlapFraction() const noexcept -> double;
 
     [[nodiscard]] auto merge(const InteractionCluster &other,
-                             const GenomicStrandSpecificity &) noexcept -> bool;
+                             const GenomicStrandSpecificity &) -> bool;
 
-    void absorbValidatedComponentMember(const InteractionCluster &other) noexcept;
+    void absorbValidatedComponentMember(const InteractionCluster &other);
 
     [[nodiscard]] auto complementarityStatistics() const -> double;
 
@@ -224,21 +227,10 @@ class InteractionCluster {
     std::vector<double> hybridizationEnergies;
     double minHybridizationEnergy;
     std::vector<int32_t> crosslinkingSiteCounts;
-    float transcriptContribution;
-    double transcriptContributionSquaredSum;
+    std::vector<double> contributions;
+    double transcriptContribution;
     ArmCoverage firstArmCoverage;
     ArmCoverage secondArmCoverage;
-
-    [[nodiscard]] static constexpr auto estimateContributionSquareSum(
-        size_t recordCount, float transcriptContribution) noexcept -> double {
-        if (recordCount == 0) {
-            return 0.0;
-        }
-
-        const double uniformContribution =
-            static_cast<double>(transcriptContribution) / static_cast<double>(recordCount);
-        return static_cast<double>(recordCount) * uniformContribution * uniformContribution;
-    }
 
     [[nodiscard]] static constexpr auto overlapOrientation(
         const GenomicStrandSpecificity strandSpecificity) -> GenomicOrientation {

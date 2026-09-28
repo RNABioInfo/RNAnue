@@ -28,21 +28,21 @@ struct InteractionID {
 };
 
 struct InteractionMetrics {
-    float contributionScore;
-    float totalSpanBp = std::numeric_limits<float>::quiet_NaN();
-    float effectiveCoverageSpanBp = std::numeric_limits<float>::quiet_NaN();
-    float supportPerTotalBp = std::numeric_limits<float>::quiet_NaN();
-    float supportPerEffectiveBp = std::numeric_limits<float>::quiet_NaN();
-    float coverageConcentration = std::numeric_limits<float>::quiet_NaN();
-    float coverageComponents = std::numeric_limits<float>::quiet_NaN();
-    float armBalance = std::numeric_limits<float>::quiet_NaN();
+    double contributionScore;
+    double totalSpanBp = std::numeric_limits<double>::quiet_NaN();
+    double effectiveCoverageSpanBp = std::numeric_limits<double>::quiet_NaN();
+    double supportPerTotalBp = std::numeric_limits<double>::quiet_NaN();
+    double supportPerEffectiveBp = std::numeric_limits<double>::quiet_NaN();
+    double coverageConcentration = std::numeric_limits<double>::quiet_NaN();
+    double coverageComponents = std::numeric_limits<double>::quiet_NaN();
+    double armBalance = std::numeric_limits<double>::quiet_NaN();
     std::string coverageProfile;
-    float meanInterCrosslinkCount;
-    float sdInterCrosslinkCount;
-    float globalComplementarityScore;
-    float globalHybridizationScore;
-    float pValue;
-    float padjValue;
+    double meanInterCrosslinkCount;
+    double sdInterCrosslinkCount;
+    double globalComplementarityScore;
+    double globalHybridizationScore;
+    double pValue;
+    double padjValue;
 };
 
 struct InteractionFeatureIDs {
@@ -106,8 +106,8 @@ struct Interaction {
     }
 
     [[nodiscard]] auto getContributionScore(const std::string_view sampleID) const noexcept
-        -> float {
-        float score = 0;
+        -> double {
+        double score = 0;
 
         for (size_t index : getIndices(sampleID)) {
             score += interactionMetrics[index].contributionScore;
@@ -189,7 +189,7 @@ struct Interaction {
 
     [[nodiscard]] auto overlapsWithShortestSegmentFraction(
         const Interaction& other, const GenomicStrandSpecificity strandSpecificity,
-        float shortestOverlapFraction) const noexcept -> bool {
+        double shortestOverlapFraction) const noexcept -> bool {
         return sortedSegments.firstRegion.overlapsWithShortestSegmentFraction(
                    other.getFirstSegment(),
                    GenomicOrientation::fromStrandSpecificity(strandSpecificity),
@@ -254,7 +254,7 @@ struct Interaction {
     std::vector<InteractionMetrics> interactionMetrics;
     std::vector<std::string> firstFeatureIDs;
     std::vector<std::string> secondFeatureIDs;
-    float transcriptContribution;
+    double transcriptContribution;
 };
 
 inline auto operator<<(std::ostream& ostream, const Interaction& interaction) -> std::ostream& {

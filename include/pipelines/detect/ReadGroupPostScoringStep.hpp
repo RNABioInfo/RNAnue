@@ -43,7 +43,7 @@ concept HasRecordContainer = requires(C const& ctx) {
 struct ReadGroupPostScoringResult {
     double contributionScore;
 
-    void addTags(SamRecord& record) const noexcept {
+    void addTags(SamRecord& record) const {
         record.tags()["XB"_tag] = static_cast<float>(contributionScore);
     }
 };
@@ -57,39 +57,39 @@ struct ReadGroupPostScoringStepMetrics {
     explicit ReadGroupPostScoringStepMetrics(ReadGroupPostScoringStepConfig config)
         : config(config) {}
 
-    [[nodiscard]] constexpr auto getHitGroupsPreFilter() const noexcept
+    [[nodiscard]] constexpr auto getHitGroupsPreFilter() const
         -> const std::vector<size_t>& {
         return hitGroupsPreFilter;
     }
-    [[nodiscard]] constexpr auto getHitGroupsPostFilter() const noexcept
+    [[nodiscard]] constexpr auto getHitGroupsPostFilter() const
         -> const std::vector<size_t>& {
         return hitGroupsPostFilter;
     }
-    [[nodiscard]] constexpr auto getHitGroupContributionScores() const noexcept
+    [[nodiscard]] constexpr auto getHitGroupContributionScores() const
         -> const std::vector<double>& {
         return hitGroupContributionScores;
     }
 
-    [[nodiscard]] constexpr auto getContributionScoreSum() const noexcept -> double {
+    [[nodiscard]] constexpr auto getContributionScoreSum() const -> double {
         return std::reduce(hitGroupContributionScores.begin(), hitGroupContributionScores.end());
     }
 
-    [[nodiscard]] constexpr auto getReadGroupCount() const noexcept -> size_t {
+    [[nodiscard]] constexpr auto getReadGroupCount() const -> size_t {
         return readGroupCount;
     }
 
-    [[nodiscard]] constexpr auto getContributionScoreByRecordType() const noexcept
+    [[nodiscard]] constexpr auto getContributionScoreByRecordType() const
         -> const std::unordered_map<SplitRecordType, double>& {
         return contributionScoreByRecordType;
     }
 
-    void incrementReadGroupCount() noexcept { ++readGroupCount; }
+    void incrementReadGroupCount() { ++readGroupCount; }
 
-    void addPreFilterCount(const size_t count) noexcept { hitGroupsPreFilter.push_back(count); }
+    void addPreFilterCount(const size_t count) { hitGroupsPreFilter.push_back(count); }
 
-    void addPostFilterCount(const size_t count) noexcept { hitGroupsPostFilter.push_back(count); }
+    void addPostFilterCount(const size_t count) { hitGroupsPostFilter.push_back(count); }
 
-    void addHitGroupContributionScore(const double score) noexcept {
+    void addHitGroupContributionScore(const double score) {
         hitGroupContributionScores.push_back(score);
     }
 
@@ -114,7 +114,7 @@ struct ReadGroupPostScoringStepMetrics {
         }
     }
 
-    void operator+=(const ReadGroupPostScoringStepMetrics& other) noexcept {
+    void operator+=(const ReadGroupPostScoringStepMetrics& other) {
         hitGroupsPreFilter.insert(hitGroupsPreFilter.end(), other.hitGroupsPreFilter.begin(),
                                   other.hitGroupsPreFilter.end());
         hitGroupsPostFilter.insert(hitGroupsPostFilter.end(), other.hitGroupsPostFilter.begin(),
@@ -256,7 +256,7 @@ struct ReadGroupPostScoringStep {
     template <typename... ContextVariants>
         requires(... && HasRecordContainer<ContextVariants>)
     [[nodiscard]] static auto getEditDistances(
-        const std::vector<std::variant<ContextVariants...>>& contexts) noexcept
+        const std::vector<std::variant<ContextVariants...>>& contexts)
         -> std::vector<size_t> {
         std::vector<size_t> editDistances;
         editDistances.reserve(contexts.size());
@@ -273,7 +273,7 @@ struct ReadGroupPostScoringStep {
         return editDistances;
     }
 
-    [[nodiscard]] static auto getEditDistance(const auto& context) noexcept -> size_t {
+    [[nodiscard]] static auto getEditDistance(const auto& context) -> size_t {
         const auto& container = context.group->getRecordContainer();
 
         return std::transform_reduce(
@@ -284,7 +284,7 @@ struct ReadGroupPostScoringStep {
     template <typename... ContextVariants>
         requires(... && HasRecordContainer<ContextVariants>)
     [[nodiscard]] static auto getAlignedLengths(
-        const std::vector<std::variant<ContextVariants...>>& contexts) noexcept
+        const std::vector<std::variant<ContextVariants...>>& contexts)
         -> std::vector<size_t> {
         std::vector<size_t> alignmentLengths;
         alignmentLengths.reserve(contexts.size());
@@ -301,7 +301,7 @@ struct ReadGroupPostScoringStep {
         return alignmentLengths;
     }
 
-    [[nodiscard]] static auto getAlignedLength(const auto& context) noexcept -> size_t {
+    [[nodiscard]] static auto getAlignedLength(const auto& context) -> size_t {
         const auto& container = context.group->getRecordContainer();
 
         return std::transform_reduce(

@@ -29,11 +29,15 @@
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
 #include "Utility.hpp"
+#include "CheckedFastqReader.hpp"
+#include "utility/ConcurrentInput.hpp"
 
 namespace pipelines::preprocess {
 
 void PairedEndPreprocessor::ChunkResult::operator+=(
     const PairedEndPreprocessor::ChunkResult& other) {
+    polyGChangedRecords += other.polyGChangedRecords;
+    polyGRemovedBases += other.polyGRemovedBases;
     mergedRecords += other.getMergedRecords();
     singleFwdRecords += other.getSingleFwdRecords();
     singleRevRecords += other.getSingleRevRecords();
@@ -48,6 +52,9 @@ void PairedEndPreprocessor::process(const PreprocessSamplePaired& sample) const 
 
     ChunkResult totalResult = parameters.deduplicate ? processWithDeduplication(sample)
                                                      : processWithoutDeduplication(sample);
+
+    Logger::log("Poly-G trimming: ", totalResult.polyGChangedRecords, " records changed, ",
+                totalResult.polyGRemovedBases, " bases removed");
 
     Logger::log("Merging temporary files");
 
@@ -88,71 +95,29 @@ void PairedEndPreprocessor::process(const PreprocessSamplePaired& sample) const 
                 totalResult.getFailedReverseRecords(), " failed reverse records");
 }
 
-[[nodiscard]] auto PairedEndPreprocessor::processWithDeduplication(
-    const PreprocessSamplePaired& sample) const -> ChunkResult {
-    const auto deduplicationConfig =
-        DeduplicationBySequencePairedConfig{.recordsPathFwd = sample.input.inputForwardFastqPath,
-                                            .recordsPathRev = sample.input.inputReverseFastqPath};
-    auto deduplicatedResults = Deduplicator::deduplicate(deduplicationConfig);
+auto PairedEndPreprocessor::processWithDeduplication(const PreprocessSamplePaired& sample) const -> ChunkResult {
+    auto retained = Deduplicator::deduplicate(DeduplicationBySequencePairedConfig{sample.input.inputForwardFastqPath, sample.input.inputReverseFastqPath});
+    return processInput(sample, &retained.validRecordOrdinals);
+}
 
-    auto isValidRecord = [&deduplicatedResults](const auto& records) {
-        assert(helper::splitString(std::get<0>(records).id(), ' ')[0] ==
-                   helper::splitString(std::get<1>(records).id(), ' ')[0] &&
-               "The record ids of the paired end files do not match.");
-        return deduplicatedResults.validRecordIDs.contains(std::get<0>(records).id());
-    };
+auto PairedEndPreprocessor::processWithoutDeduplication(const PreprocessSamplePaired& sample) const -> ChunkResult {
+    return processInput(sample, nullptr);
+}
 
-    seqan3::sequence_file_input recForwardIn{sample.input.inputForwardFastqPath};
-    seqan3::sequence_file_input recReverseIn{sample.input.inputReverseFastqPath};
-
-    auto pairedInputBuffer = seqan3::views::zip(recForwardIn, recReverseIn) |
-                             seqan3::views::async_input_buffer(parameters.chunkSize / 2) |
-                             std::ranges::views::filter(isValidRecord);
-
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
-
-    for (size_t i = 1; i < parameters.threadCount; ++i) {
-        processResults.emplace_back(std::async(
-            std::launch::async, &PairedEndPreprocessor::processChunk<decltype(pairedInputBuffer)>,
-            this, std::ref(pairedInputBuffer), std::cref(sample.output)));
-    }
-
-    ChunkResult totalResult = {};
-
-    for (auto& result : processResults) {
-        totalResult += result.get();
-    }
-
-    return totalResult;
-};
-
-[[nodiscard]] auto PairedEndPreprocessor::processWithoutDeduplication(
-    const PreprocessSamplePaired& sample) const -> ChunkResult {
-    seqan3::sequence_file_input recForwardIn{sample.input.inputForwardFastqPath};
-    seqan3::sequence_file_input recReverseIn{sample.input.inputReverseFastqPath};
-
-    PairedEndAsyncInputBuffer pairedInputBuffer =
-        seqan3::views::zip(recForwardIn, recReverseIn) |
-        seqan3::views::async_input_buffer(parameters.chunkSize / 2);
-
-    std::vector<std::future<ChunkResult>> processResults;
-    processResults.reserve(parameters.threadCount - 1);
-
-    for (size_t i = 1; i < parameters.threadCount; ++i) {
-        processResults.emplace_back(std::async(
-            std::launch::async, &PairedEndPreprocessor::processChunk<PairedEndAsyncInputBuffer>,
-            this, std::ref(pairedInputBuffer), std::cref(sample.output)));
-    }
-
-    ChunkResult totalResult = {};
-
-    for (auto& result : processResults) {
-        totalResult += result.get();
-    }
-
-    return totalResult;
-};
+auto PairedEndPreprocessor::processInput(const PreprocessSamplePaired& sample,
+                                       const std::set<size_t>* retained) const -> ChunkResult {
+    CheckedFastqPairReader reader{sample.input.inputForwardFastqPath, sample.input.inputReverseFastqPath};
+    size_t ordinal = 0;
+    utility::ConcurrentInput<PairedFastqRecords> input{parameters.chunkSize / 2, [&]() -> std::optional<PairedFastqRecords> {
+        while (auto record = reader.next()) {
+            const size_t current = ordinal++;
+            if (!retained || retained->contains(current)) return record;
+        }
+        return std::nullopt;
+    }};
+    return utility::consumeConcurrently(input, parameters.threadCount - 1,
+        [&] { return processChunk(input, sample.output); });
+}
 
 void PairedEndPreprocessor::trimWindowedQuality(
     PairedFastqRecords& records, const RecordTrimmer::TrimWindowedConfig& config) const {
@@ -209,8 +174,13 @@ template <typename T>
         PairedFastqRecords records{std::make_pair(std::move(record1), std::move(record2))};
 
         if (parameters.trimPolyG) {
-            RecordTrimmer::trim3PolyG(records.first, parameters.minPolyGCount);
-            RecordTrimmer::trim3PolyG(records.second, parameters.minPolyGCount);
+            for (auto* record : {&records.first, &records.second}) {
+                const auto before = record->sequence().size();
+                RecordTrimmer::trim3PolyG(*record, parameters.minPolyGCount);
+                const auto removed = before - record->sequence().size();
+                result.polyGChangedRecords += removed != 0;
+                result.polyGRemovedBases += removed;
+            }
         }
 
         trimWindowedQuality(records, {.windowTrimmingSize = parameters.windowTrimmingSize,

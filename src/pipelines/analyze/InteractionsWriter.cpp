@@ -134,22 +134,22 @@ void InteractionsWriter::writeInteraction(const EvaluatedInteractionCluster& clu
 
     const CoverageShapeMetrics coverageMetrics = cluster.coverageShapeMetrics();
 
-    interactionOut << std::format("{:.2f}", cluster.getTranscriptContribution()) << "\t";
+    interactionOut << std::format("{:.17g}", cluster.getTranscriptContribution()) << "\t";
     interactionOut << coverageMetrics.totalSpanBp << "\t";
-    interactionOut << std::format("{:.2f}", coverageMetrics.effectiveCoverageSpanBp) << "\t";
-    interactionOut << std::format("{:.6f}", coverageMetrics.supportPerTotalBp) << "\t";
-    interactionOut << std::format("{:.6f}", coverageMetrics.supportPerEffectiveBp) << "\t";
-    interactionOut << std::format("{:.4f}", coverageMetrics.coverageConcentration) << "\t";
+    interactionOut << std::format("{:.17g}", coverageMetrics.effectiveCoverageSpanBp) << "\t";
+    interactionOut << std::format("{:.17g}", coverageMetrics.supportPerTotalBp) << "\t";
+    interactionOut << std::format("{:.17g}", coverageMetrics.supportPerEffectiveBp) << "\t";
+    interactionOut << std::format("{:.17g}", coverageMetrics.coverageConcentration) << "\t";
     interactionOut << coverageMetrics.coverageComponents << "\t";
-    interactionOut << std::format("{:.4f}", coverageMetrics.armBalance) << "\t";
+    interactionOut << std::format("{:.17g}", coverageMetrics.armBalance) << "\t";
     interactionOut << coverageMetrics.coverageProfile << "\t";
-    interactionOut << std::format("{:.2f}", cluster.meanCrosslinkingSiteCount()) << "\t";
-    interactionOut << std::format("{:.2f}", cluster.standardDeviationCrosslinkingSiteCount())
+    interactionOut << std::format("{:.17g}", cluster.meanCrosslinkingSiteCount()) << "\t";
+    interactionOut << std::format("{:.17g}", cluster.standardDeviationCrosslinkingSiteCount())
                    << "\t";
-    interactionOut << std::format("{:.2f}", cluster.complementarityStatistics()) << "\t";
-    interactionOut << std::format("{:.2f}", cluster.hybridizationEnergyStatistics()) << "\t";
-    interactionOut << std::format("{:.4f}", cluster.getPValue()) << "\t";
-    interactionOut << std::format("{:.4f}", cluster.getPadj());
+    interactionOut << std::format("{:.17g}", cluster.complementarityStatistics()) << "\t";
+    interactionOut << std::format("{:.17g}", cluster.hybridizationEnergyStatistics()) << "\t";
+    interactionOut << std::format("{:.17g}", cluster.getPValue()) << "\t";
+    interactionOut << std::format("{:.17g}", cluster.getPadj());
     interactionOut << "\n";
 }
 

@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdlib>
 #include <memory>
+#include <stdexcept>
 #include <optional>
 #include <string>
 #include <vector>
@@ -43,18 +44,22 @@ auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) 
 
     std::string interactionSeq = toString(sequence1View) + "&" + toString(sequence2View);
 
-    vrna_fold_compound_t *foldCompound = vrna_fold_compound(
-        interactionSeq.c_str(), nullptr, VRNA_OPTION_DEFAULT | VRNA_OPTION_HYBRID);
-
-    std::unique_ptr<char[]> structure(new char[interactionSeq.size() + 1]);  // NOLINT
-
-    constexpr int DELTA_MFE = 0;
-
-    std::unique_ptr<vrna_subopt_sol_s, decltype(&free)> result{
-        vrna_subopt(foldCompound, DELTA_MFE, 1, nullptr), free};
-
-    if (result == nullptr) {
-        vrna_fold_compound_free(foldCompound);
+    vrna_md_t model;
+    vrna_md_set_default(&model);
+    model.uniq_ML = 1;  // Required by vrna_subopt's multibranch traceback.
+    std::unique_ptr<vrna_fold_compound_t, decltype(&vrna_fold_compound_free)> foldCompound{
+        vrna_fold_compound(interactionSeq.c_str(), &model, VRNA_OPTION_DEFAULT | VRNA_OPTION_HYBRID),
+        vrna_fold_compound_free};
+    if (!foldCompound) throw std::runtime_error("ViennaRNA could not create a fold compound");
+    const auto freeSolutions = [](vrna_subopt_sol_s* solutions) {
+        if (!solutions) return;
+        for (auto* solution = solutions; solution->structure; ++solution) free(solution->structure);
+        free(solutions);
+    };
+    // Keep energy/lexicographic selection of the first zero-band solution.
+    std::unique_ptr<vrna_subopt_sol_s, decltype(freeSolutions)> result{
+        vrna_subopt(foldCompound.get(), 0, 1, nullptr), freeSolutions};
+    if (!result || !result->structure) {
         return {.passed = false, .energy = std::nullopt, .crosslinkingResult = std::nullopt};
     }
 
@@ -65,9 +70,7 @@ auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) 
     const auto combinedSequenceLength = sequence1View.size() + sequence2View.size();
 
     if (secondaryStructure.size() != (combinedSequenceLength + 1)) {
-        Logger::log<IncludeSourceLocation, LogLevel::ERROR>(
-            "Expected size: ", (combinedSequenceLength + 1), ", Got: ", secondaryStructure.size(),
-            "\n", secondaryStructure, "\n", std::string(result->structure));
+        throw std::runtime_error("ViennaRNA returned a structure with an unexpected length");
     }
 
     const seqan3::dna5_vector sequence1{sequence1View.begin(), sequence1View.end()};
@@ -76,14 +79,13 @@ auto HybridizationEvaluationStep::evaluate(const ChimericRecords &splitRecords) 
     const auto crosslinkingResult = CrosslinkingSitesEvaluator::evaluate(
         sequence1, sequence2, secondaryStructure, config.includeWobbleBasePairsInCrosslinkingSites);
 
-    vrna_fold_compound_free(foldCompound);
 
     return {.passed = isPassingFilters(result->energy),
             .energy = result->energy,
             .crosslinkingResult = crosslinkingResult};
 }
 
-auto HybridizationEvaluationStep::isPassingFilters(double energy) const noexcept -> bool {
+auto HybridizationEvaluationStep::isPassingFilters(double energy) const -> bool {
     return energy <= config.mfeThreshold;
 }
 }  // namespace pipelines::detect

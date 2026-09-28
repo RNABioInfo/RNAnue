@@ -9,6 +9,7 @@
 
 // Internal
 #include "DeduplicationOutput.hpp"
+#include "CheckedFastqReader.hpp"
 #include "Logger.hpp"
 #include "SequenceQualityAlgorithms.hpp"
 #include "seqan3/alphabet/nucleotide/dna5.hpp"
@@ -25,11 +26,12 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
         validRecordIDsBySequencePair;
 
     size_t duplicateRecords = 0;
+    size_t nextOrdinal = 0;
 
-    seqan3::sequence_file_input recForwardIn{recordsFwd};
-    seqan3::sequence_file_input recReverseIn{recordsRev};
-
-    for (auto&& [record1, record2] : seqan3::views::zip(recForwardIn, recReverseIn)) {
+    CheckedFastqPairReader input{recordsFwd, recordsRev};
+    while (auto pair = input.next()) {
+        auto& [record1, record2] = *pair;
+        const size_t ordinal = nextOrdinal++;
         const double meanQuality1 =
             SequenceQualityAlgorithms::meanQualityScore(record1.base_qualities());
         const double meanQuality2 =
@@ -42,7 +44,7 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
         if (!validRecordIDsBySequencePair.contains(key)) {
             validRecordIDsBySequencePair.emplace(
                 key,
-                DeduplicationRecordPairedEnd{.recordID = record1.id(), .meanQuality = meanQuality});
+                DeduplicationRecordPairedEnd{.recordOrdinal = ordinal, .meanQuality = meanQuality});
             continue;
         }
 
@@ -51,21 +53,21 @@ auto DeduplicatorBySequencePairedEnd::deduplicate(const fs::path& recordsFwd,
         if (meanQuality > validRecordIDsBySequencePair[key].meanQuality) {
             validRecordIDsBySequencePair.insert_or_assign(
                 key,
-                DeduplicationRecordPairedEnd{.recordID = record1.id(), .meanQuality = meanQuality});
+                DeduplicationRecordPairedEnd{.recordOrdinal = ordinal, .meanQuality = meanQuality});
         }
     }
 
     auto validRecordIDsView =
         validRecordIDsBySequencePair | std::views::values |
         std::views::transform([](DeduplicationRecordPairedEnd& deduplicatedRecord) {
-            return deduplicatedRecord.recordID;
+            return deduplicatedRecord.recordOrdinal;
         });
 
     Logger::log("Duplicate records: ", duplicateRecords,
                 "; Unique records: ", validRecordIDsBySequencePair.size());
 
     return DeduplicationOutputPaired{
-        .validRecordIDs = {validRecordIDsView.begin(), validRecordIDsView.end()}};
+        .validRecordOrdinals = {validRecordIDsView.begin(), validRecordIDsView.end()}};
 }
 
 }  // namespace pipelines::preprocess

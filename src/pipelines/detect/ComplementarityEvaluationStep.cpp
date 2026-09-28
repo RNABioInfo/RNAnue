@@ -27,7 +27,7 @@
 namespace pipelines::detect {
 
 void ComplementarityEvaluationStepMetrics::operator+=(
-    const ComplementarityEvaluationResult &result) noexcept {
+    const ComplementarityEvaluationResult &result) {
     if (result.passed) {
         passedCount++;
     } else {
@@ -43,7 +43,7 @@ void ComplementarityEvaluationStepMetrics::operator+=(
 }
 
 void ComplementarityEvaluationStepMetrics::operator+=(
-    const ComplementarityEvaluationStepMetrics &other) noexcept {
+    const ComplementarityEvaluationStepMetrics &other) {
     passedCount += other.passedCount;
     failedCount += other.failedCount;
 
@@ -99,7 +99,7 @@ void ComplementarityEvaluationStepMetrics::createPlots(const fs::path &outDir) c
     plotter.save();
 }
 
-auto ComplementarityEvaluationStep::evaluate(const ChimericRecords &splitRecords) const noexcept
+auto ComplementarityEvaluationStep::evaluate(const ChimericRecords &splitRecords) const
     -> ComplementarityEvaluationResult {
     const auto sequence1View = splitRecords.first().sequence() | std::views::reverse |
                                views::underlying_sequence(splitRecords.first().flag());
@@ -128,6 +128,7 @@ constexpr auto ComplementarityEvaluationStep::complementaryScoringScheme()
 
     seqan3::nucleotide_scoring_scheme scheme{seqan3::match_score{1}, seqan3::mismatch_score{-1}};
 
+    scheme.score('N'_dna5, 'N'_dna5) = -1;
     scheme.score('A'_dna5, 'T'_dna5) = 1;
     scheme.score('T'_dna5, 'A'_dna5) = 1;
     scheme.score('G'_dna5, 'C'_dna5) = 1;
@@ -152,7 +153,7 @@ constexpr auto ComplementarityEvaluationStep::complementaryScoringScheme()
 }
 
 auto ComplementarityEvaluationStep::isPassingFilters(
-    const CoOptimalPairwiseAligner::Result &alignmentResult) const noexcept -> bool {
+    const CoOptimalPairwiseAligner::Result &alignmentResult) const -> bool {
     return alignmentResult.complementarity >= config.minComplementarity &&
            alignmentResult.fraction >= config.minFraction;
 };

@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 
 // Standard
 #include <array>
@@ -71,6 +72,16 @@ struct PostprocessData : public PipelineData {
             samplesByCondition.emplace(std::string{controlID}, retrieveSamplesInDir(*controlDir));
         }
 
+        std::unordered_map<std::string, fs::path> pathBySample;
+        for (const auto& [condition, samples] : samplesByCondition) {
+            for (const auto& sample : samples) {
+                const auto& input = sample.input;
+                const auto [previous, inserted] = pathBySample.emplace(input.sampleName, input.interactionsPath);
+                if (!inserted) throw std::runtime_error("Duplicate sample name '" + input.sampleName +
+                    "' in " + previous->second.string() + " and " + input.interactionsPath.string() +
+                    "; sample names must be globally unique");
+            }
+        }
         return samplesByCondition;
     }
 

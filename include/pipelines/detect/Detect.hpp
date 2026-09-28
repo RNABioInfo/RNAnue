@@ -1,4 +1,5 @@
 #pragma once
+#include <sstream>
 
 // Standard
 #include <cstddef>
@@ -66,7 +67,7 @@ class Detect {
 
         TranscriptCounts singletonTranscriptCounts;
 
-        void createPlots(const fs::path &outDir) const noexcept {
+        void createPlots(const fs::path &outDir) const {
             preprocessMetrics.createPlots(outDir);
             complementarityMetrics.createPlots(outDir);
             hybridizationMetrics.createPlots(outDir);
@@ -74,7 +75,7 @@ class Detect {
         }
 
         [[nodiscard]] auto toString() const -> std::string {
-            return std::format(
+            auto summary = std::format(
                 "\n\tPreprocessed {} read groups. Of which {} had at least one passed hit group "
                 "and {} failed completely. \n\tComplementarity evaluation resulted in {} passed "
                 "split hit groups and {} failed split hit groups. \n\tHybridization evalutaion "
@@ -87,6 +88,10 @@ class Detect {
                 hybridizationMetrics.getPassedCount(), hybridizationMetrics.getFailedCount(),
                 postprocessMetrics.getReadGroupCount(),
                 postprocessMetrics.getContributionScoreSum());
+            std::ostringstream reasons;
+            for (const auto& [reason, count] : preprocessMetrics.failures)
+                reasons << "\n\tExcluded hit groups: " << reason << " = " << count;
+            return summary + reasons.str();
         }
 
         void operator+=(const Result &other) {

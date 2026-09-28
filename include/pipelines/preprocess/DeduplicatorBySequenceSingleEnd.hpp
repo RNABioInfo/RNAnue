@@ -25,7 +25,7 @@ class DeduplicatorBySequenceSingleEnd {
 
    private:
     struct DeduplicationRecordSingleEnd {
-        std::string recordID;
+        size_t recordOrdinal;
         double meanQuality;
     };
 };

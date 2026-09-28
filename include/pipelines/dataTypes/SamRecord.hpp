@@ -1,4 +1,5 @@
 #pragma once
+#include <stdexcept>
 
 // seqan3
 #include <cstddef>
@@ -63,20 +64,31 @@ inline auto recordEndPosition(const SamRecord& record) -> std::optional<int32_t>
     return end;
 }
 
-inline auto softClippedBaseCount(const SamRecord& record) noexcept -> size_t {
-    size_t frontSoftClipped = record.cigar_sequence().front() == 'S'_cigar_operation
-                                  ? static_cast<size_t>(get<0>(record.cigar_sequence().front()))
-                                  : 0;
-
-    size_t backSoftClipped = record.cigar_sequence().back() == 'S'_cigar_operation
-                                 ? static_cast<size_t>(get<0>(record.cigar_sequence().front()))
-                                 : 0;
-
-    return frontSoftClipped + backSoftClipped;
+inline auto softClippedBaseCount(const SamRecord& record) -> size_t {
+    size_t count = 0;
+    for (const auto& cigar : record.cigar_sequence()) {
+        if (cigar == 'S'_cigar_operation) count += get<0>(cigar);
+    }
+    if (count > record.sequence().size()) throw std::invalid_argument("Soft clipping exceeds query length");
+    return count;
 }
 
-inline auto alignmentLength(const SamRecord& record) noexcept -> size_t {
-    return record.sequence().size() - softClippedBaseCount(record);
+// Query bases aligned to reference bases; I, D, N, S, H and P do not contribute.
+inline auto alignmentLength(const SamRecord& record) -> size_t {
+    if (record.cigar_sequence().empty()) throw std::invalid_argument("Aligned record has empty CIGAR");
+    size_t count = 0;
+    size_t queryConsumed = 0;
+    for (const auto& cigar : record.cigar_sequence()) {
+        const size_t length = get<0>(cigar);
+        if (cigar == 'M'_cigar_operation || cigar == '='_cigar_operation || cigar == 'X'_cigar_operation) {
+            count += length;
+            queryConsumed += length;
+        } else if (cigar == 'I'_cigar_operation || cigar == 'S'_cigar_operation) {
+            queryConsumed += length;
+        }
+    }
+    if (queryConsumed != record.sequence().size()) throw std::invalid_argument("CIGAR query length differs from sequence length");
+    return count;
 }
 
 inline auto operator<(const SamRecord& lhs, const SamRecord& rhs) -> bool {

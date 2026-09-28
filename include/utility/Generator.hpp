@@ -65,10 +65,11 @@ class [[nodiscard]] Generator {
             return false;  // nothing more to process
         }
         coro.resume();
+        if (coro.promise().error) std::rethrow_exception(coro.promise().error);
         return !coro.done();
     }
 
-    auto getValue() noexcept -> std::optional<T> {
+    auto getValue() -> std::optional<T> {
         return coro ? std::make_optional(coro.promise().current_value) : std::nullopt;
     }
 
@@ -109,7 +110,8 @@ class [[nodiscard]] Generator {
             return std::suspend_always{};
         }
 
-        void unhandled_exception() { std::terminate(); }
+        std::exception_ptr error;
+        void unhandled_exception() noexcept { error = std::current_exception(); }
     };
 
     struct iterator {
@@ -121,6 +123,7 @@ class [[nodiscard]] Generator {
         void getNext() {
             if (hdl) {
                 hdl.resume();
+                if (hdl.promise().error) std::rethrow_exception(hdl.promise().error);
                 if (hdl.done()) {
                     hdl = nullptr;
                 }

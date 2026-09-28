@@ -32,7 +32,7 @@ struct IdentityStep {
     using step_result_t = HitGroupFailureReason;
 
     template <typename G, typename... Es>
-    auto operator()(EvaluationContext<G, Es...>&& ctx) const noexcept {
+    auto operator()(EvaluationContext<G, Es...>&& ctx) const {
         auto new_ctx =
             std::forward<decltype(ctx)>(ctx).with(HitGroupFailureReason::FAILED_COMPLEMENTARITY);
         return new_ctx;
@@ -44,7 +44,7 @@ concept EvalStep =
     requires(EvalStepT evalStep, EvaluationContext<HitGroupT, EvalResultT...>&& evalContext) {
         {
             std::move(evalStep)(std::move(evalContext))
-        } noexcept -> std::same_as<
+        } -> std::same_as<
             EvaluationContext<HitGroupT, EvalResultT..., typename EvalStepT::step_result_t>>;
         typename EvalStepT::step_result_t;
     };
@@ -107,7 +107,7 @@ class ReadGroupEvaluator {
 
    public:
     constexpr ReadGroupEvaluator(Preprocessor preprocessor, Postprocessor postprocessor,
-                                 EvalSteps... steps) noexcept
+                                 EvalSteps... steps)
         : preprocessor(std::move(preprocessor)),
           postprocessor(std::move(postprocessor)),
           evalSteps(std::move(steps)...) {
@@ -116,13 +116,13 @@ class ReadGroupEvaluator {
         failureBuffer.reserve(EXPECTED_HIT_GROUP_COUNT);
     }
 
-    constexpr void clearAll() noexcept {
+    constexpr void clearAll() {
         std::apply([](auto&... vec) { (vec.clear(), ...); }, stepBuffers);
 
         failureBuffer.clear();
     }
 
-    [[nodiscard]] auto evaluate(ReadGroup&& readGroup) noexcept -> ResultT {
+    [[nodiscard]] auto evaluate(ReadGroup&& readGroup) -> ResultT {
         clearAll();
 
         auto& outBuffer = std::get<0>(stepBuffers);
@@ -154,7 +154,7 @@ class ReadGroupEvaluator {
 
    private:
     template <std::size_t Index>
-    auto applySteps() noexcept {
+    auto applySteps() {
         auto& step = std::get<Index>(evalSteps);
         auto& inBuffer = std::get<Index>(stepBuffers);
         auto& outBuffer = std::get<Index + 1>(stepBuffers);
@@ -185,7 +185,7 @@ class ReadGroupEvaluator {
     }
 
     template <typename R, typename Buffer>
-    auto processStepResult(R&& result, Buffer& buffer) noexcept -> void {
+    auto processStepResult(R&& result, Buffer& buffer) -> void {
         using BufferValueT = std::remove_cvref_t<std::ranges::range_value_t<decltype(buffer)>>;
 
         if constexpr (is_variant_v<std::remove_cvref_t<R>>) {
