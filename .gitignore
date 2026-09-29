@@ -79,3 +79,5 @@ _deps
 /submodules/ViennaRNA/build/**
 cspell.json
 review
+benchmarks
+docs
