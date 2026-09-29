@@ -39,8 +39,7 @@ auto ParameterParser::getParameters(int argc, const char *const argv[])  // NOLI
     -> ParameterParser::ParametersVariant {
     const auto params = parseParameters(argc, argv);
 
-    const std::string subcall =
-        params.at(constants::pipelines::SUBCALL_PARAMETER_KEY).as<std::string>();
+    const std::string subcall = SubcallOptions::subcall.extractValue(params);
     if (subcall == constants::pipelines::COMPLETE) {
         return CompleteParameters{params};
     }
@@ -73,6 +72,7 @@ auto ParameterParser::parseParameters(int argc,
     po::variables_map params;
     try {
         store(po::command_line_parser(argc, argv)
+                  .style(po::command_line_style::default_style & ~po::command_line_style::allow_guessing)
                   .options(commandLineOptions)
                   .positional(positionalOptions)
                   .run(),
@@ -86,36 +86,36 @@ auto ParameterParser::parseParameters(int argc,
 
     printVersion();
 
-    if (params.at("version").as<bool>()) {
+    if (OtherOptions::printVersion.extractValue(params)) {
         Closing::printQuote();
         exit(EXIT_SUCCESS);
     }
 
-    if (params.at("help").as<bool>()) {
+    if (OtherOptions::printHelp.extractValue(params)) {
         std::cout << commandLineOptions << "\n";
         Closing::printQuote();
         exit(EXIT_SUCCESS);
     }
 
-    if (!params.contains("subcall")) {
+    if (!params.contains(SubcallOptions::subcall.getLongName())) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Please provide a subcall.");
     }
 
     insertConfigFileParameters(params);
 
-    Logger::setLogLevel(params.at("loglevel").as<LogLevel>());
+    Logger::setLogLevel(GeneralOptions::logLevel.extractValue(params));
 
     return params;
 }
 
 void ParameterParser::insertConfigFileParameters(po::variables_map &params) {
-    if (!params.contains("config")) {
+    if (!params.contains(OtherOptions::configFile.getLongName())) {
         return;
     }
 
     const po::options_description configFileOptions{getConfigFileOptions()};
 
-    const std::string configFilePath{params["config"].as<std::string>()};
+    const std::string configFilePath{OtherOptions::configFile.extractValue(params)};
 
     std::ifstream configIn{configFilePath};
 
@@ -183,7 +183,7 @@ auto ParameterParser::getConfigFileOptions() -> po::options_description {
 
 auto ParameterParser::getPositionalOptions() -> po::positional_options_description {
     po::positional_options_description positionalOptions;
-    positionalOptions.add("subcall", 1);
+    positionalOptions.add(SubcallOptions::subcall.getLongName().c_str(), 1);
 
     return positionalOptions;
 }

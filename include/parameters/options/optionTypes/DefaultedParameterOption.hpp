@@ -59,7 +59,7 @@ class DefaultedParameterOption : public ParameterOption<T> {
             return std::string{this->names.inverseDescription};
         }
 
-        return "set " + this->names.longName + " to false";
+        return "set " + this->getLongName() + " to false";
     }
 
     /**

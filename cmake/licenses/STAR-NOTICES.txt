@@ -1,0 +1,15 @@
+STAR 2.7.11b is distributed as an independent executable.
+
+LICENSE contains STAR's MIT licence. upstream-source.tar.gz contains the exact
+pinned STAR source, including the Opal licence and all HTSlib/CRAM and SIMDe
+copyright notices and licence terms embedded in their source files. The archive
+also supplies the original source corresponding to those bundled components.
+
+zlib-notice.h preserves the licence and copyright notice of the zlib headers
+used for this build. Packaged GCC compiler/OpenMP runtime libraries are covered
+by GPLv3 with the GCC Runtime Library Exception; both texts accompany this file.
+Operating-system libraries are not redistributed by the STAR bundle.
+
+build-info.txt identifies the release, source commit, compiler and target.
+The original upstream source can also be obtained from:
+https://github.com/alexdobin/STAR/tree/b1edc1208d91a53bf40ebae8669f71d50b994851

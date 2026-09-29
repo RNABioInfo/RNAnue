@@ -13,7 +13,7 @@ struct PostprocessOptions {
     static constexpr std::string_view optionsDescription = "Postprocess Pipeline";
 
     static constexpr DefaultedParameterOption<float, float{0.3}> minSegmentFractionOverlap{
-        {.shortName = std::nullopt, .longName = "intfrac"},
+        {.shortName = std::nullopt, .longName = "min_interaction_overlap"},
         "minimal fractional overlap of each interaction arm between two interactions to be considered the same interaction"sv};
 
     static constexpr auto allOptions = std::make_tuple(minSegmentFractionOverlap);

@@ -54,7 +54,7 @@ class GeneralParameters {
    private:
     static auto validateFeatureTypes(const po::variables_map& params)
         -> std::unordered_set<std::string> {
-        const auto featureTypesString = params["featuretypes"].as<std::string>();
+        const auto featureTypesString = GeneralOptions::featureTypes.extractValue(params);
 
         std::unordered_set<std::string> uniqueIncludedFeatures;
 

@@ -4,3 +4,6 @@
 [submodule "submodules/htslib"]
 	path = submodules/htslib
 	url = https://github.com/samtools/htslib.git
+[submodule "submodules/STAR"]
+	path = submodules/STAR
+	url = https://github.com/alexdobin/STAR.git

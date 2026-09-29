@@ -273,7 +273,7 @@ auto formatFailure(const std::filesystem::path& path, const DiagnosticCollector&
         message << "\n  ... " << (diagnostics.total - diagnostics.retained.size())
                 << " additional errors omitted.";
     }
-    message << "\nAnnotation loading failed; check the annotation and --featuretypes."
+    message << "\nAnnotation loading failed; check the annotation and --feature_types."
                " Earlier pipeline stages may already have completed.";
     return message.str();
 }
@@ -426,7 +426,7 @@ auto AnnotationHierarchyResolver::resolve(std::vector<ParsedFeatureRecord>&& rec
                 !includedFeatures.empty() && !includedFeatures.contains(match->second.featureType);
             guidance = excluded ? std::format(
                                       " A matching '{}' record exists at line {}; add '{}' to "
-                                      "--featuretypes.",
+                                      "--feature_types.",
                                       match->second.featureType, match->second.lineNumber,
                                       match->second.featureType)
                                 : std::format(

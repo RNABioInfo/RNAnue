@@ -6,14 +6,14 @@
 //    protected:
 //     DetectTest() {
 //         detect = Detect(po::variables_map{
-//             "minlen" : 15,
-//             "cmplmin" : 0.8,
-//             "sitelenratio" : 0.5,
-//             "mapqmin" : 10,
-//             "exclclipping" : true,
+//             "min_read_length" : 15,
+//             "min_complementarity" : 0.8,
+//             "min_site_length_ratio" : 0.5,
+//             "min_mapping_quality" : 10,
+//             "exclude_soft_clipping" : true,
 //             "annotationorientation" : annotation::Orientation::BOTH,
 //             "features" : "",
-//             "featuretypes" : "gene"
+//             "feature_types" : "gene"
 //         });
 //     }
 

@@ -68,6 +68,7 @@ _deps
 .DS_Store
 
 # Cache files
+__pycache__/
 *.cache
 *traces.0
 *requests

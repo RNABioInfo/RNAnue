@@ -15,7 +15,9 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
 
       - name: setup QEMU
         uses: docker/setup-qemu-action@v3
@@ -24,6 +26,7 @@ jobs:
         uses: docker/setup-buildx-action@v2
 
       - name: login to dockerhub
+        if: github.event_name != 'pull_request'
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
@@ -33,13 +36,13 @@ jobs:
         id: extract_version
         run: | 
           VERSION=$(grep 'ARG VERSION=' Dockerfile | cut -d'=' -f2)
-          echo "::set-output name=VERSION::$VERSION"
+          echo "VERSION=$VERSION" >> "$GITHUB_OUTPUT"
 
       - name: build and push
         uses: docker/build-push-action@v4
         with:
-          context: "{{defaultContext}}"
+          context: .
           platforms: linux/amd64, linux/arm64
-          push: true
+          push: ${{ github.event_name != 'pull_request' }}
           tags: cobirna/rnanue:${{ steps.extract_version.outputs.VERSION }}
 

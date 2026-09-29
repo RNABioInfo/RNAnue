@@ -1,0 +1,66 @@
+set(work "@RNANUE_STAR_WORK@")
+set(stage "@RNANUE_STAR_STAGE@")
+execute_process(COMMAND "@GIT_EXECUTABLE@" -C "@RNANUE_STAR_SOURCE@" rev-parse HEAD
+    OUTPUT_VARIABLE commit OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+execute_process(COMMAND "@GIT_EXECUTABLE@" -C "@RNANUE_STAR_SOURCE@" status --porcelain -- source LICENSE
+    OUTPUT_VARIABLE dirty COMMAND_ERROR_IS_FATAL ANY)
+if(NOT commit STREQUAL "@RNANUE_STAR_COMMIT@" OR dirty)
+    message(FATAL_ERROR "STAR source must be clean at @RNANUE_STAR_COMMIT@. Restore the pinned submodule before rebuilding.")
+endif()
+file(REMOVE_RECURSE "${work}")
+file(MAKE_DIRECTORY "${work}" "${stage}")
+file(COPY "@RNANUE_STAR_SOURCE@/source/" DESTINATION "${work}")
+file(READ "${work}/Makefile" makefile)
+string(REPLACE "xxd -i parametersDefault" "\"@RNANUE_STAR_XXD@\" -i parametersDefault" makefile "${makefile}")
+file(WRITE "${work}/Makefile" "${makefile}")
+set(target STAR)
+set(output STAR)
+set(flags [==[@RNANUE_STAR_FLAGS@]==])
+set(cppflags [==[@RNANUE_STAR_CPPFLAGS@]==])
+set(libraries "-pthread -Lhtslib -lhts \"@RNANUE_STAR_ZLIB@\"")
+if(NOT "@RNANUE_STAR_STATIC@")
+    # Non-system zlib may use an @rpath install name. This build-only path is
+    # removed/replaced with private relative paths during installation.
+    string(APPEND libraries " -Wl,-rpath,\"@RNANUE_STAR_ZLIB_DIR@\"")
+endif()
+if("@CMAKE_SYSTEM_NAME@" STREQUAL "Darwin")
+    string(APPEND flags " -DCOMPILE_FOR_MAC")
+    string(APPEND libraries " -Wl,-headerpad_max_install_names")
+endif()
+if("@RNANUE_STAR_STATIC@")
+    set(target STARstatic)
+    string(PREPEND libraries "-static -static-libgcc ")
+endif()
+set(common "-std=c++11 -fopenmp -D'COMPILATION_TIME_PLACE=\"RNAnue STAR @RNANUE_STAR_VERSION@\"' -D'GIT_BRANCH_COMMIT_DIFF=\"@RNANUE_STAR_COMMIT@\"' ${flags}")
+execute_process(COMMAND "@CMAKE_COMMAND@" -E env "CPPFLAGS=${cppflags}"
+    "@RNANUE_STAR_MAKE@" -j2 "${target}"
+    "CXX=\"@CMAKE_CXX_COMPILER@\"" "CC=\"@CMAKE_C_COMPILER@\""
+    "CXXFLAGS=-O3 -pipe -Wall -Wextra ${common}" "CFLAGS=-O2 ${flags}"
+    "CXXFLAGS_common=${common} ${cppflags}" "CXXFLAGS_SIMD=" "CXXFLAGSextra="
+    "LDFLAGS=${libraries} ${flags}" "LDFLAGSextra=" "GIT_CHECK=1" "BUILD_DATE=pinned-release" "BUILD_PLACE=RNAnue"
+    WORKING_DIRECTORY "${work}" RESULT_VARIABLE result
+    OUTPUT_FILE "${work}/build.log" ERROR_FILE "${work}/build-errors.log")
+if(NOT result EQUAL 0)
+    message(FATAL_ERROR "STAR build failed (${result}). See ${work}/build.log and build-errors.log. Static builds require static zlib, C/C++ and OpenMP runtimes.")
+endif()
+execute_process(COMMAND "${work}/${output}" --version RESULT_VARIABLE result
+    OUTPUT_VARIABLE version OUTPUT_STRIP_TRAILING_WHITESPACE)
+if(NOT result EQUAL 0 OR NOT version STREQUAL "@RNANUE_STAR_VERSION@")
+    message(FATAL_ERROR "Built STAR failed version verification: ${version} (${result})")
+endif()
+if("@RNANUE_STAR_STATIC@")
+    execute_process(COMMAND "@RNANUE_STAR_READELF@" -l -d "${work}/${output}"
+        OUTPUT_VARIABLE elf COMMAND_ERROR_IS_FATAL ANY)
+    if(elf MATCHES "INTERP|NEEDED")
+        message(FATAL_ERROR "RNANUE_STAR_STATIC requested but STAR has dynamic runtime dependencies")
+    endif()
+endif()
+execute_process(COMMAND "@CMAKE_COMMAND@" -E tar cfz "${stage}/upstream-source.tar.gz" source LICENSE
+    WORKING_DIRECTORY "@RNANUE_STAR_SOURCE@" COMMAND_ERROR_IS_FATAL ANY)
+file(SHA256 "${work}/${output}" digest)
+file(WRITE "${stage}/build-info.txt"
+    "STAR=@RNANUE_STAR_VERSION@\ncommit=@RNANUE_STAR_COMMIT@\nplatform=@CMAKE_SYSTEM_NAME@\narchitecture=@RNANUE_STAR_ARCH@\ncompiler=@CMAKE_CXX_COMPILER_ID@ @CMAKE_CXX_COMPILER_VERSION@\nlinking=@RNANUE_STAR_LINK_MODE@\nmacos_deployment_target=@CMAKE_OSX_DEPLOYMENT_TARGET@\nbuild_executable_sha256=${digest}\n")
+# Publish the executable last, so failed builds are never treated as complete.
+file(COPY_FILE "${work}/${output}" "${stage}/STAR.tmp")
+file(CHMOD "${stage}/STAR.tmp" PERMISSIONS OWNER_READ OWNER_WRITE OWNER_EXECUTE GROUP_READ GROUP_EXECUTE WORLD_READ WORLD_EXECUTE)
+file(RENAME "${stage}/STAR.tmp" "${stage}/STAR")

@@ -28,6 +28,9 @@ docker pull cobirna/rnanue:latest
 docker run -ti  cobirna/rnanue
 ```
 
+To build an image from your checkout, initialize its submodules and run
+`docker build -t rnanue .` from the repository root.
+
 ### Singularity
 
 _Not available yet_
@@ -40,6 +43,42 @@ singularity exec --bind /path/to/data:/data rnanue_latest.sif RNAnue <subcall> -
 ```
 
 ### Building from source
+
+STAR 2.7.11b is built and bundled by default as a private executable. This does
+not change the segemehl mapping pipeline or enable STAR alignment in RNAnue.
+
+#### Bundled STAR
+
+Native Linux and macOS builds support x86_64 and ARM64. Initialize the pinned
+source with `git submodule update --init --recursive`; CMake requires STAR
+2.7.11b at commit `b1edc1208d91a53bf40ebae8669f71d50b994851` and never searches
+for STAR on `PATH`. Generated binaries stay in the build directory.
+
+Additional prerequisites are GNU Make, `xxd`, zlib development files and GCC
+with OpenMP. Linux also needs `patchelf`; macOS needs Xcode command line tools
+and GNU GCC (for example, `brew install gcc@14 make`). Select the compiler pair
+with `CC`/`CXX` when first configuring.
+
+- `-DRNANUE_BUILD_STAR=OFF` skips STAR and its prerequisites.
+- `-DRNANUE_STAR_STATIC=ON` requires fully static STAR on Linux, including static
+  zlib, C/C++ and OpenMP runtimes. It is unsupported on macOS and does not make
+  RNAnue itself static.
+
+Normal builds, installation and CPack commands include STAR. The default
+installation is `libexec/rnanue/STAR`, with private runtime libraries in the
+adjacent `lib/` directory and licences/build metadata under
+`share/rnanue/licenses/STAR/`. Installation prefixes, `DESTDIR` staging and
+relocation are supported. Build on the oldest OS version you intend to support;
+cross-compilation, universal macOS binaries and release notarization are outside
+this setup.
+
+To verify the dependency independently of RNAnue's other libraries:
+
+```sh
+cmake -S tests/star -B build/star-check -DCMAKE_BUILD_TYPE=Release
+cmake --build build/star-check
+ctest --test-dir build/star-check --output-on-failure
+```
 
 #### Prerequisites
 
@@ -178,7 +217,7 @@ RNAnue provides different sub-calls for individual pipeline steps. These include
 
 > **IMPORTANT** In order to process paired-end files, files must end with "\_forward.fastq" and "\_reverse.fastq", "\_R1.fastq" and "\_R2.fastq" or "\_1.fastq" and "\_2.fastq".
 
-The root folders of the treatments (`--trtms`; required) and controls (`--ctrls`; optional) are specified accordingly. These folders contain sub-folders
+The root folders of the treatments (`--treatment_dir`; required) and controls (`--control_dir`; optional) are specified accordingly. These folders contain sub-folders
 with arbitrary samples that in turn contain the read files.
 
 ### Example folder structure
@@ -212,8 +251,33 @@ RNAnue <sub-call-here> --config <params.cfg-here>
 In any case, the specifying parameters over the command lines has precedence over the config file.
 Boolean parameters accept explicit values on the command line, for example
 `--deduplicate=false`. Options that are enabled by default also provide clearer inverse flags,
-such as `--no-deduplicate`, `--no-preprocess`, `--no-trimpolyg`, `--no-maskmulticopy`,
-`--no-multimap`, and `--keep-altsplice`.
+such as `--no_deduplicate`, `--no_preprocess`, `--no_trim_poly_g`, `--no_mask_multicopy_genes`,
+`--no_multimapping`, and `--keep_alt_splicing`.
+
+Long options and configuration keys now use the same `snake_case` names. Update existing
+commands and config files using `RNAnue --help` or the example config (for example,
+`trtms` → `treatment_dir`, `dbref` → `reference_genome`). Old names and abbreviated long
+options are rejected; there are no compatibility aliases. `-t` now means threads;
+the old `-p` and `-s` shortcuts have been removed.
+
+| Flag | Option | Flag | Option |
+| --- | --- | --- | --- |
+| `-T` | `treatment_dir` | `-C` | `control_dir` |
+| `-t` | `threads` | `-o` | `output_dir` |
+| `-r` | `reference_genome` | `-f` | `features` |
+| `-a` | `aligner` | `-c` | `config` |
+| `-q` | `min_read_quality` | `-l` | `min_read_length` |
+| `-h` | `help` | `-v` | `version` |
+
+`aligner=segemehl` remains the default and only operational backend. Segemehl-specific
+identity and fragment-score controls are named `seg_alignment_accuracy` and
+`seg_min_fragment_score`; the latter is not STAR's combined chimeric score.
+The `star_*` controls prepare for future integration: `aligner=star` currently fails
+before pipeline processing or output creation, even when STAR is bundled. Explicit
+`star_*` settings also fail for segemehl alignment runs. See the commented STAR settings
+in the example config for defaults and bounds. An omitted `star_min_junction_overhang`
+inherits `min_fragment_length`; disabling multimapping makes the future effective cap
+1 without discarding the configured `star_max_multimaps` value.
 
 ## Results
 
@@ -284,7 +348,7 @@ The reported metrics are calculated from those coverage runs:
   max(first_arm_integrated_coverage, second_arm_integrated_coverage)`. Values near 1 indicate
   balanced support on both arms; values near 0 indicate mostly one-sided support.
 
-Coverage-shaped filtering is opt-in through `mineffdens`, `maxcovcomp`, and `minarmbal`. Each sample
+Coverage-shaped filtering is opt-in through `min_support_per_effective_bp`, `max_coverage_components`, and `min_arm_balance`. Each sample
 also gets an aggregate weighted bedGraph of retained interaction-arm coverage for visual inspection.
 
 #### Coverage profile assignment
@@ -315,7 +379,7 @@ interaction.
 Paired FASTQ files must contain the same number of records in matching order. RNAnue compares
 identifiers before the first whitespace, accepts `/1` and `/2` suffixes, and checks recognizable
 mate labels. A mismatch stops the invocation with the file names, pair number, and available IDs.
-Paired preprocessing requires `--chunksize >= 2`. Sequence deduplication retains the original
+Paired preprocessing requires `--chunk_size >= 2`. Sequence deduplication retains the original
 record with the highest mean quality and the first record on a tie. Read IDs must remain unique
 within each sample for downstream assignment accounting; RNAnue does not rename them or perform
 a global collision scan. Sample names must be globally unique across treatment/control groups

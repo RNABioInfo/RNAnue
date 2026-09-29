@@ -56,10 +56,10 @@ class ParameterOption {
     /**
      * @brief Retrieves the long name of the parameter.
      *
-     * @return const std::string& The parameter's long name.
+     * @return std::string The parameter's long name.
      */
-    [[nodiscard]] constexpr auto getLongName() const noexcept -> const std::string& {
-        return names.longName;
+    [[nodiscard]] constexpr auto getLongName() const -> std::string {
+        return std::string{names.longName};
     }
 
     /**
@@ -96,9 +96,9 @@ class ParameterOption {
      */
     [[nodiscard]] virtual auto extractValue(const po::variables_map& variables) const -> valueType {
         if constexpr (isOptional) {
-            return ParameterValidator::validateOptional<T>(variables, names.longName);
+            return ParameterValidator::validateOptional<T>(variables, getLongName());
         } else {
-            return ParameterValidator::validate<T>(variables, names.longName);
+            return ParameterValidator::validate<T>(variables, getLongName());
         }
     }
 

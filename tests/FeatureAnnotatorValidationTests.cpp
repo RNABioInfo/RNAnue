@@ -45,7 +45,7 @@ TEST_P(FeatureAnnotatorValidationTests, ExcludedParentPropagatesInsteadOfTermina
         FAIL() << "Expected excluded-parent validation to fail";
     } catch (const annotation::AnnotationHierarchyError& error) {
         const std::string message{error.what()};
-        EXPECT_NE(message.find("add '" + GetParam() + "' to --featuretypes"), std::string::npos);
+        EXPECT_NE(message.find("add '" + GetParam() + "' to --feature_types"), std::string::npos);
     }
 }
 

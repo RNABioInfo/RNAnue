@@ -1,49 +1,22 @@
-############################################################
-# Dockerfile to build RNAnue container
-# Based on Debian
-# v1.0.0
-############################################################
-
-# set the base image to debian
-FROM ubuntu:23.04
-# tag version
+# Build exactly this checkout, including its pinned submodules.
+FROM ubuntu:24.04
 ARG VERSION=v1.0.0
-# file author
+ARG BUILD_JOBS=2
 LABEL authors="Christopher Adelmann and Richard A. Schaefer"
-
-# update sources list
-RUN apt-get update && apt-get -y upgrade
-RUN apt-get install -y curl build-essential cmake git pkg-config
-RUN apt-get install -y libboost-program-options-dev libbz2-dev zlib1g-dev libncurses5-dev liblzma-dev
-
-# install htslib
-WORKDIR /
-RUN curl -L https://github.com/samtools/htslib/releases/download/1.20/htslib-1.20.tar.bz2 -o htslib-1.20.tar.bz2
-RUN tar -xvf htslib-1.20.tar.bz2 && rm htslib-1.20.tar.bz2
-WORKDIR /htslib-1.20
-RUN ./configure
-RUN make
-RUN make install
-
-# install segemehl
-WORKDIR /
-RUN curl -L http://legacy.bioinf.uni-leipzig.de/Software/segemehl/downloads/segemehl-0.3.4.tar.gz -o segemehl-0.3.4.tar.gz
-RUN tar -xvf segemehl-0.3.4.tar.gz && rm segemehl-0.3.4.tar.gz
-WORKDIR /segemehl-0.3.4
-RUN export PKG_CONFIG_PATH=/usr/local/lib/pkgconfig
-RUN make all
-RUN cp segemehl.x /usr/local/bin
-RUN echo 'alias segemehl="segemehl.x"' >> ~/.bashrc
-
-# TODO Change to main when release is available
-# retrieve RNAnue
-WORKDIR /
-RUN git clone -b develop --recurse-submodules https://github.com/ChristopherAdelmann/RNAnue.git
-WORKDIR /RNAnue
-
-# install RNAnue
-WORKDIR /RNAnue
-RUN cmake --preset release
-RUN cmake --build --preset release --parallel 10
-RUN echo 'alias RNAnue="/RNAnue/build/release/RNAnue"' >> ~/.bashrc
-WORKDIR /
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    gcc-14 g++-14 make cmake ninja-build git pkg-config xxd patchelf \
+    autoconf automake libtool python3 gnuplot-nox libboost-program-options-dev \
+    libbz2-dev zlib1g-dev liblzma-dev libhts-dev libtbb-dev libpng-dev \
+    libncurses-dev ca-certificates && rm -rf /var/lib/apt/lists/*
+WORKDIR /src/RNAnue
+# Keep Git metadata: CMake verifies the STAR gitlink against the supported pin.
+COPY . .
+RUN cmake --preset release -G Ninja \
+    -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 \
+    -DCMAKE_INSTALL_PREFIX=/opt/rnanue -DRNANUE_BUILD_STAR=ON \
+    && cmake --build --preset release --parallel ${BUILD_JOBS} \
+    && cmake --install build/release \
+    && /opt/rnanue/libexec/rnanue/STAR --version
+ENV PATH="/opt/rnanue/bin:${PATH}"
+WORKDIR /data
+CMD ["RNAnue", "--help"]

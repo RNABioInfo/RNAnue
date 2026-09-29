@@ -51,7 +51,7 @@ class AnalyzeParameters : public GeneralParameters {
 
     static auto validateClusteringOrientation(const po::variables_map& params)
         -> GenomicStrandSpecificity {
-        return params["clustmethod"].as<GenomicStrandSpecificity>();
+        return AnalyzeOptions::clusteringStrandSpecificity.extractValue(params);
     };
 
     auto getClusteringParameters() -> ClusteringParameters {

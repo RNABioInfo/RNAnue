@@ -195,7 +195,7 @@ TEST(FeatureParserTests, ExcludedParentFailsWithFeatureTypeGuidance) {
         FAIL() << "Expected annotation hierarchy validation to fail";
     } catch (const AnnotationHierarchyError& error) {
         const std::string message = error.what();
-        EXPECT_NE(message.find("add 'gene' to --featuretypes"), std::string::npos);
+        EXPECT_NE(message.find("add 'gene' to --feature_types"), std::string::npos);
         EXPECT_NE(message.find("Line 3"), std::string::npos);
     }
 

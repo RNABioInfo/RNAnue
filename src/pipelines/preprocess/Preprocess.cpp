@@ -31,7 +31,7 @@ void Preprocess::process(const PreprocessData &data) const {
     if (parameters.chunkSize < 2 &&
         (std::ranges::any_of(data.treatmentSamples, isPaired) ||
          (data.controlSamples && std::ranges::any_of(*data.controlSamples, isPaired)))) {
-        throw std::invalid_argument("Paired-end preprocessing requires --chunksize >= 2");
+        throw std::invalid_argument("Paired-end preprocessing requires --chunk_size >= 2");
     }
     Logger::log(constants::pipelines::PROCESSING_TREATMENT_MESSAGE);
 

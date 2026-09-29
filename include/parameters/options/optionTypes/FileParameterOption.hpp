@@ -36,6 +36,6 @@ class FileParameterOption : public ParameterOption<std::filesystem::path> {
      */
     [[nodiscard]] auto extractValue(const po::variables_map& variables) const
         -> std::filesystem::path override {
-        return ParameterValidator::validateFilePath(variables, names.longName);
+        return ParameterValidator::validateFilePath(variables, this->getLongName());
     }
 };

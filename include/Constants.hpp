@@ -17,10 +17,10 @@ const std::string COMPLETE = "complete";
 
 const std::string GENERAL_DESCRIPTION =
     "RNAnue efficient data analysis for RNA–RNA interactomics.\nRun RNAnue with the subcall "
-    "\"complete\" to execute all pipeline steps.\n\nMinimum call: RNAnue complete -t "
+    "\"complete\" to execute all pipeline steps.\n\nMinimum call: RNAnue complete -T "
     "<treatment-dir> "
     "-o "
-    "<output-dir> -f <feature-gff-file> --dbref <reference-genome-file>\nOr run RNAnue with a "
+    "<output-dir> -f <feature-gff-file> --reference_genome <reference-genome-file>\nOr run RNAnue with a "
     "config "
     "file: RNAnue complete -c <config-file>\n\nGeneral Options";
 const std::string SUBCALL_DESCRIPTION =

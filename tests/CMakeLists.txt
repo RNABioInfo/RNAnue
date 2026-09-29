@@ -62,6 +62,7 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParameterOptionsTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCorrectnessTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineAnalysisRegressionTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
@@ -152,3 +153,21 @@ find_package(Python3 COMPONENTS Interpreter REQUIRED)
 add_test(NAME PipelineCliRegressions COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCliRegressionTests.py $<TARGET_FILE:RNAnue>)
 set_tests_properties(PipelineCliRegressions PROPERTIES TIMEOUT 180)
+
+add_test(NAME ParameterCliRegressions COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/ParameterCliRegressionTests.py $<TARGET_FILE:RNAnue>)
+set_tests_properties(ParameterCliRegressions PROPERTIES TIMEOUT 180)
+
+add_executable(star_locator_probe star/locator.cpp)
+target_link_libraries(star_locator_probe PRIVATE RNAnue_StarSupport)
+# The locator's build-tree anchor is the RNAnue executable directory.
+set_target_properties(star_locator_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+if(RNANUE_BUILD_STAR)
+    add_dependencies(star_locator_probe RNAnue_STAR)
+    add_test(NAME StarSmoke COMMAND "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/star/smoke.py"
+        --star "$<TARGET_FILE:STAR::STAR>" --locator "$<TARGET_FILE:star_locator_probe>")
+    set_tests_properties(StarSmoke PROPERTIES TIMEOUT 120)
+else()
+    add_test(NAME StarDisabled COMMAND star_locator_probe --expect-disabled)
+endif()

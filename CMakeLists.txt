@@ -244,6 +244,9 @@ add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Utility.cpp
 )
 
+include(star)
+rnanue_add_star(RNAnue)
+
 target_compile_options(RNAnue PRIVATE
     $<$<COMPILE_LANGUAGE:CXX>:-Wall>
     $<$<COMPILE_LANGUAGE:CXX>:-Wextra>

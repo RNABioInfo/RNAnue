@@ -1,0 +1,8 @@
+#pragma once
+namespace utility::star::build {
+inline constexpr bool enabled = @RNANUE_STAR_ENABLED_CPP@;
+inline constexpr auto version = "@RNANUE_STAR_VERSION@";
+inline constexpr auto buildExecutable = R"star(@RNANUE_STAR_EXECUTABLE@)star";
+inline constexpr auto hostBuildDirectory = R"star($<TARGET_FILE_DIR:@host@>)star";
+inline constexpr auto installRelativePath = R"star(@RNANUE_STAR_INSTALL_RELATIVE@)star";
+}

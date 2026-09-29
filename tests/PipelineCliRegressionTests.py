@@ -29,11 +29,11 @@ class PipelineCliRegressions(unittest.TestCase):
         (self.input/('sample_R1.fastq' if reverse is not None else 'sample.fastq')).write_text(forward)
         if reverse is not None:
             (self.input/'sample_R2.fastq').write_text(reverse)
-        command = [str(BINARY),'preprocess','-t',str(self.input.parent),'-o',str(self.root/'out'),
-                   '-f',str(self.annotation),'--threads',str(threads),'--minqual','0','--minlen','1',
-                   '--no-trimpolyg']
+        command = [str(BINARY),'preprocess','-T',str(self.input.parent),'-o',str(self.root/'out'),
+                   '-f',str(self.annotation),'--threads',str(threads),'--min_read_quality','0','--min_read_length','1',
+                   '--no_trim_poly_g']
         if not deduplicate:
-            command.append('--no-deduplicate')
+            command.append('--no_deduplicate')
         return subprocess.run(command+list(extra),capture_output=True,text=True,timeout=30)
 
     def output_count(self):
@@ -56,9 +56,9 @@ class PipelineCliRegressions(unittest.TestCase):
         self.assertEqual(self.output_count(),1)
 
     def test_invalid_pair_buffer_is_rejected(self):
-        result = self.run_case(fastq('one'),fastq('one'),extra=['--chunksize','1'])
+        result = self.run_case(fastq('one'),fastq('one'),extra=['--chunk_size','1'])
         self.assertEqual(result.returncode,1,result.stdout+result.stderr)
-        self.assertIn('--chunksize >= 2',result.stdout+result.stderr)
+        self.assertIn('--chunk_size >= 2',result.stdout+result.stderr)
 
     def test_malformed_fastq_is_controlled_error(self):
         result = self.run_case(fastq('one',quality='I'))

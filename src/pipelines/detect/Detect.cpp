@@ -82,7 +82,7 @@ void Detect::process(const DetectData& data) {
         }
         if (!hasExonRelationships) Logger::log<LogLevel::WARNING>(
             "Splice filtering is enabled but the loaded annotation has no usable exon relationships. "
-            "Include exons and their parent hierarchy with --featuretypes; --altsplice alone does not enable filtering.");
+            "Include exons and their parent hierarchy with --feature_types; --remove_alt_splicing alone does not enable filtering.");
     }
 
     const auto evaluationParameters =
