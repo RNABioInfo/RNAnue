@@ -82,6 +82,11 @@ class ParameterOption {
         if constexpr (std::is_same_v<T, bool>) {
             optionsDescription.add_options()(names.optionsName().data(), po::bool_switch(),
                                              getDescription().data());
+        } else if constexpr (std::is_same_v<T, std::filesystem::path>) {
+            // Boost's stream extraction for filesystem::path splits unquoted spaces.
+            // argv and config already delimit the value; preserve it as a single string.
+            optionsDescription.add_options()(names.optionsName().data(), po::value<std::string>(),
+                                             getDescription().data());
         } else {
             optionsDescription.add_options()(names.optionsName().data(),
                                              po::value<underlyingType>(), getDescription().data());

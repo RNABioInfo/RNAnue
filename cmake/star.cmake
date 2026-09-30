@@ -78,6 +78,9 @@ function(rnanue_add_star host)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
             message(FATAL_ERROR "The pinned STAR build requires GCC; select gcc/g++ as RNAnue's compilers")
         endif()
+        include("${module_dir}/star_runtime_license.cmake")
+        set(star_runtime_license "${CMAKE_CURRENT_BINARY_DIR}/star-licenses/GCC-RUNTIME-EXCEPTION.txt")
+        rnanue_stage_star_runtime_license("${star_runtime_license}")
         if(APPLE)
             find_program(RNANUE_STAR_INSTALL_NAME_TOOL install_name_tool REQUIRED)
             find_program(RNANUE_STAR_CODESIGN codesign REQUIRED)
@@ -155,7 +158,7 @@ function(rnanue_add_star host)
         install(FILES "${RNANUE_STAR_STAGE}/build-info.txt" "${RNANUE_STAR_STAGE}/upstream-source.tar.gz"
             "${RNANUE_STAR_SOURCE}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR")
         install(FILES "${repo}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR" RENAME GPL-3.0.txt)
-        install(FILES "${module_dir}/licenses/GCC-RUNTIME-EXCEPTION.txt" "${module_dir}/licenses/STAR-NOTICES.txt"
+        install(FILES "${star_runtime_license}" "${module_dir}/licenses/STAR-NOTICES.txt"
             DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR")
         foreach(include_dir IN LISTS ZLIB_INCLUDE_DIRS)
             if(EXISTS "${include_dir}/zlib.h")

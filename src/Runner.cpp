@@ -1,5 +1,7 @@
 #include "Runner.hpp"
 
+#include "ExternalProcess.hpp"
+
 // Standard
 #include <optional>
 #include <variant>
@@ -51,6 +53,9 @@ void Runner::runPreprocessPipeline(const preprocess::PreprocessParameters &param
 
 void Runner::runAlignPipeline(const align::AlignParameters &parameters) {
     parameters.validateBackendAvailability();
+    if (parameters.aligner == align::AlignmentBackend::Star) {
+        utility::validateStarExecutable();
+    }
     Logger::log("Running align pipeline");
 
     const auto inputDirs = InputDirectories(parameters.outputDir, preprocess::pipelinePrefix);
@@ -100,6 +105,9 @@ void Runner::runPostprocessPipeline(const postprocess::PostprocessParameters &pa
 
 void Runner::runCompletePipeline(const CompleteParameters &parameters) {
     parameters.alignParameters.validateBackendAvailability();
+    if (parameters.alignParameters.aligner == align::AlignmentBackend::Star) {
+        utility::validateStarExecutable();
+    }
     Logger::log("Running complete pipeline");
 
     // Masking uses a broader feature set than detection. Validate the user's

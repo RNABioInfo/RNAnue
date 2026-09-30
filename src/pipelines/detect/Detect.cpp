@@ -19,6 +19,10 @@
 #include <variant>
 #include <vector>
 
+#include "AlignmentProvenance.hpp"
+#include "SamFileUtility.hpp"
+#include "StarReadGroupPreprocessor.hpp"
+
 // seqan3
 #include <seqan3/alphabet/cigar/cigar.hpp>
 #include <seqan3/alphabet/nucleotide/dna5.hpp>
@@ -77,12 +81,16 @@ void Detect::process(const DetectData& data) {
         for (const auto& [referenceID, tree] : featureAnnotator->getFeatureTreeMap()) {
             for (size_t i = 0; i < tree.size(); ++i) {
                 const auto& feature = tree.getData(i);
-                hasExonRelationships |= feature.getType() == "exon" && feature.getParentID().has_value();
+                hasExonRelationships |=
+                    feature.getType() == "exon" && feature.getParentID().has_value();
             }
         }
-        if (!hasExonRelationships) Logger::log<LogLevel::WARNING>(
-            "Splice filtering is enabled but the loaded annotation has no usable exon relationships. "
-            "Include exons and their parent hierarchy with --feature_types; --remove_alt_splicing alone does not enable filtering.");
+        if (!hasExonRelationships)
+            Logger::log<LogLevel::WARNING>(
+                "Splice filtering is enabled but the loaded annotation has no usable exon "
+                "relationships. "
+                "Include exons and their parent hierarchy with --feature_types; "
+                "--remove_alt_splicing alone does not enable filtering.");
     }
 
     const auto evaluationParameters =
@@ -121,16 +129,33 @@ void Detect::processSample(const DetectSample& sample, const ParamT& evaluationP
     // Prepare temporary dirs for chunked processing
     const fs::path outputParentDir = sample.output.outputSplitAlignmentsPath.parent_path();
     const fs::path outputTmpDir = outputParentDir / "tmp";
+
+    struct TemporaryOutputCleanup {
+        fs::path path;
+        ~TemporaryOutputCleanup() {
+            std::error_code error;
+            fs::remove_all(path, error);
+        }
+    } cleanup{outputTmpDir};
     const TempOutputDirs outTmpDirs = prepareTmpOutputDirs(outputTmpDir);
 
     // Get sam file input infos and buffer
     seqan3::sam_file_input alignmentsIn{sample.input.inputAlignmentsPath, SamFieldIDs{}};
+    const auto backend = utility::alignmentBackend(alignmentsIn.header());
     SamReference reference{alignmentsIn.header()};
+    // SeqAn buffers an empty record when a BAM contains only a header. Advance
+    // past that sentinel before handing the range to the concurrent consumer.
+    if (!SamFileUtility::inspect(sample.input.inputAlignmentsPath).hasRecords()) {
+        ++alignmentsIn.begin();
+    }
     AsyncGroupBufferType recordInputBuffer =
         alignmentsIn | AsyncSplitReadGroupBuffer(params.threadCount + 1);
 
-    auto mergedResults = utility::consumeConcurrently(recordInputBuffer, params.threadCount - 1,
-        [&] { return processRecordChunk(outTmpDirs, recordInputBuffer, reference, evaluationParams); });
+    auto mergedResults =
+        utility::consumeConcurrently(recordInputBuffer, params.threadCount - 1, [&] {
+            return processRecordChunk(outTmpDirs, recordInputBuffer, reference, evaluationParams,
+                                      backend);
+        });
 
     mergedResults.createPlots(outputParentDir);
 
@@ -144,14 +169,13 @@ void Detect::processSample(const DetectSample& sample, const ParamT& evaluationP
 
     writeReadCountsSummaryFile(mergedResults, sample.input.sampleName,
                                sample.output.outputSharedReadCountsPath);
-
-    fs::remove_all(outputTmpDir);
 }
 
 template <ReadGroupEvaluationParameters::Type ParamT>
 auto Detect::processRecordChunk(const TempOutputDirs& outTmpDirs,
                                 AsyncGroupBufferType& recordInputBuffer, SamReference& reference,
-                                const ParamT& evaluationParams) const -> Detect::Result {
+                                const ParamT& evaluationParams,
+                                align::AlignmentBackend backend) const -> Detect::Result {
     EvaluationContextResultHandler resultHandler{outTmpDirs, reference, params.chunkSize};
 
     SegemehlReadGroupPreprocessorConfig collationConfig{
@@ -159,59 +183,71 @@ auto Detect::processRecordChunk(const TempOutputDirs& outTmpDirs,
                                .minimumFragmentLength = params.minimumFragmentLength,
                                .excludeSoftClipping = params.excludeSoftClipping},
         .maxPrimaryAlignmentCount = params.maxPrimaryAlignmentCount};
-    SegemehlReadGroupPreprocessor preprocessor{collationConfig};
-
-    ReadGroupPostScoringStep postprocessor{{static_cast<float>(params.minHitGroupContribution)}};
-
-    auto complementarityStep = ComplementarityEvaluationStep{
-        ComplementarityEvaluationStepConfig::makeConfig(evaluationParams)};
-
-    auto hybridizationStep = HybridizationEvaluationStep{
-        HybridizationEvaluationStepConfig::makeConfig(evaluationParams)};
-
-    auto annotationStep = AnnotationStep{AnnotationStepConfig::makeConfig(evaluationParams)};
-
-    auto metricTrackingStep = MetricsTrackingStep{};
-
-    if constexpr (std::same_as<ParamT, ReadGroupEvaluationParameters::Base>) {
-        auto evaluator = ReadGroupEvaluator(
-            std::ref(preprocessor), std::ref(postprocessor), std::ref(complementarityStep),
-            std::ref(hybridizationStep), std::ref(annotationStep), std::ref(metricTrackingStep));
-
-        for (ReadGroup readGroup : recordInputBuffer) {
-            auto res = evaluator.evaluate(std::move(readGroup));
-
-            for (const auto& context : res.successes) {
-                std::visit(resultHandler, context);
-            }
-        }
-
-        Logger::log("Finished batch with metrics: ", metricTrackingStep);
-    } else {
-        auto splicingStep =
-            SplicingEvaluationStep{SplicingEvaluationStepConfig::makeConfig(evaluationParams)};
-
-        auto evaluator = ReadGroupEvaluator(std::ref(preprocessor), std::ref(postprocessor),
-                                            std::ref(splicingStep), std::ref(complementarityStep),
-                                            std::ref(hybridizationStep), std::ref(annotationStep),
-                                            std::ref(metricTrackingStep));
-
-        for (ReadGroup readGroup : recordInputBuffer) {
-            auto res = evaluator.evaluate(std::move(readGroup));
-
-            for (const auto& context : res.successes) {
-                std::visit(resultHandler, context);
-            }
-        }
+    std::variant<SegemehlReadGroupPreprocessor, StarReadGroupPreprocessor> preprocessors{
+        SegemehlReadGroupPreprocessor{collationConfig}};
+    if (backend == align::AlignmentBackend::Star) {
+        preprocessors.emplace<StarReadGroupPreprocessor>(collationConfig, reference.referenceIDs,
+                                                         reference.referenceLengths);
     }
 
-    resultHandler.save();
+    return std::visit(
+        [&](auto& preprocessor) -> Result {
+            ReadGroupPostScoringStep postprocessor{
+                {static_cast<float>(params.minHitGroupContribution)}};
 
-    return {.preprocessMetrics = preprocessor.getMetrics(),
-            .complementarityMetrics = complementarityStep.getMetrics(),
-            .hybridizationMetrics = hybridizationStep.getMetrics(),
-            .postprocessMetrics = postprocessor.getMetrics(),
-            .singletonTranscriptCounts = resultHandler.getSingletonTranscriptCounts()};
+            auto complementarityStep = ComplementarityEvaluationStep{
+                ComplementarityEvaluationStepConfig::makeConfig(evaluationParams)};
+
+            auto hybridizationStep = HybridizationEvaluationStep{
+                HybridizationEvaluationStepConfig::makeConfig(evaluationParams)};
+
+            auto annotationStep =
+                AnnotationStep{AnnotationStepConfig::makeConfig(evaluationParams)};
+
+            auto metricTrackingStep = MetricsTrackingStep{};
+
+            if constexpr (std::same_as<ParamT, ReadGroupEvaluationParameters::Base>) {
+                auto evaluator =
+                    ReadGroupEvaluator(std::ref(preprocessor), std::ref(postprocessor),
+                                       std::ref(complementarityStep), std::ref(hybridizationStep),
+                                       std::ref(annotationStep), std::ref(metricTrackingStep));
+
+                for (ReadGroup readGroup : recordInputBuffer) {
+                    auto res = evaluator.evaluate(std::move(readGroup));
+
+                    for (const auto& context : res.successes) {
+                        std::visit(resultHandler, context);
+                    }
+                }
+
+                Logger::log("Finished batch with metrics: ", metricTrackingStep);
+            } else {
+                auto splicingStep = SplicingEvaluationStep{
+                    SplicingEvaluationStepConfig::makeConfig(evaluationParams)};
+
+                auto evaluator = ReadGroupEvaluator(
+                    std::ref(preprocessor), std::ref(postprocessor), std::ref(splicingStep),
+                    std::ref(complementarityStep), std::ref(hybridizationStep),
+                    std::ref(annotationStep), std::ref(metricTrackingStep));
+
+                for (ReadGroup readGroup : recordInputBuffer) {
+                    auto res = evaluator.evaluate(std::move(readGroup));
+
+                    for (const auto& context : res.successes) {
+                        std::visit(resultHandler, context);
+                    }
+                }
+            }
+
+            resultHandler.save();
+
+            return {.preprocessMetrics = preprocessor.getMetrics(),
+                    .complementarityMetrics = complementarityStep.getMetrics(),
+                    .hybridizationMetrics = hybridizationStep.getMetrics(),
+                    .postprocessMetrics = postprocessor.getMetrics(),
+                    .singletonTranscriptCounts = resultHandler.getSingletonTranscriptCounts()};
+        },
+        preprocessors);
 }
 
 auto Detect::getReferenceIDs(const fs::path& mappingsInPath) -> std::deque<std::string> {

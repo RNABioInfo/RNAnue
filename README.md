@@ -44,8 +44,8 @@ singularity exec --bind /path/to/data:/data rnanue_latest.sif RNAnue <subcall> -
 
 ### Building from source
 
-STAR 2.7.11b is built and bundled by default as a private executable. This does
-not change the segemehl mapping pipeline or enable STAR alignment in RNAnue.
+STAR 2.7.11b is built and bundled by default as a private executable. Select it
+with `--aligner star`. `segemehl` is the default aligner.
 
 #### Bundled STAR
 
@@ -58,6 +58,9 @@ Additional prerequisites are GNU Make, `xxd`, zlib development files and GCC
 with OpenMP. Linux also needs `patchelf`; macOS needs Xcode command line tools
 and GNU GCC (for example, `brew install gcc@14 make`). Select the compiler pair
 with `CC`/`CXX` when first configuring.
+The GCC runtime notice is copied from that toolchain into the build directory.
+For nonstandard layouts, set `-DRNANUE_STAR_GCC_RUNTIME_LICENSE=/path/to/COPYING.RUNTIME`
+(a distribution copyright file containing the exception also works).
 
 - `-DRNANUE_BUILD_STAR=OFF` skips STAR and its prerequisites.
 - `-DRNANUE_STAR_STATIC=ON` requires fully static STAR on Linux, including static
@@ -148,6 +151,10 @@ The presets do not require Ninja; CMake will use the default generator for your 
 > not ABI-compatible with RNAnue's GCC/libstdc++ build. The presets use AUTO-first
 > dependency discovery and fall back to bundled Boost.Program_options on macOS
 > when the installed Boost package is not safe for the selected compiler.
+> On macOS 26 and later, native builds default to the host's major release
+> (for example, `26.0`) as the minimum deployment target to avoid older GCC
+> releases inferring `16.0`. Set `-DCMAKE_OSX_DEPLOYMENT_TARGET=<version>` to
+> choose a different minimum; all linked dependencies must support that version.
 
 #### Dependencies
 
@@ -260,24 +267,16 @@ commands and config files using `RNAnue --help` or the example config (for examp
 options are rejected; there are no compatibility aliases. `-t` now means threads;
 the old `-p` and `-s` shortcuts have been removed.
 
-| Flag | Option | Flag | Option |
-| --- | --- | --- | --- |
-| `-T` | `treatment_dir` | `-C` | `control_dir` |
-| `-t` | `threads` | `-o` | `output_dir` |
-| `-r` | `reference_genome` | `-f` | `features` |
-| `-a` | `aligner` | `-c` | `config` |
+| Flag | Option             | Flag | Option            |
+| ---- | ------------------ | ---- | ----------------- |
+| `-T` | `treatment_dir`    | `-C` | `control_dir`     |
+| `-t` | `threads`          | `-o` | `output_dir`      |
+| `-r` | `reference_genome` | `-f` | `features`        |
+| `-a` | `aligner`          | `-c` | `config`          |
 | `-q` | `min_read_quality` | `-l` | `min_read_length` |
-| `-h` | `help` | `-v` | `version` |
+| `-h` | `help`             | `-v` | `version`         |
 
-`aligner=segemehl` remains the default and only operational backend. Segemehl-specific
-identity and fragment-score controls are named `seg_alignment_accuracy` and
-`seg_min_fragment_score`; the latter is not STAR's combined chimeric score.
-The `star_*` controls prepare for future integration: `aligner=star` currently fails
-before pipeline processing or output creation, even when STAR is bundled. Explicit
-`star_*` settings also fail for segemehl alignment runs. See the commented STAR settings
-in the example config for defaults and bounds. An omitted `star_min_junction_overhang`
-inherits `min_fragment_length`; disabling multimapping makes the future effective cap
-1 without discarding the configured `star_max_multimaps` value.
+Explicit `seg_*` controls require segemehl, and `star_*` controls require STAR.
 
 ## Results
 
@@ -345,7 +344,7 @@ The reported metrics are calculated from those coverage runs:
   part of a component only when its coverage is at least `max(1.0, 0.05 * maxCoverage)`, which avoids
   counting very weak shoulders around stronger peaks.
 - `arm_balance`: `min(first_arm_integrated_coverage, second_arm_integrated_coverage) /
-  max(first_arm_integrated_coverage, second_arm_integrated_coverage)`. Values near 1 indicate
+max(first_arm_integrated_coverage, second_arm_integrated_coverage)`. Values near 1 indicate
   balanced support on both arms; values near 0 indicate mostly one-sided support.
 
 Coverage-shaped filtering is opt-in through `min_support_per_effective_bp`, `max_coverage_components`, and `min_arm_balance`. Each sample

@@ -43,7 +43,14 @@ struct ParameterValidator {
         T value;
 
         try {
-            value = variables.at(optionName).as<T>();
+            if constexpr (std::is_same_v<T, std::filesystem::path>) {
+                const auto& entry = variables.at(optionName);
+                value = entry.value().type() == typeid(std::string)
+                            ? std::filesystem::path{entry.as<std::string>()}
+                            : entry.as<T>();
+            } else {
+                value = variables.at(optionName).as<T>();
+            }
         } catch (const po::required_option& e) {
             Logger::log<IncludeSourceLocation, LogLevel::ERROR>(optionName,
                                                                 " is a required parameter.");

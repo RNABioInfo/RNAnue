@@ -45,6 +45,8 @@ def main():
         for name in ['LICENSE', 'upstream-source.tar.gz', 'build-info.txt',
                      'GCC-RUNTIME-EXCEPTION.txt', 'GPL-3.0.txt', 'zlib-notice.h']:
             assert (notices / name).is_file(), name
+        assert (notices / 'GCC-RUNTIME-EXCEPTION.txt').read_bytes() == (
+            build / 'star-licenses/GCC-RUNTIME-EXCEPTION.txt').read_bytes()
         metadata = (notices / 'build-info.txt').read_text()
         assert 'commit=b1edc1208d91a53bf40ebae8669f71d50b994851' in metadata
         # Check the actual native architecture, not just the recorded metadata.

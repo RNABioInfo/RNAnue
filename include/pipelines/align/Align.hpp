@@ -1,74 +1,31 @@
 #pragma once
 
-// Standard
-#include <cstdlib>
-#include <cstring>
 #include <filesystem>
-#include <optional>
-#include <string>
 #include <utility>
-#include <vector>
+#include <variant>
 
-// Boost
-#include <boost/program_options.hpp>
-
-// segemehl
-extern "C" {
-#include <segemehl.h>
-}  // segemehl
-
-// Class
 #include "AlignData.hpp"
 #include "AlignParameters.hpp"
-#include "AlignSample.hpp"
-#include "SamReference.hpp"
+#include "SegemehlAligner.hpp"
+#include "StarAligner.hpp"
 
 namespace pipelines::align {
-
 class Align {
    public:
-    explicit Align(AlignParameters params) : parameters(std::move(params)) {};
-
-    void process(const AlignData &data);
+    explicit Align(AlignParameters params)
+        : parameters(params), backend(SegemehlAligner{std::move(params)}) {}
+    void process(const AlignData& data);
 
    private:
     AlignParameters parameters;
-    fs::path indexPath;
-
-    [[nodiscard]] auto threadsAdaptedToEntries(const fs::path &inputPath) const -> size_t;
-
+    std::variant<SegemehlAligner, StarAligner> backend;
     void preprocessReferences();
-
-    void processSample(const AlignSampleType &sample);
-
-    void processSingleEnd(const AlignSampleSingle &sample);
-    void processMergedPairedEnd(const AlignSampleMergedPaired &sample);
-
-    [[nodiscard]] auto findIndex(const fs::path &referenceGenomePath) const
-        -> std::optional<fs::path>;
-
-    void buildIndex();
-
-    [[nodiscard]] auto referenceFromGenome() const -> dataTypes::SamReference;
-    void writeEmptyAlignments(const fs::path &alignmentsOutPath,
-                              const fs::path &emptyInputPath) const;
-
-    [[nodiscard]] auto getGeneralAlignmentArgs(size_t threadCount) const
-        -> std::vector<std::string>;
-    static void runSegemehlAlignment(std::vector<std::string> args, const fs::path &outputPath,
-                                     const std::string &errorMessage);
-    void alignReads(const std::string &query, const std::string &mate,
-                    const std::string &matched) const;
-    void alignSingleReads(const fs::path &queryFastqInPath,
-                          const fs::path &alignmentsFastqOutPath) const;
-    void alignPairedReads(const fs::path &queryForwardFastqInPath,
-                          const fs::path &queryReverseFastqInPath,
-                          const fs::path &alignmentsFastqOutPath) const;
-
-    void sortAlignmentsByQueryName(const fs::path &alignmentsPath,
-                                   const fs::path &sortedAlignmentsPath) const;
-
-    static auto convertToCStrings(std::vector<std::string> &args) -> std::vector<char *>;
+    void processSample(const AlignSampleType& sample);
+    void processSingleEnd(const AlignSampleSingle& sample);
+    void processMergedPairedEnd(const AlignSampleMergedPaired& sample);
+    void alignSingleReads(const fs::path& input, const fs::path& output);
+    void alignPairedReads(const fs::path& forward, const fs::path& reverse, const fs::path& output);
+    auto referenceFromGenome() const -> dataTypes::SamReference;
+    void sortAlignmentsByQueryName(const fs::path& input, const fs::path& output) const;
 };
-
 }  // namespace pipelines::align

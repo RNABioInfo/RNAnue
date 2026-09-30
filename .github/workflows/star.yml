@@ -72,22 +72,27 @@ jobs:
         run: |
           if [[ "$RUNNER_OS" == macOS ]]; then cpack -G productbuild; else cpack -G DEB; fi
   regressions:
-    runs-on: ubuntu-24.04
+    runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         star: ['ON', 'OFF']
+        os: [ubuntu-24.04, ubuntu-24.04-arm, macos-15-intel, macos-15]
     steps:
       - uses: actions/checkout@v4
         with:
           submodules: recursive
-      - name: RNAnue build prerequisites
+      - name: Linux RNAnue prerequisites
+        if: runner.os == 'Linux'
         run: |
           sudo apt-get update
           sudo apt-get install -y gcc-14 g++-14 cmake ninja-build make git pkg-config \
             xxd patchelf autoconf automake libtool python3 gnuplot-nox \
             libboost-program-options-dev libbz2-dev zlib1g-dev liblzma-dev \
             libhts-dev libtbb-dev libpng-dev libncurses-dev
+      - name: macOS RNAnue prerequisites
+        if: runner.os == 'macOS'
+        run: brew install gcc@14 cmake ninja make pkg-config autoconf automake libtool boost htslib tbb gnuplot
       - name: Build and test RNAnue parameters and pipelines
         run: |
           cmake --preset test -G Ninja -DCMAKE_C_COMPILER=gcc-14 -DCMAKE_CXX_COMPILER=g++-14 \

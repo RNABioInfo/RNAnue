@@ -6,6 +6,8 @@ add_executable(star_locator_probe locator.cpp)
 rnanue_add_star(star_locator_probe)
 install(TARGETS star_locator_probe RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")
 find_package(Python3 REQUIRED COMPONENTS Interpreter)
+add_test(NAME StarRuntimeLicense COMMAND "${Python3_EXECUTABLE}"
+    "${CMAKE_CURRENT_LIST_DIR}/runtime_license.py" --cmake "${CMAKE_COMMAND}")
 if(RNANUE_BUILD_STAR)
     set(static_argument)
     if(RNANUE_STAR_STATIC)

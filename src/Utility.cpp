@@ -1,5 +1,8 @@
 #include "Utility.hpp"
 
+#include "AlignmentFileInput.hpp"
+#include "AlignmentProvenance.hpp"
+
 // Standard
 #include <execinfo.h>
 #include <unistd.h>
@@ -15,6 +18,7 @@
 #include <iomanip>
 #include <iostream>
 #include <iterator>
+#include <map>
 #include <optional>
 #include <random>
 #include <sstream>
@@ -38,8 +42,8 @@
 #include "Config.hpp"
 #include "LogLevel.hpp"
 #include "Logger.hpp"
-#include "SamReference.hpp"
 #include "SamFileUtility.hpp"
+#include "SamReference.hpp"
 #include "seqan3/io/exception.hpp"
 
 namespace helper {
@@ -108,6 +112,7 @@ void moveSamOutputIntoPlace(const fs::path& tempPath, const fs::path& outputPath
 
 void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath,
                    const std::optional<dataTypes::SamReference>& reference) {
+    using namespace seqan3::literals;
     Logger::log("Merging files into: ", outputPath);
 
     std::vector<SamFileUtility::SamFileInspection> validInputs;
@@ -115,14 +120,18 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
 
     std::optional<dataTypes::SamReference> outputReference = reference;
     bool hasRecordInput = false;
+    std::optional<pipelines::align::AlignmentBackend> backend;
+    std::vector<std::string> comments;
+    std::vector<seqan3::sam_file_program_info_t> programs;
+    std::map<fs::path, std::map<std::string, std::string>> programIDs;
 
     for (const auto& inputPath : inputPaths) {
         auto inspection = SamFileUtility::inspectWithRetries(inputPath);
 
         if (!inspection.isReadable()) {
             Logger::log<SourceLocation{}, LogLevel::ERROR>(
-                "Could not merge invalid SAM/BAM input: ",
-                SamFileUtility::describe(inspection), "; output=", outputPath);
+                "Could not merge invalid SAM/BAM input: ", SamFileUtility::describe(inspection),
+                "; output=", outputPath);
         }
 
         if (inspection.hasMissingEof()) {
@@ -136,6 +145,57 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
             outputReference = inspection.reference();
         }
 
+        {
+            seqan3::sam_file_input input{inputPath};
+            const auto& header = input.header();
+            const auto current = utility::alignmentBackend(header);
+            if (backend && *backend != current) {
+                throw std::runtime_error("Cannot merge different alignment backends");
+            }
+
+            backend = current;
+            for (const auto& comment : header.comments) {
+                if (std::ranges::find(comments, comment) == comments.end()) {
+                    comments.push_back(comment);
+                }
+            }
+
+            const auto firstProgram = programs.size();
+            auto& remappedPrograms = programIDs[inputPath];
+
+            for (auto program : header.program_infos) {
+                const auto originalID = program.id;
+
+                while (std::ranges::any_of(programs,
+                                           [&](const auto& p) { return p.id == program.id; })) {
+                    program.id += ".1";
+                }
+                remappedPrograms[originalID] = program.id;
+                programs.push_back(std::move(program));
+            }
+
+            for (size_t i = firstProgram; i < programs.size(); ++i) {
+                const auto previous = remappedPrograms.find(programs[i].previous);
+                if (previous != remappedPrograms.end()) {
+                    programs[i].previous = previous->second;
+                }
+            }
+
+            if (outputReference) {
+                for (size_t i = 0; i < inspection.referenceIDs.size(); ++i) {
+                    const auto found = std::ranges::find(outputReference->referenceIDs,
+                                                         inspection.referenceIDs[i]);
+
+                    if (found == outputReference->referenceIDs.end() ||
+                        outputReference
+                                ->referenceLengths[found - outputReference->referenceIDs.begin()] !=
+                            inspection.referenceLengths[i]) {
+                        throw std::runtime_error("Incompatible reference dictionary in " +
+                                                 inputPath.string());
+                    }
+                }
+            }
+        }
         hasRecordInput = hasRecordInput || inspection.hasRecords();
         validInputs.push_back(std::move(inspection));
     }
@@ -149,7 +209,12 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
 
         Logger::log<LogLevel::INFO>("Creating header-only SAM/BAM output: ", outputPath);
         const auto tempOutputPath = temporarySamOutputPath(outputPath, "header_only");
-        SamFileUtility::writeHeaderOnlyFile(tempOutputPath, *outputReference);
+        {
+            seqan3::sam_file_output output{tempOutputPath, outputReference->referenceIDs,
+                                           outputReference->referenceLengths};
+            output.header().comments = comments;
+            output.header().program_infos = programs;
+        }
 
         const auto outputInspection = validateSamOutput(tempOutputPath);
         if (!outputInspection.isReadable() || outputInspection.hasMissingEof()) {
@@ -178,6 +243,8 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
                 seqan3::sam_file_output outputFile{tempOutputPath, outputReference->referenceIDs,
                                                    outputReference->referenceLengths};
 
+                outputFile.header().comments = comments;
+                outputFile.header().program_infos = programs;
                 for (const auto& inspection : validInputs) {
                     if (!inspection.hasRecords()) {
                         Logger::log<LogLevel::DEBUG>(
@@ -188,8 +255,39 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
 
                     Logger::log<LogLevel::DEBUG>("Merging: ", inspection.path);
 
-                    seqan3::sam_file_input inputFile{inspection.path};
-                    inputFile | outputFile;
+                    utility::AlignmentFileInput inputFile{inspection.path};
+                    std::vector<int32_t> indices;
+                    for (const auto& id : inputFile.header().ref_ids()) {
+                        const auto found = std::ranges::find(outputReference->referenceIDs, id);
+                        if (found == outputReference->referenceIDs.end()) {
+                            throw std::runtime_error("Unknown reference while merging");
+                        }
+                        indices.push_back(
+                            static_cast<int32_t>(found - outputReference->referenceIDs.begin()));
+                    }
+
+                    for (auto& record : inputFile) {
+                        if (record.reference_id()) {
+                            record.reference_id() = indices.at(*record.reference_id());
+                        }
+
+                        auto& mateReference = record.mate_reference_id();
+                        if (mateReference) {
+                            mateReference = indices.at(*mateReference);
+                        }
+
+                        if (record.tags().contains("PG"_tag)) {
+                            auto& program = record.tags().get<"PG"_tag>();
+                            const auto& remappedPrograms = programIDs.at(inspection.path);
+                            const auto found = remappedPrograms.find(program);
+                            if (found == remappedPrograms.end()) {
+                                throw std::runtime_error("Unknown PG tag while merging");
+                            }
+
+                            program = found->second;
+                        }
+                        outputFile.push_back(record);
+                    }
                 }
             }
 
@@ -216,9 +314,8 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
                     tempOutputPath, "; reason=", exception.what());
                 continue;
             }
-            Logger::log<SourceLocation{}, LogLevel::ERROR>("Could not write SAM/BAM file: ",
-                                                           outputPath, "; reason: ",
-                                                           exception.what());
+            Logger::log<SourceLocation{}, LogLevel::ERROR>(
+                "Could not write SAM/BAM file: ", outputPath, "; reason: ", exception.what());
         } catch (...) {
             std::error_code ignoredError;
             fs::remove(tempOutputPath, ignoredError);
@@ -233,9 +330,9 @@ void mergeSamFiles(const std::vector<fs::path>& inputPaths, const fs::path& outp
         }
     }
 
-    Logger::log<SourceLocation{}, LogLevel::ERROR>(
-        "Merged SAM/BAM output is invalid after retry: ",
-        SamFileUtility::describe(outputInspection), "; final_output=", outputPath);
+    Logger::log<SourceLocation{}, LogLevel::ERROR>("Merged SAM/BAM output is invalid after retry: ",
+                                                   SamFileUtility::describe(outputInspection),
+                                                   "; final_output=", outputPath);
 }
 
 void mergeFastqFiles(const std::vector<fs::path>& inputPaths, const fs::path& outputPath) {

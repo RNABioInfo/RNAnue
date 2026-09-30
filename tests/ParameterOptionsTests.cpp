@@ -108,11 +108,11 @@ TEST_F(ParameterOptionsTests, StarDefaultsDoNotBlockSegemehl) {
     EXPECT_EQ(p.aligner, AlignmentBackend::Segemehl);
     EXPECT_EQ(p.starMaxMultimaps, 10);
     EXPECT_FALSE(p.starMinJunctionOverhang);
-    EXPECT_EQ(p.effectiveStarMinJunctionOverhang(), 10);
+    EXPECT_EQ(p.effectiveStarMinJunctionOverhang(), 15);
     EXPECT_EQ(p.starMaxSegmentGap, 3);
     EXPECT_EQ(p.starMinNonchimericScoreDrop, 10);
     EXPECT_EQ(p.starMaxChimericScoreDrop, 30);
-    EXPECT_EQ(p.starMaxIntronLength, 0);
+    EXPECT_EQ(p.starMaxIntronLength, 10);
     EXPECT_NO_THROW(p.validateBackendAvailability());
 }
 
@@ -128,7 +128,7 @@ TEST_F(ParameterOptionsTests, StarCanBeExtractedIndependentlyOfExecution) {
     EXPECT_EQ(p.starMinNonchimericScoreDrop, 8);
     EXPECT_EQ(p.starMaxChimericScoreDrop, 26);
     EXPECT_EQ(p.starMaxIntronLength, 1000);
-    EXPECT_THROW(p.validateBackendAvailability(), std::invalid_argument);
+    EXPECT_NO_THROW(p.validateBackendAvailability());
 }
 
 TEST_F(ParameterOptionsTests, OverhangOverrideAndMultimapCapRemainConfigured) {

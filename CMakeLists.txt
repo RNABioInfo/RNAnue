@@ -5,6 +5,8 @@ rnanue_select_compatible_compilers()
 
 project(RNAnue VERSION 1.0.0 LANGUAGES C CXX)
 
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/macos_deployment_target.cmake)
+
 set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -191,6 +193,12 @@ include_directories(${CMAKE_CURRENT_SOURCE_DIR}/include
                     ${BAM_SORT_DIR})
 
 add_executable (RNAnue  ${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/ExternalProcess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/utility/AlignmentProvenance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/StarAlignmentDecoder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/StarAligner.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/src/pipelines/align/SegemehlAligner.cpp
+
 
                         ${CMAKE_CURRENT_SOURCE_DIR}/src/Runner.cpp
 

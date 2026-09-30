@@ -62,6 +62,11 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/StarAlignmentTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/ExternalProcess.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/AlignmentProvenance.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/align/StarAlignmentDecoder.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/align/StarAligner.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ParameterOptionsTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCorrectnessTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineAnalysisRegressionTests.cpp
@@ -134,6 +139,7 @@ target_include_directories(tests PRIVATE
 target_link_libraries(tests PRIVATE
     matplot
     GTest::gtest_main
+    RNAnue_StarSupport
     seqan3::seqan3
     segemehl
     TBB::tbb
@@ -157,6 +163,10 @@ set_tests_properties(PipelineCliRegressions PROPERTIES TIMEOUT 180)
 add_test(NAME ParameterCliRegressions COMMAND ${Python3_EXECUTABLE}
     ${CMAKE_CURRENT_SOURCE_DIR}/ParameterCliRegressionTests.py $<TARGET_FILE:RNAnue>)
 set_tests_properties(ParameterCliRegressions PROPERTIES TIMEOUT 180)
+
+add_test(NAME StarPipelineRegressions COMMAND ${Python3_EXECUTABLE}
+    ${CMAKE_CURRENT_SOURCE_DIR}/StarPipelineRegressionTests.py $<TARGET_FILE:RNAnue> ${RNANUE_BUILD_STAR})
+set_tests_properties(StarPipelineRegressions PROPERTIES TIMEOUT 240)
 
 add_executable(star_locator_probe star/locator.cpp)
 target_link_libraries(star_locator_probe PRIVATE RNAnue_StarSupport)

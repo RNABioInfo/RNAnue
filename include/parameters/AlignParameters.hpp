@@ -13,13 +13,12 @@
 
 // Internal
 #include "AlignOptions.hpp"
+#include "AlignmentBackend.hpp"
 #include "GeneralParameters.hpp"
 
 namespace po = boost::program_options;
 
 namespace pipelines::align {
-
-enum class AlignmentBackend { Segemehl, Star };
 
 struct AlignParameters : public GeneralParameters {
     std::filesystem::path referenceGenome;
@@ -48,45 +47,59 @@ struct AlignParameters : public GeneralParameters {
           minimumSpliceCoverage(AlignOptions::minSpliceCoverage.extractValue(params)),
           aligner(validateAligner(AlignOptions::aligner.extractValue(params))),
           starMaxMultimaps(AlignOptions::starMaxMultimaps.extractValue(params)),
-          starMinJunctionOverhang(validateJunctionOverhang(
-              AlignOptions::starMinJunctionOverhang.extractValue(params))),
+          starMinJunctionOverhang(
+              validateJunctionOverhang(AlignOptions::starMinJunctionOverhang.extractValue(params))),
           starMaxSegmentGap(AlignOptions::starMaxSegmentGap.extractValue(params)),
-          starMinNonchimericScoreDrop(AlignOptions::starMinNonchimericScoreDrop.extractValue(params)),
+          starMinNonchimericScoreDrop(
+              AlignOptions::starMinNonchimericScoreDrop.extractValue(params)),
           starMaxChimericScoreDrop(AlignOptions::starMaxChimericScoreDrop.extractValue(params)),
           starMaxIntronLength(AlignOptions::starMaxIntronLength.extractValue(params)) {
         if (aligner == AlignmentBackend::Star &&
             (minimumFragmentLength == 0 || minimumFragmentLength > INT_MAX)) {
-            throw std::invalid_argument("min_fragment_length must be between 1 and INT_MAX for STAR");
+            throw std::invalid_argument(
+                "min_fragment_length must be between 1 and INT_MAX for STAR");
         }
-        std::apply([&](const auto&... option) {
-            (recordExplicitStarOption(params, option.getLongName()), ...);
-        }, AlignOptions::starOptions);
+        std::apply(
+            [&](const auto&... option) {
+                (recordExplicitStarOption(params, option.getLongName()), ...);
+            },
+            AlignOptions::starOptions);
+        for (const auto& name :
+             {AlignOptions::accuracy.getLongName(), AlignOptions::minFragmentScore.getLongName()}) {
+            const auto entry = params.find(name);
+            if (entry != params.end() && !entry->second.defaulted()) explicitSegemehlOption = name;
+        }
     }
 
-    // Keep configured values intact; these are the intended future STAR values.
     [[nodiscard]] auto effectiveStarMaxMultimaps() const -> int {
         return multimapAlignments ? starMaxMultimaps : 1;
     }
 
     [[nodiscard]] auto effectiveStarMinJunctionOverhang() const -> size_t {
         return starMinJunctionOverhang ? static_cast<size_t>(*starMinJunctionOverhang)
-                                      : minimumFragmentLength;
+                                       : minimumFragmentLength;
     }
 
     // Called only by alignment-bearing pipelines, before any pipeline side effects.
     // Extraction itself remains usable without an operational STAR backend.
     void validateBackendAvailability() const {
         if (aligner == AlignmentBackend::Star) {
-            throw std::invalid_argument("STAR alignment backend is not implemented yet; use --aligner segemehl");
+            if (explicitSegemehlOption) {
+                throw std::invalid_argument("--" + *explicitSegemehlOption +
+                                            " requires aligner=segemehl");
+            }
+            return;
         }
         if (explicitStarOption) {
-            throw std::invalid_argument("--" + *explicitStarOption +
-                                        " requires aligner=star; STAR controls cannot be used with aligner=segemehl");
+            throw std::invalid_argument(
+                "--" + *explicitStarOption +
+                " requires aligner=star; STAR controls cannot be used with aligner=segemehl");
         }
     }
 
    private:
     std::optional<std::string> explicitStarOption;
+    std::optional<std::string> explicitSegemehlOption;
 
     static auto validateAligner(const std::string& value) -> AlignmentBackend {
         if (value == "segemehl") return AlignmentBackend::Segemehl;

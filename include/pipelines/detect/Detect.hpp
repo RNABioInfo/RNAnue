@@ -19,6 +19,7 @@
 #include <seqan3/io/sam_file/input.hpp>
 
 // Internal
+#include "AlignmentBackend.hpp"
 #include "AsyncSplitReadGroupBuffer.hpp"
 #include "ComplementarityEvaluationStep.hpp"
 #include "DetectData.hpp"
@@ -27,9 +28,9 @@
 #include "HybridizationEvaluationStep.hpp"
 #include "ReadGroupEvaluationParameters.hpp"
 #include "ReadGroupPostScoringStep.hpp"
+#include "ReadGroupPreprocessorMetrics.hpp"
 #include "SamRecord.hpp"
 #include "SamReference.hpp"
-#include "SegemehlReadGroupPreprocessor.hpp"
 #include "TempOutputDirs.hpp"
 
 using namespace dataTypes;
@@ -60,7 +61,7 @@ class Detect {
     using TranscriptCounts = std::unordered_map<std::string, double>;
 
     struct Result {
-        SegemehlReadGroupPreprocessorMetrics preprocessMetrics;
+        ReadGroupPreprocessorMetrics preprocessMetrics;
         ComplementarityEvaluationStepMetrics complementarityMetrics;
         HybridizationEvaluationStepMetrics hybridizationMetrics;
         ReadGroupPostScoringStepMetrics postprocessMetrics;
@@ -88,9 +89,11 @@ class Detect {
                 hybridizationMetrics.getPassedCount(), hybridizationMetrics.getFailedCount(),
                 postprocessMetrics.getReadGroupCount(),
                 postprocessMetrics.getContributionScoreSum());
+
             std::ostringstream reasons;
-            for (const auto& [reason, count] : preprocessMetrics.failures)
+            for (const auto &[reason, count] : preprocessMetrics.failures) {
                 reasons << "\n\tExcluded hit groups: " << reason << " = " << count;
+            }
             return summary + reasons.str();
         }
 
@@ -116,7 +119,8 @@ class Detect {
     template <ReadGroupEvaluationParameters::Type ParamT>
     auto processRecordChunk(const TempOutputDirs &outTmpDirs,
                             AsyncGroupBufferType &recordInputBuffer, SamReference &reference,
-                            const ParamT &evaluationParams) const -> Result;
+                            const ParamT &evaluationParams, align::AlignmentBackend backend) const
+        -> Result;
 
     static void mergeTmpFiles(const TempOutputDirs &tmpDirs, const DetectOutput &output,
                               const SamReference &reference);
