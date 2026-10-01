@@ -16,6 +16,7 @@
 #include "PreprocessParameters.hpp"
 #include "PreprocessSample.hpp"
 #include "RecordTrimmer.hpp"
+#include "TrimConfig.hpp"
 #include "seqan3/contrib/std/zip_view.hpp"
 #include "seqan3/io/sequence_file/input.hpp"
 
@@ -25,7 +26,20 @@ using namespace dataTypes;
 
 class PairedEndPreprocessor {
    public:
-    PairedEndPreprocessor(PreprocessParameters parameters) : parameters(std::move(parameters)) {}
+    PairedEndPreprocessor(PreprocessParameters parameters)
+        : parameters(std::move(parameters)),
+          adapters5fwd(Adapter::loadAdapters(this->parameters.adapter5Forward,
+                                             this->parameters.maxMissMatchFractionTrimming,
+                                             TrimConfig::Mode::FIVE_PRIME)),
+          adapters3fwd(Adapter::loadAdapters(this->parameters.adapter3Forward,
+                                             this->parameters.maxMissMatchFractionTrimming,
+                                             TrimConfig::Mode::THREE_PRIME)),
+          adapters5rev(Adapter::loadAdapters(this->parameters.adapter5Reverse,
+                                             this->parameters.maxMissMatchFractionTrimming,
+                                             TrimConfig::Mode::FIVE_PRIME)),
+          adapters3rev(Adapter::loadAdapters(this->parameters.adapter3Reverse,
+                                             this->parameters.maxMissMatchFractionTrimming,
+                                             TrimConfig::Mode::THREE_PRIME)) {}
 
     void process(const PreprocessSamplePaired& sample) const;
 
@@ -78,8 +92,8 @@ class PairedEndPreprocessor {
 
     void trimAdapters(PairedFastqRecords& records) const;
 
-    auto processInput(const PreprocessSamplePaired& sample,
-                      const std::set<size_t>* retained) const -> ChunkResult;
+    auto processInput(const PreprocessSamplePaired& sample, const std::set<size_t>* retained) const
+        -> ChunkResult;
 
     template <typename T>
     auto processChunk(T& recordIterator, const PrepocessSampleOutputPaired& tmpOutDir) const

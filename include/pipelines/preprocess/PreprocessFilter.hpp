@@ -17,6 +17,10 @@ struct Criteria {
 };
 
 static inline auto passes(const Criteria &criteria, const FastqRecord &record) -> bool {
+    if (record.sequence().empty()) {
+        return false;
+    }
+
     const auto meanQual = SequenceQualityAlgorithms::meanQualityScore(record.base_qualities());
 
     const bool passesQual = meanQual >= double(criteria.minQualityThreshold);

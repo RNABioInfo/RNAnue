@@ -62,6 +62,7 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
 endif()
 
 add_executable(tests
+    ${CMAKE_CURRENT_SOURCE_DIR}/AdapterTrimmingTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StarAlignmentTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/ExternalProcess.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/AlignmentProvenance.cpp

@@ -25,12 +25,14 @@ class PipelineCliRegressions(unittest.TestCase):
     def tearDown(self):
         self.temp.cleanup()
 
-    def run_case(self, forward, reverse=None, deduplicate=False, threads=2, extra=()):
+    def run_case(self, forward, reverse=None, deduplicate=False, threads=2, extra=(), output_name='out',
+                 min_read_length=1):
         (self.input/('sample_R1.fastq' if reverse is not None else 'sample.fastq')).write_text(forward)
         if reverse is not None:
             (self.input/'sample_R2.fastq').write_text(reverse)
-        command = [str(BINARY),'preprocess','-T',str(self.input.parent),'-o',str(self.root/'out'),
-                   '-f',str(self.annotation),'--threads',str(threads),'--min_read_quality','0','--min_read_length','1',
+        command = [str(BINARY),'preprocess','-T',str(self.input.parent),'-o',str(self.root/output_name),
+                   '-f',str(self.annotation),'--threads',str(threads),'--min_read_quality','0',
+                   '--min_read_length',str(min_read_length),
                    '--no_trim_poly_g']
         if not deduplicate:
             command.append('--no_deduplicate')
@@ -38,6 +40,14 @@ class PipelineCliRegressions(unittest.TestCase):
 
     def output_count(self):
         return sum(len(gzip.open(p,'rt').read().splitlines())//4 for p in (self.root/'out').rglob('*.fastq.gz'))
+
+    def output_records(self, output_name='out'):
+        records = []
+        for path in (self.root/output_name).rglob('*.fastq.gz'):
+            with gzip.open(path, 'rt') as handle:
+                lines = handle.read().splitlines()
+            records.extend((lines[i], lines[i+1], lines[i+3]) for i in range(0, len(lines), 4))
+        return sorted(records)
 
     def test_unequal_mates_fail_clearly(self):
         result = self.run_case(fastq('one/1')+fastq('two/1'),fastq('one/2'))
@@ -69,6 +79,48 @@ class PipelineCliRegressions(unittest.TestCase):
         result = self.run_case(fastq('same')*3+fastq('same','AAAA'*10),deduplicate=True,threads=4)
         self.assertEqual(result.returncode,0,result.stdout+result.stderr)
         self.assertEqual(self.output_count(),2)
+
+    def test_repeated_adapters_single_end_and_dimers(self):
+        adapter5 = 'TGTAGATCTCGGTGGTCGCCGTATCATT'
+        adapter3 = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA'
+        insert = 'TCCCTGGTGGTCTAGTGGTTAGGATTCGGCGCTCTCACCG'
+        sequence = adapter5*2 + insert + adapter3*2
+        qualities = ''.join(chr(40+i % 30) for i in range(len(sequence)))
+        result = self.run_case(fastq('keep', sequence, qualities) +
+                               fastq('dimer', adapter5*2+adapter3*2),
+                               min_read_length=0, extra=['--adapter_5p_forward', adapter5,
+                                                        '--adapter_3p_forward', adapter3])
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(self.output_records(),
+                         [('@keep', insert, qualities[len(adapter5)*2:len(adapter5)*2+len(insert)])])
+
+    def test_repeated_adapters_on_both_paired_mates(self):
+        adapter = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA'
+        forward_insert, reverse_insert = 'C'*40, 'AC'*20
+        result = self.run_case(fastq('keep/1', adapter*2+forward_insert) + fastq('dimer/1', adapter*2),
+                               fastq('keep/2', reverse_insert+adapter*2) + fastq('dimer/2', adapter*2),
+                               min_read_length=0, extra=['--adapter_5p_forward', adapter,
+                                                        '--adapter_3p_reverse', adapter])
+        self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+        self.assertEqual(sorted(r[1] for r in self.output_records()), [reverse_insert, forward_insert])
+        self.assertTrue(all(len(r[1]) == len(r[2]) for r in self.output_records()))
+
+    def test_simulation_adapter_probes_and_thread_equivalence(self):
+        source = ('TCCCTGGTGGTCTAGTGGTTAGGATTCGGCGCTCTCACCGCCGCGGCCCGGGTTCGATT'
+                  'CCCGGTCAGGGAAAGA')
+        adapter = 'AGATCGGAAGAGCACACGTCTGAACTCCAGTCA'
+        input_text, expected = '', []
+        for length in (40, 60, 73, 75, 84, 90, 100, 120):
+            insert = (source*2)[:length]
+            sequence = (insert+adapter*5)[:150]
+            input_text += fastq(f'insert_{length}', sequence)
+            expected.append((f'@insert_{length}', insert, 'I'*length))
+        for threads in (2, 4):
+            name = f'threads_{threads}'
+            result = self.run_case(input_text, threads=threads, output_name=name,
+                                   extra=['--adapter_3p_forward', adapter])
+            self.assertEqual(result.returncode, 0, result.stdout+result.stderr)
+            self.assertEqual(self.output_records(name), sorted(expected))
 
 
 if __name__ == '__main__':

@@ -261,6 +261,9 @@ Boolean parameters accept explicit values on the command line, for example
 such as `--no_deduplicate`, `--no_preprocess`, `--no_trim_poly_g`, `--no_mask_multicopy_genes`,
 `--no_multimapping`, and `--keep_alt_splicing`.
 
+Adapter trimming removes everything through the **rightmost valid 5′ adapter** or
+from the **leftmost valid 3′ adapter** onward, including repeated adapter copies.
+
 Long options and configuration keys now use the same `snake_case` names. Update existing
 commands and config files using `RNAnue --help` or the example config (for example,
 `trtms` → `treatment_dir`, `dbref` → `reference_genome`). Old names and abbreviated long
