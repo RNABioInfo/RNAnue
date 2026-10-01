@@ -6,6 +6,7 @@
 #include <climits>
 #include <cstddef>
 #include <cstdint>
+#include <filesystem>
 #include <optional>
 #include <string>
 #include <string_view>
@@ -28,6 +29,10 @@ struct AlignOptions {
         {.shortName = 'a', .longName = "aligner"},
         "alignment backend [segemehl, star]; STAR uses the bundled executable"sv,
         "segemehl"sv};
+
+    static constexpr ParameterOption<std::filesystem::path, true> alignmentIndex{
+        {.shortName = 'i', .longName = "alignment_index"},
+        "precomputed segemehl index file or STAR index directory; requires masking disabled; reference compatibility is the user's responsibility"sv};
 
     static constexpr DefaultedParameterOption<bool, true> allowMultimap{
         {.shortName = std::nullopt,
@@ -91,7 +96,7 @@ struct AlignOptions {
                         starMinNonchimericScoreDrop, starMaxChimericScoreDrop, starMaxIntronLength);
 
     static constexpr auto allOptions = std::tuple_cat(
-        std::make_tuple(refGenome, aligner, allowMultimap, accuracy, minFragmentScore,
+        std::make_tuple(refGenome, aligner, alignmentIndex, allowMultimap, accuracy, minFragmentScore,
                         minAlignLength, minFragmentLength, minSpliceCoverage),
         starOptions);
 };

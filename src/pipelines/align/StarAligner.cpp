@@ -169,7 +169,7 @@ struct IndexLock {
 
 void StarAligner::buildIndex() {
     const auto genomePath = fs::absolute(parameters.referenceGenome);
-    const auto hash = fingerprint(genomePath);
+    const auto hash = parameters.alignmentIndex ? std::string{} : fingerprint(genomePath);
 
     reference = dataTypes::SamReference{{}, {}};
     size_t genomeSize = 0;
@@ -188,8 +188,15 @@ void StarAligner::buildIndex() {
         reference.referenceLengths.push_back(record.sequence().size());
         genomeSize += record.sequence().size();
     }
+
     if (genomeSize == 0U) {
         throw std::runtime_error("STAR reference genome is empty");
+    }
+
+    if (parameters.alignmentIndex) {
+        indexPath = fs::absolute(*parameters.alignmentIndex);
+        Logger::log("Using supplied STAR index: ", indexPath);
+        return;
     }
 
     const int bases = std::clamp(
@@ -207,7 +214,10 @@ void StarAligner::buildIndex() {
                                              fs::absolute(parameters.outputDir) / name};
 
     const auto valid = [&](const fs::path& candidate) {
-        if (readText(candidate / "rnanue-index.meta") != metadata) return false;
+        if (readText(candidate / "rnanue-index.meta") != metadata) {
+            return false;
+        }
+
         for (const auto* const file :
              {"Genome", "SA", "SAindex", "genomeParameters.txt", "chrName.txt", "chrLength.txt",
               "chrStart.txt", "chrNameLength.txt"}) {

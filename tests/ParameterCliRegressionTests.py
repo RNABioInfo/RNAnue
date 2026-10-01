@@ -1,5 +1,6 @@
 """Public option spelling contract and side-effect-free backend rejection."""
 
+import os
 import re
 import subprocess
 import sys
@@ -143,6 +144,7 @@ class ParameterCliRegressions(unittest.TestCase):
                 "version",
                 "subcall",
                 "aligner",
+                "alignment_index",
             }
         )
         self.assertEqual(set(names), expected)
@@ -162,6 +164,7 @@ class ParameterCliRegressions(unittest.TestCase):
                 "r": "reference_genome",
                 "f": "features",
                 "a": "aligner",
+                "i": "alignment_index",
                 "c": "config",
                 "q": "min_read_quality",
                 "l": "min_read_length",
@@ -308,6 +311,47 @@ class ParameterCliRegressions(unittest.TestCase):
             ),
             "requires aligner=star",
         )
+
+    def test_alignment_index_conflicts_with_masking_before_pipeline_io(self):
+        for backend in ["segemehl", "star"]:
+            for subcall in ["align", "complete"]:
+                for config in [False, True]:
+                    with self.subTest(backend=backend, subcall=subcall, config=config):
+                        args = self.required(subcall) + ["-a", backend]
+                        if config:
+                            self.config.write_text("alignment_index = supplied index\nmask_multicopy_genes = true\n")
+                            args += ["-c", str(self.config)]
+                        else:
+                            args += ["-i", "supplied index"]  # Masking defaults to true.
+                        self.assert_failed(self.run_cli(args), "use --no_mask_multicopy_genes")
+
+    def test_alignment_index_path_errors_before_pipeline_io(self):
+        file = self.root / "index file"
+        file.write_text("unparsed index")
+        for backend in ["segemehl", "star"]:
+            wrong = self.root if backend == "segemehl" else file
+            for subcall in ["align", "complete"]:
+                for path in [self.root / "missing", wrong, ""]:
+                    with self.subTest(backend=backend, subcall=subcall, path=path):
+                        self.assert_failed(self.run_cli(self.required(subcall) +
+                            ["-a", backend, "--alignment_index=" + str(path),
+                             "--no_mask_multicopy_genes"]), "--alignment_index")
+
+    @unittest.skipIf(os.geteuid() == 0, "root bypasses access restrictions")
+    def test_alignment_index_must_be_accessible(self):
+        for backend in ["segemehl", "star"]:
+            path = self.root / backend
+            if backend == "star":
+                path.mkdir()
+            else:
+                path.write_text("unparsed index")
+            path.chmod(0)
+            try:
+                self.assert_failed(self.run_cli(self.required() +
+                    ["-a", backend, "-i", str(path), "--no_mask_multicopy_genes"]),
+                    "must be an accessible")
+            finally:
+                path.chmod(0o755 if backend == "star" else 0o644)
 
 
 if __name__ == "__main__":

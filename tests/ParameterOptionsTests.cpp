@@ -84,7 +84,7 @@ TEST_F(ParameterOptionsTests, CanonicalNamesAndShortcutsAreUnique) {
     }, all);
     const std::map<char, std::string> expected{
         {'T', "treatment_dir"}, {'C', "control_dir"}, {'t', "threads"}, {'o', "output_dir"},
-        {'r', "reference_genome"}, {'f', "features"}, {'a', "aligner"}, {'c', "config"},
+        {'r', "reference_genome"}, {'f', "features"}, {'a', "aligner"}, {'i', "alignment_index"}, {'c', "config"},
         {'q', "min_read_quality"}, {'l', "min_read_length"}, {'h', "help"}, {'v', "version"}};
     EXPECT_EQ(shorts, expected);
 }
@@ -289,6 +289,8 @@ TEST_F(ParameterOptionsTests, EveryCanonicalOptionExtractsEquallyFromCliAndConfi
     check(PreprocessOptions::wtrim, "3", 3);
     check(PreprocessOptions::minOvl, "9", 9);
     check(PreprocessOptions::mmerge, "0.3", 0.3);
+    check(AlignOptions::alignmentIndex, "index with spaces",
+          std::optional<std::filesystem::path>{"index with spaces"});
     check(AlignOptions::refGenome, "reference with spaces.fa", "reference with spaces.fa");
     check(AlignOptions::aligner, "star", "star");
     check(AlignOptions::allowMultimap, "false", false);
@@ -327,3 +329,37 @@ TEST_F(ParameterOptionsTests, EveryCanonicalOptionExtractsEquallyFromCliAndConfi
     check(PostprocessOptions::minSegmentFractionOverlap, "0.4", 0.4f);
 }
 }  // namespace
+
+TEST_F(ParameterOptionsTests, AlignmentIndexExtractionAndPrecedence) {
+    EXPECT_FALSE(AlignParameters{parse()}.alignmentIndex);
+    for (const auto& flag : {"--alignment_index", "-i"}) {
+        const AlignParameters p{parse({flag, "index with spaces", "--no_mask_multicopy_genes"},
+                                      "alignment_index = config index\n")};
+        EXPECT_EQ(p.alignmentIndex, std::filesystem::path{"index with spaces"});
+    }
+    const AlignParameters p{parse({}, "alignment_index = config index\nmask_multicopy_genes = false\n")};
+    EXPECT_EQ(p.alignmentIndex, std::filesystem::path{"config index"});
+    EXPECT_THROW(AlignParameters{parse({"-i", "index"})}, std::invalid_argument);
+    EXPECT_THROW(AlignParameters{parse({"-i", "", "--no_mask_multicopy_genes"})}, std::invalid_argument);
+}
+
+TEST_F(ParameterOptionsTests, AlignmentIndexValidationOnlyChecksPathAccessibilityAndType) {
+    const auto file = root / "arbitrary index name";
+    std::ofstream{file} << "Not a parsed index";
+    const auto directory = root / "external STAR directory";
+    std::filesystem::create_directory(directory);
+    for (const auto& backend : {"segemehl", "star"}) {
+        const auto valid = std::string{backend} == "star" ? directory : file;
+        const auto wrong = std::string{backend} == "star" ? file : directory;
+        const auto params = [&](const auto& path) {
+            return AlignParameters{parse({"--aligner", backend, "-i", path.string(),
+                                           "--no_mask_multicopy_genes"})};
+        };
+        EXPECT_NO_THROW(params(valid).validateBackendAvailability());
+        EXPECT_THROW(params(wrong).validateBackendAvailability(), std::invalid_argument);
+        EXPECT_THROW(params(root / "missing").validateBackendAvailability(), std::invalid_argument);
+        const auto link = root / (std::string{backend} + " symlink");
+        std::filesystem::create_symlink(valid, link);
+        EXPECT_NO_THROW(params(link).validateBackendAvailability());
+    }
+}

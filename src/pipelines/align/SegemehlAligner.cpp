@@ -51,6 +51,11 @@ auto SegemehlAligner::findIndex(const fs::path &referenceGenomePath) const
 }
 
 void SegemehlAligner::buildIndex() {
+    if (parameters.alignmentIndex) {
+        indexPath = fs::absolute(*parameters.alignmentIndex);
+        Logger::log("Using supplied segemehl index: ", indexPath);
+        return;
+    }
     fs::path referencePath = parameters.referenceGenome;
     size_t const threads = parameters.threadCount;
 

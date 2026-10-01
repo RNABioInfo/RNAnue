@@ -1,6 +1,7 @@
 """Real bundled STAR, cache lifecycle and unchanged downstream output contracts."""
 
 import gzip
+import hashlib
 import os
 import random
 import shutil
@@ -501,6 +502,103 @@ class StarPipelineRegressions(unittest.TestCase):
             self.assertEqual((index / "SA").stat().st_mtime_ns, before)
         finally:
             directory.chmod(0o755)
+        self.assert_clean()
+
+    def exercise_supplied_index(self, backend):
+        ordinary = fastq("ordinary", self.a[1200:1280])
+        self.prepared(ordinary)
+        (self.input / "sample.fastq").write_text(ordinary)
+        args = ["-a", backend]
+        self.run_cli("align", args)
+        expected = bam(self.aligned())[1]
+        expected_files = sorted(self.aligned().parent.iterdir())
+        automatic = self.index if backend == "star" else self.reference.with_suffix(".idx")
+        store = self.root / "precomputed elsewhere"
+        store.mkdir()
+        supplied = store / "arbitrary index name"
+        automatic.rename(supplied)
+        if backend == "star":
+            (supplied / "rnanue-index.meta").unlink()
+            automatic.mkdir()
+            poison = automatic / "do not replace"
+        else:
+            poison = automatic
+        poison.write_text("Explicit index must take precedence")
+        link = self.root / "index symlink"
+        link.symlink_to(supplied, target_is_directory=backend == "star")
+
+        def snapshot():
+            paths = [supplied] + (sorted(supplied.rglob("*")) if supplied.is_dir() else [])
+            return [(str(p.relative_to(store)), p.stat().st_mtime_ns, p.stat().st_mode,
+                     hashlib.sha256(p.read_bytes()).hexdigest() if p.is_file() else None)
+                    for p in paths]
+
+        def readonly(enabled):
+            paths = [supplied] + (list(supplied.rglob("*")) if supplied.is_dir() else [])
+            for path in paths:
+                path.chmod((0o555 if enabled else 0o755) if path.is_dir()
+                           else (0o444 if enabled else 0o644))
+
+        for form in ["absolute", "relative symlink", "config"]:
+            if backend == "star" and form != "absolute":
+                (supplied / "rnanue-index.meta").write_text("unrelated RNAnue metadata")
+                # A different reference fingerprint must not invalidate an explicit index.
+                first = "C" if self.a[0] != "C" else "A"
+                self.reference.write_text(f">chr1\n{first}{self.a[1:]}\n>chr2\n{self.b}\n")
+            readonly(True)
+            before = snapshot()
+            try:
+                if form == "absolute":
+                    options = ["--alignment_index", str(supplied)]
+                elif form == "relative symlink":
+                    options = ["-i", os.path.relpath(link)]
+                else:
+                    config = self.root / "index configuration.cfg"
+                    config.write_text(f"alignment_index = {link}\nmask_multicopy_genes = false\n")
+                    options = ["-c", str(config)]
+                text = self.run_cli("align", args + options)
+                self.assertIn("Using supplied", text)
+                self.assertNotIn("Building", text)
+                self.assertEqual(bam(self.aligned())[1], expected)
+                self.assertEqual(snapshot(), before)
+                self.assertEqual(poison.read_text(), "Explicit index must take precedence")
+                self.assertEqual(list(store.iterdir()), [supplied])
+                self.assertEqual(sorted(self.aligned().parent.iterdir()), expected_files)
+                self.assert_clean()
+            finally:
+                readonly(False)
+
+        readonly(True)
+        before = snapshot()
+        try:
+            self.run_cli("complete", args + ["-i", str(supplied)])
+            self.assertEqual(bam(self.aligned())[1], expected)
+            self.assertEqual(snapshot(), before)
+            self.assertEqual(poison.read_text(), "Explicit index must take precedence")
+            self.assert_clean()
+        finally:
+            readonly(False)
+
+    def test_supplied_segemehl_index(self):
+        self.exercise_supplied_index("segemehl")
+
+    @unittest.skipUnless(ENABLED, "STAR-disabled build")
+    def test_supplied_star_index(self):
+        self.exercise_supplied_index("star")
+
+    @unittest.skipUnless(ENABLED, "STAR-disabled build")
+    def test_malformed_supplied_star_index_does_not_fall_back(self):
+        self.prepared(fastq("ordinary", self.a[1200:1280]))
+        self.run_cli("align", ["-a", "star"])
+        existing = (self.index / "SA").stat().st_mtime_ns
+        previous = self.aligned().read_bytes()
+        malformed = self.root / "empty provided index"
+        malformed.mkdir()
+        text = self.run_cli("align", ["-a", "star", "-i", str(malformed)], success=False)
+        self.assertIn("STAR failed", text)
+        self.assertEqual(list(malformed.iterdir()), [])
+        self.assertEqual((self.index / "SA").stat().st_mtime_ns, existing)
+        self.assertEqual(self.aligned().read_bytes(), previous)
         self.assert_clean()
 
 

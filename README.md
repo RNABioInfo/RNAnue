@@ -275,8 +275,14 @@ the old `-p` and `-s` shortcuts have been removed.
 | `-a` | `aligner`          | `-c` | `config`          |
 | `-q` | `min_read_quality` | `-l` | `min_read_length` |
 | `-h` | `help`             | `-v` | `version`         |
+| `-i` | `alignment_index`  |      |                   |
 
 Explicit `seg_*` controls require segemehl, and `star_*` controls require STAR.
+
+Use `--alignment_index PATH` (`-i`) to supply an existing segemehl index file or
+STAR index directory. This requires `--no_mask_multicopy_genes` (or
+`mask_multicopy_genes = false` in configuration); `reference_genome` is still required.
+Omit the option to retain automatic index discovery and generation.
 
 ## Results
 

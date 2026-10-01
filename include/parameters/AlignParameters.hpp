@@ -1,6 +1,8 @@
 #pragma once
 
 // Standard
+#include <unistd.h>
+
 #include <cstddef>
 #include <filesystem>
 #include <optional>
@@ -22,6 +24,7 @@ namespace pipelines::align {
 
 struct AlignParameters : public GeneralParameters {
     std::filesystem::path referenceGenome;
+    std::optional<std::filesystem::path> alignmentIndex;
     bool multimapAlignments;
     size_t minLengthThreshold;
     size_t accuracy;
@@ -39,6 +42,7 @@ struct AlignParameters : public GeneralParameters {
     AlignParameters(const po::variables_map& params)
         : GeneralParameters(params),
           referenceGenome(AlignOptions::refGenome.extractValue(params)),
+          alignmentIndex(AlignOptions::alignmentIndex.extractValue(params)),
           multimapAlignments(AlignOptions::allowMultimap.extractValue(params)),
           minLengthThreshold(AlignOptions::minAlignLength.extractValue(params)),
           accuracy(AlignOptions::accuracy.extractValue(params)),
@@ -54,6 +58,16 @@ struct AlignParameters : public GeneralParameters {
               AlignOptions::starMinNonchimericScoreDrop.extractValue(params)),
           starMaxChimericScoreDrop(AlignOptions::starMaxChimericScoreDrop.extractValue(params)),
           starMaxIntronLength(AlignOptions::starMaxIntronLength.extractValue(params)) {
+        if (alignmentIndex && maskMultiCopyGenes) {
+            throw std::invalid_argument(
+                "--alignment_index is incompatible with mask_multicopy_genes=true; "
+                "use --no_mask_multicopy_genes or mask_multicopy_genes=false");
+        }
+
+        if (alignmentIndex && alignmentIndex->empty()) {
+            throw std::invalid_argument("--alignment_index must not be empty");
+        }
+
         if (aligner == AlignmentBackend::Star &&
             (minimumFragmentLength == 0 || minimumFragmentLength > INT_MAX)) {
             throw std::invalid_argument(
@@ -83,6 +97,20 @@ struct AlignParameters : public GeneralParameters {
     // Called only by alignment-bearing pipelines, before any pipeline side effects.
     // Extraction itself remains usable without an operational STAR backend.
     void validateBackendAvailability() const {
+        if (alignmentIndex) {
+            std::error_code error;
+            const bool isStar = aligner == AlignmentBackend::Star;
+            const bool correctType = isStar
+                                         ? std::filesystem::is_directory(*alignmentIndex, error)
+                                         : std::filesystem::is_regular_file(*alignmentIndex, error);
+            if (!correctType || error ||
+                access(alignmentIndex->c_str(), isStar ? R_OK | X_OK : R_OK) != 0) {
+                throw std::invalid_argument(
+                    "--alignment_index must be an accessible " +
+                    std::string(isStar ? "STAR index directory: " : "segemehl index file: ") +
+                    alignmentIndex->string());
+            }
+        }
         if (aligner == AlignmentBackend::Star) {
             if (explicitSegemehlOption) {
                 throw std::invalid_argument("--" + *explicitSegemehlOption +
