@@ -72,6 +72,16 @@ if(RNANUE_BOOST_STEP STREQUAL "bootstrap")
         WORKING_DIRECTORY "${RNANUE_BOOST_SOURCE_DIR}"
     )
 elseif(RNANUE_BOOST_STEP STREQUAL "build")
+    # CXX and --cxx select the compiler for the b2 engine only. Boost.Build's
+    # gcc toolset otherwise discovers "g++" from PATH (AppleClang on macOS),
+    # producing a libc++ archive that cannot link with RNAnue's libstdc++.
+    set(RNANUE_BOOST_USER_CONFIG "${RNANUE_BOOST_SOURCE_DIR}/rnanue-user-config.jam")
+    string(REPLACE "\\" "\\\\" RNANUE_BOOST_JAM_COMPILER "${RNANUE_BOOST_CXX_COMPILER}")
+    string(REPLACE "\"" "\\\"" RNANUE_BOOST_JAM_COMPILER "${RNANUE_BOOST_JAM_COMPILER}")
+    file(WRITE "${RNANUE_BOOST_USER_CONFIG}"
+        "using ${RNANUE_BOOST_TOOLSET} : : \"${RNANUE_BOOST_JAM_COMPILER}\" ;\n"
+    )
+
     set(RNANUE_B2_COMMAND
         "${CMAKE_COMMAND}"
         -E
@@ -79,7 +89,8 @@ elseif(RNANUE_BOOST_STEP STREQUAL "build")
         "CXX=${RNANUE_BOOST_CXX_COMPILER}"
         ./b2
         install
-        "--cxx=${RNANUE_BOOST_CXX_COMPILER}"
+        "--user-config=${RNANUE_BOOST_USER_CONFIG}"
+        --ignore-site-config
         "toolset=${RNANUE_BOOST_TOOLSET}"
         link=static
         variant=release

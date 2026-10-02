@@ -146,6 +146,12 @@ if(NOT RNANUE_BOOST_LIBRARIES)
         BUILD_BYPRODUCTS ${RNANUE_BOOST_LIBRARIES}
         INSTALL_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}
     )
+    ExternalProject_Add_StepDependencies(Boost configure
+        "${CMAKE_CURRENT_LIST_DIR}/boost_build_step.cmake"
+    )
+    ExternalProject_Add_StepDependencies(Boost build
+        "${CMAKE_CURRENT_LIST_DIR}/boost_build_step.cmake"
+    )
 
     set(RNANUE_BOOST_INCLUDE_DIRS ${RNANUE_BUNDLED_BOOST_INCLUDE_DIR})
     set(RNANUE_BOOST_EXTERNAL_TARGET Boost)

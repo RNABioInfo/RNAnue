@@ -14,5 +14,12 @@ file(GLOB sources "libs/*.c")
 find_package(HTSlib)
 add_library(segemehl STATIC ${sources})
 
+# The vendored readers store getc() results and EOF in plain char. Linux ARM
+# defaults to unsigned char, so EOF becomes 255 and those readers never stop.
+# Preserve the signed-char semantics expected throughout this legacy library.
+if(CMAKE_C_COMPILER_ID MATCHES "GNU|Clang")
+    target_compile_options(segemehl PRIVATE -fsigned-char)
+endif()
+
 target_link_libraries(segemehl PRIVATE ${HTSlib_LIBRARIES})
 target_include_directories(segemehl PUBLIC include ${HTSlib_INCLUDE_DIRS})

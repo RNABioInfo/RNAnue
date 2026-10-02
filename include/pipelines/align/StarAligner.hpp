@@ -3,6 +3,7 @@
 #include <filesystem>
 #include <optional>
 #include <vector>
+
 #include "AlignParameters.hpp"
 #include "SamReference.hpp"
 
