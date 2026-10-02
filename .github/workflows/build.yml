@@ -1,0 +1,87 @@
+name: build
+
+on: [push, pull_request, workflow_dispatch]
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: RNAnue (${{ matrix.platform }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 90
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: macos-15
+            platform: macos-arm64
+            package-generators: 'TGZ;productbuild'
+          - os: ubuntu-24.04
+            platform: linux-x86_64
+            package-generators: 'TGZ;DEB'
+          - os: ubuntu-24.04-arm
+            platform: linux-arm64
+            package-generators: 'TGZ;DEB'
+
+    defaults:
+      run:
+        shell: bash
+
+    steps:
+      - name: Checkout source and dependencies
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Install Linux prerequisites
+        if: runner.os == 'Linux'
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y gcc-14 g++-14 cmake ninja-build make git pkg-config \
+            xxd patchelf autoconf automake libtool python3 gnuplot-nox \
+            libboost-program-options-dev libbz2-dev zlib1g-dev liblzma-dev \
+            libhts-dev libtbb-dev libpng-dev libncurses-dev
+          echo 'CC=gcc-14' >> "$GITHUB_ENV"
+          echo 'CXX=g++-14' >> "$GITHUB_ENV"
+
+      - name: Install macOS prerequisites
+        if: runner.os == 'macOS'
+        run: |
+          brew install gcc@14 cmake ninja make pkg-config autoconf automake libtool \
+            htslib tbb gnuplot libpng xz
+          echo "CC=$(brew --prefix gcc@14)/bin/gcc-14" >> "$GITHUB_ENV"
+          echo "CXX=$(brew --prefix gcc@14)/bin/g++-14" >> "$GITHUB_ENV"
+
+      - name: Configure RNAnue with tests and bundled STAR
+        run: |
+          cmake --preset release -G Ninja \
+            -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
+            -DRNANUE_BUILD_TESTS=ON -DRNANUE_BUILD_STAR=ON
+
+      - name: Build RNAnue and dependencies
+        run: cmake --build --preset release --parallel 2
+
+      - name: Run RNAnue tests
+        run: ctest --test-dir build/release --output-on-failure --no-tests=error
+
+      - name: Verify installation
+        run: |
+          cmake --install build/release --prefix "$RUNNER_TEMP/rnanue-install"
+          "$RUNNER_TEMP/rnanue-install/bin/RNAnue" --help
+          "$RUNNER_TEMP/rnanue-install/libexec/rnanue/STAR" --version
+
+      - name: Package RNAnue
+        run: |
+          cpack --config build/release/CPackConfig.cmake \
+            -G '${{ matrix.package-generators }}' -B build/packages
+
+      - name: Upload RNAnue packages
+        uses: actions/upload-artifact@v4
+        with:
+          name: RNAnue-${{ matrix.platform }}
+          if-no-files-found: error
+          path: |
+            build/packages/*.tar.gz
+            build/packages/*.deb
+            build/packages/*.pkg
