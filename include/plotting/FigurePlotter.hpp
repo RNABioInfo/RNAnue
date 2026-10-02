@@ -21,6 +21,7 @@
 
 // Internal
 #include "Logger.hpp"
+#include "HistogramBins.hpp"
 #include "NumericConcept.hpp"
 #include "PlottingDefaults.hpp"
 #include "Subsampling.hpp"
@@ -134,7 +135,7 @@ class FigurePlotter {
             if (values.empty()) {
                 continue;
             }
-            auto plot = axes->hist(values, matplot::histogram::binning_algorithm::fd);
+            auto plot = axes->hist(values, histogramBinEdges(matplot::to_vector_1d(values)));
             plot->face_alpha(face_alpha);
             datapointLabels.push_back(data.datapointLabel);
             matplot::hold(matplot::on);

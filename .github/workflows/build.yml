@@ -52,15 +52,27 @@ jobs:
             htslib tbb gnuplot libpng xz
           echo "CC=$(brew --prefix gcc@14)/bin/gcc-14" >> "$GITHUB_ENV"
           echo "CXX=$(brew --prefix gcc@14)/bin/g++-14" >> "$GITHUB_ENV"
+          echo "SDKROOT=$(xcrun --sdk macosx --show-sdk-path)" >> "$GITHUB_ENV"
 
       - name: Configure RNAnue with tests and bundled STAR
         run: |
           cmake --preset release -G Ninja \
             -DCMAKE_C_COMPILER="$CC" -DCMAKE_CXX_COMPILER="$CXX" \
-            -DRNANUE_BUILD_TESTS=ON -DRNANUE_BUILD_STAR=ON
+            -DRNANUE_BUILD_TESTS=ON -DRNANUE_BUILD_STAR=ON -DRNANUE_STAR_STATIC=OFF
 
       - name: Build RNAnue and dependencies
         run: cmake --build --preset release --parallel 2
+
+      - name: Upload build diagnostics on failure
+        if: failure()
+        uses: actions/upload-artifact@v6
+        with:
+          name: RNAnue-build-logs-${{ matrix.platform }}
+          path: |
+            build/release/submodules/STAR-build/build*.log
+            build/release/CMakeFiles/CMakeConfigureLog.yaml
+            build/release/CMakeCache.txt
+            build/release/star_build.cmake
 
       - name: Run RNAnue tests
         run: ctest --test-dir build/release --output-on-failure --no-tests=error

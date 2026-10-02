@@ -80,6 +80,7 @@ add_executable(
     ${CMAKE_CURRENT_SOURCE_DIR}/ParameterOptionsTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCorrectnessTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/PipelineAnalysisRegressionTests.cpp
+    ${CMAKE_CURRENT_SOURCE_DIR}/HistogramBinsTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/ArmCoverageTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureAnnotatorValidationTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/FeatureParserTests.cpp
