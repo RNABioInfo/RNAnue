@@ -470,7 +470,14 @@ set(CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
 set(CPACK_PACKAGE_CONTACT
     "Christopher Adelmann; RNA Biology & Bioinformatics; Institute of Biomedical Genetics; University of Stuttgart"
 )
-set(CPACK_RESOURCE_FILE_LICENSE ${CMAKE_CURRENT_SOURCE_DIR}/LICENSE)
+# productbuild requires a supported resource extension; the repository's
+# extensionless LICENSE is plain text. Keep its contents unchanged for CPack.
+configure_file(
+    "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE"
+    "${CMAKE_CURRENT_BINARY_DIR}/LICENSE.txt"
+    COPYONLY
+)
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_BINARY_DIR}/LICENSE.txt")
 
 if(APPLE)
   message(STATUS "Building for MacOS")
