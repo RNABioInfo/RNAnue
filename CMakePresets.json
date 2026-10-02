@@ -26,7 +26,7 @@
     {
       "name": "release",
       "displayName": "Release",
-      "description": "Optimized release build with AUTO-first dependency discovery.",
+      "description": "Optimized release build with dependency discovery.",
       "binaryDir": "${sourceDir}/build/release",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "Release",
@@ -43,7 +43,7 @@
     {
       "name": "test",
       "displayName": "Test",
-      "description": "RelWithDebInfo build with tests enabled and AUTO-first dependency discovery.",
+      "description": "RelWithDebInfo build with tests enabled and dependency discovery.",
       "binaryDir": "${sourceDir}/build/test",
       "cacheVariables": {
         "CMAKE_BUILD_TYPE": "RelWithDebInfo",

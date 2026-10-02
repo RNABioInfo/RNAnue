@@ -30,7 +30,7 @@ jobs:
 
     steps:
       - name: Checkout source and dependencies
-        uses: actions/checkout@v4
+        uses: actions/checkout@v6
         with:
           submodules: recursive
 
@@ -77,7 +77,7 @@ jobs:
             -G '${{ matrix.package-generators }}' -B build/packages
 
       - name: Upload RNAnue packages
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: RNAnue-${{ matrix.platform }}
           if-no-files-found: error
