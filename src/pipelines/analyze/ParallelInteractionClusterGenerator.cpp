@@ -67,7 +67,11 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
             {
                 std::lock_guard<std::mutex> lock(mergeMutex);
                 clusteringResults.merge(std::move(result));
-                logClusteringStatus();
+
+                constexpr size_t LOG_INTERVAL = 100;
+                if (nextGroupIndex % LOG_INTERVAL == 0) {
+                    logClusteringStatus();
+                }
             }
         }
     };
@@ -80,8 +84,12 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     try {
         for (size_t i = 0; i < workerCount; ++i) {
             consumerThreads.emplace_back(std::async(std::launch::async, [&] {
-                try { clusterGroupConsumer(); }
-                catch (...) { cancelled = true; throw; }
+                try {
+                    clusterGroupConsumer();
+                } catch (...) {
+                    cancelled = true;
+                    throw;
+                }
             }));
         }
     } catch (...) {
@@ -90,8 +98,9 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
     }
 
     for (auto& consumerThread : consumerThreads) {
-        try { consumerThread.get(); }
-        catch (...) {
+        try {
+            consumerThread.get();
+        } catch (...) {
             if (!error) error = std::current_exception();
             cancelled = true;
         }
