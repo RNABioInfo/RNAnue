@@ -64,9 +64,7 @@ struct GeneralOptions {
             "orientation of the reads in relation to RNA sequences (strand-specific sequencing). Non strand-specific setting (both) disables max_hybridization_energy filtering. [same, opposite, both]"sv};
     static constexpr DefaultedParameterOption<bool, false> maskMultiCopyGenes{
         {.shortName = std::nullopt,
-         .longName = "mask_multicopy_genes",
-         .inverseLongName = "no_mask_multicopy_genes",
-         .inverseDescription = "disable multi-copy gene masking"},
+         .longName = "mask_multicopy_genes"},
         "mask multi-copy genes, only keeping one transcript per gene"sv};
 
     static constexpr ArithmeticParameterOption<double, 0.99, {.lowerBound = 0.0, .upperBound = 1.0}>

@@ -61,7 +61,7 @@ struct AlignParameters : public GeneralParameters {
         if (alignmentIndex && maskMultiCopyGenes) {
             throw std::invalid_argument(
                 "--alignment_index is incompatible with mask_multicopy_genes=true; "
-                "use --no_mask_multicopy_genes or mask_multicopy_genes=false");
+                "use --mask_multicopy_genes=false or mask_multicopy_genes = false in configuration");
         }
 
         if (alignmentIndex && alignmentIndex->empty()) {

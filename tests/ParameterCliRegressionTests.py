@@ -62,13 +62,22 @@ MIGRATION = {
     "maxcovcomp": "max_coverage_components",
     "minarmbal": "min_arm_balance",
     "intfrac": "min_interaction_overlap",
-    "no-preprocess": "no_preprocess",
-    "no-deduplicate": "no_deduplicate",
-    "no-trimpolyg": "no_trim_poly_g",
-    "no-maskmulticopy": "no_mask_multicopy_genes",
-    "no-multimap": "no_multimapping",
-    "keep-altsplice": "keep_alt_splicing",
+    "no-preprocess": "preprocess",
+    "no-deduplicate": "deduplicate",
+    "no-trimpolyg": "trim_poly_g",
+    "no-maskmulticopy": "mask_multicopy_genes",
+    "no-multimap": "allow_multimapping",
+    "keep-altsplice": "remove_alt_splicing",
 }
+RETIRED_INVERSE_OPTIONS = [
+    "no_preprocess", "no_deduplicate", "no_trim_poly_g",
+    "no_mask_multicopy_genes", "no_multimapping", "keep_alt_splicing",
+]
+BOOLEAN_OPTIONS = [
+    "preprocess", "deduplicate", "trim_poly_g", "mask_multicopy_genes",
+    "allow_multimapping", "exclude_soft_clipping", "filter_splicing",
+    "remove_alt_splicing", "include_wobble",
+]
 STAR_CONTROLS = {
     "star_max_multimaps": 10,
     "star_min_junction_overhang": 15,
@@ -176,7 +185,7 @@ class ParameterCliRegressions(unittest.TestCase):
         self.assertIn("STAR", result.stdout)
 
     def test_retired_long_names_and_abbreviations_fail(self):
-        for name in list(MIGRATION) + [
+        for name in list(MIGRATION) + RETIRED_INVERSE_OPTIONS + [
             "alignment_accuracy",
             "min_fragment_score",
             "treat",
@@ -188,7 +197,7 @@ class ParameterCliRegressions(unittest.TestCase):
                 )
 
     def test_retired_config_keys_fail(self):
-        for name in list(MIGRATION) + [
+        for name in list(MIGRATION) + RETIRED_INVERSE_OPTIONS + [
             "alignment_accuracy",
             "min_fragment_score",
             "treat",
@@ -211,6 +220,22 @@ class ParameterCliRegressions(unittest.TestCase):
         for flag in ["-h", "-v"]:
             result = self.run_cli([flag])
             self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+
+    def test_pipeline_booleans_require_explicit_valid_values(self):
+        for name in BOOLEAN_OPTIONS:
+            with self.subTest(option=name, value="missing"):
+                self.assert_failed(
+                    self.run_cli(self.required() + ["--" + name]), "required argument"
+                )
+            for config in [False, True]:
+                with self.subTest(option=name, value="invalid", config=config):
+                    args = self.required()
+                    if config:
+                        self.config.write_text(name + " = invalid\n")
+                        args += ["-c", str(self.config)]
+                    else:
+                        args += ["--" + name + "=invalid"]
+                    self.assert_failed(self.run_cli(args), name)
 
     def test_seg_controls_with_star_rejected_before_pipeline_io_cli_and_config(self):
         for subcall in ["align", "complete"]:
@@ -322,8 +347,8 @@ class ParameterCliRegressions(unittest.TestCase):
                             self.config.write_text("alignment_index = supplied index\nmask_multicopy_genes = true\n")
                             args += ["-c", str(self.config)]
                         else:
-                            args += ["-i", "supplied index"]  # Masking defaults to true.
-                        self.assert_failed(self.run_cli(args), "use --no_mask_multicopy_genes")
+                            args += ["-i", "supplied index", "--mask_multicopy_genes=true"]
+                        self.assert_failed(self.run_cli(args), "use --mask_multicopy_genes=false")
 
     def test_alignment_index_path_errors_before_pipeline_io(self):
         file = self.root / "index file"
@@ -335,7 +360,24 @@ class ParameterCliRegressions(unittest.TestCase):
                     with self.subTest(backend=backend, subcall=subcall, path=path):
                         self.assert_failed(self.run_cli(self.required(subcall) +
                             ["-a", backend, "--alignment_index=" + str(path),
-                             "--no_mask_multicopy_genes"]), "--alignment_index")
+                             "--mask_multicopy_genes=false"]), "--alignment_index")
+
+    def test_masking_default_and_cli_precedence_with_alignment_index(self):
+        for backend in ["segemehl", "star"]:
+            for subcall in ["align", "complete"]:
+                args = self.required(subcall) + ["-a", backend, "-i", "missing index"]
+                with self.subTest(backend=backend, subcall=subcall, masking="default"):
+                    self.assert_failed(self.run_cli(args), "must be an accessible")
+                for enabled in [False, True]:
+                    with self.subTest(backend=backend, subcall=subcall, masking=enabled):
+                        setting = "true" if enabled else "false"
+                        opposite = "false" if enabled else "true"
+                        self.config.write_text(f"mask_multicopy_genes = {opposite}\n")
+                        self.assert_failed(
+                            self.run_cli(args + ["-c", str(self.config),
+                                                "--mask_multicopy_genes", setting]),
+                            "use --mask_multicopy_genes=false" if enabled else "must be an accessible",
+                        )
 
     @unittest.skipIf(os.geteuid() == 0, "root bypasses access restrictions")
     def test_alignment_index_must_be_accessible(self):
@@ -348,7 +390,7 @@ class ParameterCliRegressions(unittest.TestCase):
             path.chmod(0)
             try:
                 self.assert_failed(self.run_cli(self.required() +
-                    ["-a", backend, "-i", str(path), "--no_mask_multicopy_genes"]),
+                    ["-a", backend, "-i", str(path), "--mask_multicopy_genes=false"]),
                     "must be an accessible")
             finally:
                 path.chmod(0o755 if backend == "star" else 0o644)

@@ -36,9 +36,7 @@ struct AlignOptions {
 
     static constexpr DefaultedParameterOption<bool, true> allowMultimap{
         {.shortName = std::nullopt,
-         .longName = "allow_multimapping",
-         .inverseLongName = "no_multimapping",
-         .inverseDescription = "disable multimapping alignments"},
+         .longName = "allow_multimapping"},
         "consider multimapping alignments."sv};
 
     static constexpr ArithmeticParameterOption<size_t, 90, {.lowerBound = 0, .upperBound = 100}>

@@ -18,23 +18,17 @@ struct PreprocessOptions {
     // Boolean parameters (using DefaultedParameterOption)
     static constexpr DefaultedParameterOption<bool, true> enablePreprocess{
         {.shortName = std::nullopt,
-         .longName = "preprocess",
-         .inverseLongName = "no_preprocess",
-         .inverseDescription = "skip preprocessing and use existing preprocess output"},
+         .longName = "preprocess"},
         "whether to include preprocessing of the raw reads in the workflow of RNAnue"sv};
 
     static constexpr DefaultedParameterOption<bool, true> enableDeduplicate{
         {.shortName = std::nullopt,
-         .longName = "deduplicate",
-         .inverseLongName = "no_deduplicate",
-         .inverseDescription = "disable duplicate read removal"},
+         .longName = "deduplicate"},
         "whether to remove duplicate reads based on the sequence"sv};
 
     static constexpr DefaultedParameterOption<bool, true> trimPolyG{
         {.shortName = std::nullopt,
-         .longName = "trim_poly_g",
-         .inverseLongName = "no_trim_poly_g",
-         .inverseDescription = "disable high quality polyG tail trimming"},
+         .longName = "trim_poly_g"},
         "whether to trim high quality polyG tails from the reads. Applicable for Illumina NextSeq reads"sv};
 
     static constexpr ArithmeticParameterOption<

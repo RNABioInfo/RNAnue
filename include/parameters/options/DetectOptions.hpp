@@ -50,9 +50,7 @@ struct DetectOptions {
 
     static constexpr DefaultedParameterOption<bool, true> removeAltSplicing{
         {.shortName = std::nullopt,
-         .longName = "remove_alt_splicing",
-         .inverseLongName = "keep_alt_splicing",
-         .inverseDescription = "keep alternative splicing events"},
+         .longName = "remove_alt_splicing"},
         "remove alternative splicing events"sv};
 
     static constexpr DefaultedParameterOption<int, 5> splicingTolerance{

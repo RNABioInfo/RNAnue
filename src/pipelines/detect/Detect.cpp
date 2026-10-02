@@ -90,7 +90,7 @@ void Detect::process(const DetectData& data) {
                 "Splice filtering is enabled but the loaded annotation has no usable exon "
                 "relationships. "
                 "Include exons and their parent hierarchy with --feature_types; "
-                "--remove_alt_splicing alone does not enable filtering.");
+                "--remove_alt_splicing=true alone does not enable filtering.");
     }
 
     const auto evaluationParameters =

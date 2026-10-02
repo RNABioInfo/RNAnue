@@ -49,17 +49,12 @@ class DefaultedParameterOption : public ParameterOption<T> {
      * @return std::string The description including the default value.
      */
     [[nodiscard]] auto getDescription() const -> std::string override {
-        // TODO: Implement default description  string_from<T, defaultValue>::value
-
-        return std::string{this->description} + " (default: " + std::to_string(defaultValue) + ")";
-    }
-
-    [[nodiscard]] auto getInverseDescription() const -> std::string {
-        if (!this->names.inverseDescription.empty()) {
-            return std::string{this->names.inverseDescription};
+        if constexpr (std::is_same_v<T, bool>) {
+            return std::string{this->description} + " (default: " +
+                   (defaultValue ? "true" : "false") + ")";
+        } else {
+            return std::string{this->description} + " (default: " + std::to_string(defaultValue) + ")";
         }
-
-        return "set " + this->getLongName() + " to false";
     }
 
     /**
@@ -71,16 +66,10 @@ class DefaultedParameterOption : public ParameterOption<T> {
         if constexpr (std::is_same_v<T, bool>) {
             optionsDescription.add_options()(this->names.optionsName().data(),
                                              po::value<bool>()
-                                                 ->default_value(defaultValue)
-                                                 ->implicit_value(true),
+                                                 ->default_value(defaultValue,
+                                                                 defaultValue ? "true" : "false")
+                                                 ->value_name("true|false"),
                                              getDescription().data());
-
-            if (this->names.hasInverseName()) {
-                optionsDescription.add_options()(
-                    this->names.inverseLongName.data(),
-                    po::bool_switch()->default_value(false),
-                    getInverseDescription().data());
-            }
         } else if constexpr (std::is_floating_point_v<T>) {
             optionsDescription.add_options()(
                 this->names.optionsName().data(),
@@ -91,19 +80,5 @@ class DefaultedParameterOption : public ParameterOption<T> {
                                              po::value<T>()->default_value(defaultValue),
                                              getDescription().data());
         }
-    }
-
-    [[nodiscard]] auto extractValue(const po::variables_map& variables) const -> T override {
-        auto value = ParameterOption<T>::extractValue(variables);
-
-        if constexpr (std::is_same_v<T, bool>) {
-            if (this->names.hasInverseName() &&
-                variables.contains(std::string{this->names.inverseLongName}) &&
-                variables.at(std::string{this->names.inverseLongName}).template as<bool>()) {
-                return false;
-            }
-        }
-
-        return value;
     }
 };

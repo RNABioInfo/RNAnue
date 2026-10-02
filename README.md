@@ -256,10 +256,6 @@ RNAnue <sub-call-here> --config <params.cfg-here>
 ```
 
 In any case, the specifying parameters over the command lines has precedence over the config file.
-Boolean parameters accept explicit values on the command line, for example
-`--deduplicate=false`. Options that are enabled by default also provide clearer inverse flags,
-such as `--no_deduplicate`, `--no_preprocess`, `--no_trim_poly_g`, `--no_mask_multicopy_genes`,
-`--no_multimapping`, and `--keep_alt_splicing`.
 
 Adapter trimming removes everything through the **rightmost valid 5′ adapter** or
 from the **leftmost valid 3′ adapter** onward, including repeated adapter copies.
@@ -283,8 +279,9 @@ the old `-p` and `-s` shortcuts have been removed.
 Explicit `seg_*` controls require segemehl, and `star_*` controls require STAR.
 
 Use `--alignment_index PATH` (`-i`) to supply an existing segemehl index file or
-STAR index directory. This requires `--no_mask_multicopy_genes` (or
-`mask_multicopy_genes = false` in configuration); `reference_genome` is still required.
+STAR index directory. Masking must be disabled (the default): use
+`--mask_multicopy_genes=false` or `mask_multicopy_genes = false` in configuration
+if needed. `reference_genome` is still required.
 Omit the option to retain automatic index discovery and generation.
 
 ## Results

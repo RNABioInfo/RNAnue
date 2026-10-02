@@ -134,7 +134,7 @@ TEST_F(ParameterOptionsTests, StarCanBeExtractedIndependentlyOfExecution) {
 TEST_F(ParameterOptionsTests, OverhangOverrideAndMultimapCapRemainConfigured) {
     AlignParameters p{parse({"--aligner=star", "--min_fragment_length=23",
                             "--star_min_junction_overhang=9", "--star_max_multimaps=17",
-                            "--no_multimapping"})};
+                            "--allow_multimapping=false"})};
     EXPECT_EQ(p.starMinJunctionOverhang, 9);
     EXPECT_EQ(p.effectiveStarMinJunctionOverhang(), 9);
     EXPECT_EQ(p.starMaxMultimaps, 17);
@@ -198,40 +198,37 @@ TEST_F(ParameterOptionsTests, CliOverridesConfigAndConfigOverridesDefaults) {
     EXPECT_EQ(p.effectiveStarMaxMultimaps(), 1);
 }
 
-TEST_F(ParameterOptionsTests, ExplicitBooleansAndInverseFlagsKeepTheirSemantics) {
-    const auto inverseOptions = std::make_tuple(
-        std::pair{PreprocessOptions::enablePreprocess, "no_preprocess"},
-        std::pair{PreprocessOptions::enableDeduplicate, "no_deduplicate"},
-        std::pair{PreprocessOptions::trimPolyG, "no_trim_poly_g"},
-        std::pair{GeneralOptions::maskMultiCopyGenes, "no_mask_multicopy_genes"},
-        std::pair{AlignOptions::allowMultimap, "no_multimapping"},
-        std::pair{DetectOptions::removeAltSplicing, "keep_alt_splicing"});
+TEST_F(ParameterOptionsTests, ExplicitBooleansPreserveDefaultsAndPrecedence) {
+    const auto booleanOptions = std::make_tuple(
+        std::pair{PreprocessOptions::enablePreprocess, true},
+        std::pair{PreprocessOptions::enableDeduplicate, true},
+        std::pair{PreprocessOptions::trimPolyG, true},
+        std::pair{GeneralOptions::maskMultiCopyGenes, false},
+        std::pair{AlignOptions::allowMultimap, true},
+        std::pair{DetectOptions::removeAltSplicing, true},
+        std::pair{DetectOptions::excludeSoftClipping, false},
+        std::pair{DetectOptions::filterSplicing, false},
+        std::pair{DetectOptions::includeWobble, false});
     std::apply([&](const auto&... pair) {
         const auto check = [&](const auto& value) {
             const auto& option = value.first;
             const auto name = option.getLongName();
-            const std::string inverse = value.second;
             SCOPED_TRACE(name);
-            EXPECT_TRUE(option.extractValue(parse()));
-            EXPECT_TRUE(option.extractValue(parse({"--" + name})));
-            EXPECT_FALSE(option.extractValue(parse({"--" + name + "=false"})));
-            EXPECT_TRUE(option.extractValue(parse({"--" + name + "=true"}, name + " = false\n")));
-            EXPECT_FALSE(option.extractValue(parse({}, name + " = false\n")));
-            EXPECT_FALSE(option.extractValue(parse({"--" + inverse}, name + " = true\n")));
-            EXPECT_FALSE(option.extractValue(parse({}, inverse + " = true\n")));
-            // Inverse true wins, including when it came from config (existing behavior).
-            EXPECT_FALSE(option.extractValue(parse({"--" + name + "=true"}, inverse + " = true\n")));
-            EXPECT_TRUE(option.extractValue(parse({}, inverse + " = false\n")));
+            EXPECT_EQ(option.extractValue(parse()), value.second);
+            for (const bool enabled : {false, true}) {
+                const std::string setting = enabled ? "true" : "false";
+                const std::string opposite = enabled ? "false" : "true";
+                EXPECT_EQ(option.extractValue(parse({"--" + name + "=" + setting})), enabled);
+                EXPECT_EQ(option.extractValue(parse({"--" + name, setting})), enabled);
+                EXPECT_EQ(option.extractValue(parse({}, name + " = " + setting + "\n")), enabled);
+                EXPECT_EQ(option.extractValue(parse({"--" + name + "=" + setting},
+                    name + " = " + opposite + "\n")), enabled);
+            }
+            EXPECT_THROW(parse({"--" + name}), po::error);
+            EXPECT_THROW(parse({"--" + name + "=invalid"}), po::error);
         };
         (check(pair), ...);
-    }, inverseOptions);
-    for (const auto& option : {DetectOptions::excludeSoftClipping, DetectOptions::filterSplicing,
-                               DetectOptions::includeWobble}) {
-        EXPECT_FALSE(option.extractValue(parse()));
-        EXPECT_TRUE(option.extractValue(parse({"--" + option.getLongName() + "=true"})));
-        EXPECT_FALSE(option.extractValue(parse({"--" + option.getLongName() + "=false"},
-                                              option.getLongName() + " = true\n")));
-    }
+    }, booleanOptions);
 }
 
 TEST_F(ParameterOptionsTests, ShortcutsExtractTheSameValues) {
@@ -333,14 +330,15 @@ TEST_F(ParameterOptionsTests, EveryCanonicalOptionExtractsEquallyFromCliAndConfi
 TEST_F(ParameterOptionsTests, AlignmentIndexExtractionAndPrecedence) {
     EXPECT_FALSE(AlignParameters{parse()}.alignmentIndex);
     for (const auto& flag : {"--alignment_index", "-i"}) {
-        const AlignParameters p{parse({flag, "index with spaces", "--no_mask_multicopy_genes"},
+        const AlignParameters p{parse({flag, "index with spaces", "--mask_multicopy_genes=false"},
                                       "alignment_index = config index\n")};
         EXPECT_EQ(p.alignmentIndex, std::filesystem::path{"index with spaces"});
     }
     const AlignParameters p{parse({}, "alignment_index = config index\nmask_multicopy_genes = false\n")};
     EXPECT_EQ(p.alignmentIndex, std::filesystem::path{"config index"});
-    EXPECT_THROW(AlignParameters{parse({"-i", "index"})}, std::invalid_argument);
-    EXPECT_THROW(AlignParameters{parse({"-i", "", "--no_mask_multicopy_genes"})}, std::invalid_argument);
+    EXPECT_NO_THROW(AlignParameters{parse({"-i", "index"})});
+    EXPECT_THROW(AlignParameters{parse({"-i", "index", "--mask_multicopy_genes=true"})}, std::invalid_argument);
+    EXPECT_THROW(AlignParameters{parse({"-i", "", "--mask_multicopy_genes=false"})}, std::invalid_argument);
 }
 
 TEST_F(ParameterOptionsTests, AlignmentIndexValidationOnlyChecksPathAccessibilityAndType) {
@@ -353,7 +351,7 @@ TEST_F(ParameterOptionsTests, AlignmentIndexValidationOnlyChecksPathAccessibilit
         const auto wrong = std::string{backend} == "star" ? file : directory;
         const auto params = [&](const auto& path) {
             return AlignParameters{parse({"--aligner", backend, "-i", path.string(),
-                                           "--no_mask_multicopy_genes"})};
+                                           "--mask_multicopy_genes=false"})};
         };
         EXPECT_NO_THROW(params(valid).validateBackendAvailability());
         EXPECT_THROW(params(wrong).validateBackendAvailability(), std::invalid_argument);

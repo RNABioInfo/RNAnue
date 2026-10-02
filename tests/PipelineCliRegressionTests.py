@@ -33,9 +33,9 @@ class PipelineCliRegressions(unittest.TestCase):
         command = [str(BINARY),'preprocess','-T',str(self.input.parent),'-o',str(self.root/output_name),
                    '-f',str(self.annotation),'--threads',str(threads),'--min_read_quality','0',
                    '--min_read_length',str(min_read_length),
-                   '--no_trim_poly_g']
+                   '--trim_poly_g=false']
         if not deduplicate:
-            command.append('--no_deduplicate')
+            command.append('--deduplicate=false')
         return subprocess.run(command+list(extra),capture_output=True,text=True,timeout=30)
 
     def output_count(self):
