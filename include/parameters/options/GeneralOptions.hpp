@@ -25,7 +25,8 @@ struct GeneralOptions {
         "\"complete\" to execute all pipeline steps.\n\nMinimum call: RNAnue complete -T "
         "<treatment-dir> "
         "-o "
-        "<output-dir> -f <feature-gff-file> --reference_genome <reference-genome-file>\nOr run RNAnue with a "
+        "<output-dir> -f <feature-gff-file> --reference_genome <reference-genome-file>\nOr run "
+        "RNAnue with a "
         "config "
         "file: RNAnue complete -c <config-file>\n\nGeneral Options"sv;
 
@@ -61,7 +62,7 @@ struct GeneralOptions {
         featureOrientation{
             {.shortName = std::nullopt, .longName = "orientation"},
             "orientation of the reads in relation to RNA sequences (strand-specific sequencing). Non strand-specific setting (both) disables max_hybridization_energy filtering. [same, opposite, both]"sv};
-    static constexpr DefaultedParameterOption<bool, true> maskMultiCopyGenes{
+    static constexpr DefaultedParameterOption<bool, false> maskMultiCopyGenes{
         {.shortName = std::nullopt,
          .longName = "mask_multicopy_genes",
          .inverseLongName = "no_mask_multicopy_genes",
