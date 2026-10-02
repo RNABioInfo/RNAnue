@@ -60,13 +60,17 @@ macro(libfind_process PREFIX)
             endif(NOT ${PREFIX}_FIND_QUIETLY)
         else(${PREFIX}_FOUND)
             if(${PREFIX}_FIND_REQUIRED)
-                foreach(i ${${PREFIX}_PROCESS_INCLUDES} ${${PREFIX}_PROCESS_LIBS})
+                foreach(
+                    i
+                    ${${PREFIX}_PROCESS_INCLUDES}
+                    ${${PREFIX}_PROCESS_LIBS}
+                )
                     message("${i}=${${i}}")
                 endforeach(i)
                 message(
-          FATAL_ERROR
-            "Required library ${PREFIX} NOT FOUND.\nInstall the library (dev version) and try again. If the library is already installed, use ccmake to set the missing variables manually."
-        )
+                    FATAL_ERROR
+                    "Required library ${PREFIX} NOT FOUND.\nInstall the library (dev version) and try again. If the library is already installed, use ccmake to set the missing variables manually."
+                )
             endif(${PREFIX}_FIND_REQUIRED)
         endif(${PREFIX}_FOUND)
     endif(NOT ${PREFIX}_FOUND)
@@ -85,11 +89,11 @@ libfind_pkg_check_modules(HTSLIB_PKGCONF htslib)
 
 # Include dir
 find_path(
-  HTSlib_INCLUDE_DIR
-  NAMES ${HTSLIB_ADDITIONAL_HEADERS} htslib/sam.h
-  PATHS ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_INCLUDE_DIRS}
-  PATH_SUFFIXES include htslib/${_htslib_ver_path}
-  NO_DEFAULT_PATH
+    HTSlib_INCLUDE_DIR
+    NAMES ${HTSLIB_ADDITIONAL_HEADERS} htslib/sam.h
+    PATHS ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_INCLUDE_DIRS}
+    PATH_SUFFIXES include htslib/${_htslib_ver_path}
+    NO_DEFAULT_PATH
 )
 
 if(HTSlib_USE_STATIC_LIBS)
@@ -113,11 +117,14 @@ endif()
 
 # Finally the library itself
 find_library(
-  HTSlib_LIBRARY
-  NAMES ${HTSlib_LIBRARY_names}
-  PATHS ${HTSlib_INCLUDE_DIR} ${HTSLIB_SEARCH_DIRS} ${HTSLIB_PKGCONF_LIBRARY_DIRS}
-  NO_DEFAULT_PATH
-  PATH_SUFFIXES lib lib64 lib/x86_64-linux-gnu ${_htslib_ver_path}
+    HTSlib_LIBRARY
+    NAMES ${HTSlib_LIBRARY_names}
+    PATHS
+        ${HTSlib_INCLUDE_DIR}
+        ${HTSLIB_SEARCH_DIRS}
+        ${HTSLIB_PKGCONF_LIBRARY_DIRS}
+    NO_DEFAULT_PATH
+    PATH_SUFFIXES lib lib64 lib/x86_64-linux-gnu ${_htslib_ver_path}
 )
 
 # Set the include dir variables and the libraries and let libfind_process do the rest. NOTE:
@@ -126,14 +133,25 @@ set(HTSlib_PROCESS_INCLUDES HTSlib_INCLUDE_DIR)
 set(HTSlib_PROCESS_LIBS HTSlib_LIBRARY)
 
 if(HTSlib_USE_STATIC_LIBS)
-    set(HTSlib_PROCESS_INCLUDES ${HTSlib_PROCESS_INCLUDES} ZLIB_INCLUDE_DIR BZIP2_INCLUDE_DIR
-                              LIBLZMA_INCLUDE_DIRS CURL_INCLUDE_DIRS
-  )
-    set(HTSlib_PROCESS_LIBS ${HTSlib_PROCESS_LIBS} ZLIB_LIBRARIES BZIP2_LIBRARIES LIBLZMA_LIBRARIES
-                          CURL_LIBRARIES
-  )
+    set(HTSlib_PROCESS_INCLUDES
+        ${HTSlib_PROCESS_INCLUDES}
+        ZLIB_INCLUDE_DIR
+        BZIP2_INCLUDE_DIR
+        LIBLZMA_INCLUDE_DIRS
+        CURL_INCLUDE_DIRS
+    )
+    set(HTSlib_PROCESS_LIBS
+        ${HTSlib_PROCESS_LIBS}
+        ZLIB_LIBRARIES
+        BZIP2_LIBRARIES
+        LIBLZMA_LIBRARIES
+        CURL_LIBRARIES
+    )
     if(NOT APPLE)
-        set(HTSlib_PROCESS_INCLUDES ${HTSlib_PROCESS_INCLUDES} OPENSSL_INCLUDE_DIR)
+        set(HTSlib_PROCESS_INCLUDES
+            ${HTSlib_PROCESS_INCLUDES}
+            OPENSSL_INCLUDE_DIR
+        )
         set(HTSlib_PROCESS_LIBS ${HTSlib_PROCESS_LIBS} OPENSSL_LIBRARIES)
     endif()
 endif()
@@ -143,4 +161,3 @@ libfind_process(HTSlib)
 message(STATUS "   HTSlib include dirs: ${HTSlib_INCLUDE_DIRS}")
 message(STATUS "   HTSlib libraries: ${HTSlib_LIBRARIES}")
 message(STATUS " HTSLIB FOUND: ${HTSlib_FOUND} ")
-

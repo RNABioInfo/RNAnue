@@ -23,7 +23,9 @@ class StarReadGroupPreprocessor {
         std::vector<ConstructedEvaluationContextVariant> contexts;
 
         for (auto& hypothesis : hypotheses) {
-            if (hypothesis.fragments.empty()) continue;
+            if (hypothesis.fragments.empty()) {
+                continue;
+            }
             std::optional<HitGroupFailureReason> failure;
 
             if (hypothesis.paired) {

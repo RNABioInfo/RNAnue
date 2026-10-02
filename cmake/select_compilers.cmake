@@ -19,18 +19,21 @@ function(rnanue_resolve_compiler RNANUE_COMPILER_CANDIDATE RNANUE_OUT)
         return()
     endif()
 
-    find_program(RNANUE_RESOLVED_COMPILER
-                 NAMES "${RNANUE_COMPILER_CANDIDATE}"
-                 NO_CACHE)
+    find_program(
+        RNANUE_RESOLVED_COMPILER
+        NAMES "${RNANUE_COMPILER_CANDIDATE}" NO_CACHE
+    )
     set(${RNANUE_OUT} "${RNANUE_RESOLVED_COMPILER}" PARENT_SCOPE)
 endfunction()
 
-function(rnanue_probe_cxx_compiler
-         RNANUE_CXX_CANDIDATE
-         RNANUE_OK_OUT
-         RNANUE_RESOLVED_OUT
-         RNANUE_VERSION_OUT
-         RNANUE_REASON_OUT)
+function(
+    rnanue_probe_cxx_compiler
+    RNANUE_CXX_CANDIDATE
+    RNANUE_OK_OUT
+    RNANUE_RESOLVED_OUT
+    RNANUE_VERSION_OUT
+    RNANUE_REASON_OUT
+)
     rnanue_resolve_compiler("${RNANUE_CXX_CANDIDATE}" RNANUE_RESOLVED_CXX)
 
     if(NOT RNANUE_RESOLVED_CXX)
@@ -39,7 +42,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "compiler '${RNANUE_CXX_CANDIDATE}' was not found"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -49,7 +53,8 @@ function(rnanue_probe_cxx_compiler
         OUTPUT_VARIABLE RNANUE_VERSION_BANNER
         ERROR_VARIABLE RNANUE_VERSION_ERROR
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE)
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
 
     if(NOT RNANUE_VERSION_RESULT EQUAL 0)
         set(${RNANUE_OK_OUT} FALSE PARENT_SCOPE)
@@ -57,7 +62,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "could not execute '${RNANUE_RESOLVED_CXX} --version': ${RNANUE_VERSION_ERROR}"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -67,7 +73,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "compiler is Clang/AppleClang, but RNAnue requires GCC/G++ ${RNANUE_MINIMUM_GNU_COMPILER_VERSION} or newer"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -77,11 +84,20 @@ function(rnanue_probe_cxx_compiler
         OUTPUT_VARIABLE RNANUE_DUMP_VERSION
         ERROR_VARIABLE RNANUE_DUMP_VERSION_ERROR
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE)
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
 
-    string(REGEX MATCH "[0-9]+(\\.[0-9]+)*" RNANUE_GNU_VERSION "${RNANUE_DUMP_VERSION}")
+    string(
+        REGEX MATCH "[0-9]+(\\.[0-9]+)*"
+        RNANUE_GNU_VERSION
+        "${RNANUE_DUMP_VERSION}"
+    )
     if(NOT RNANUE_GNU_VERSION)
-        string(REGEX MATCH "[0-9]+(\\.[0-9]+)*" RNANUE_GNU_VERSION "${RNANUE_VERSION_BANNER}")
+        string(
+            REGEX MATCH "[0-9]+(\\.[0-9]+)*"
+            RNANUE_GNU_VERSION
+            "${RNANUE_VERSION_BANNER}"
+        )
     endif()
 
     if(NOT RNANUE_DUMP_VERSION_RESULT EQUAL 0 OR NOT RNANUE_GNU_VERSION)
@@ -90,7 +106,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "could not determine a GNU compiler version: ${RNANUE_DUMP_VERSION_ERROR}"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -100,7 +117,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "${RNANUE_GNU_VERSION}" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "GNU ${RNANUE_GNU_VERSION} is older than required GCC/G++ ${RNANUE_MINIMUM_GNU_COMPILER_VERSION}"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -108,22 +126,38 @@ function(rnanue_probe_cxx_compiler
     set(RNANUE_PROBE_SOURCE "${RNANUE_PROBE_DIR}/required_cxx_features.cpp")
     set(RNANUE_PROBE_BINARY "${RNANUE_PROBE_DIR}/required_cxx_features")
     file(MAKE_DIRECTORY "${RNANUE_PROBE_DIR}")
-    file(WRITE "${RNANUE_PROBE_SOURCE}" "${RNANUE_REQUIRED_CXX_FEATURES_SOURCE}")
+    file(
+        WRITE "${RNANUE_PROBE_SOURCE}"
+        "${RNANUE_REQUIRED_CXX_FEATURES_SOURCE}"
+    )
     file(REMOVE "${RNANUE_PROBE_BINARY}")
 
     execute_process(
-        COMMAND "${RNANUE_RESOLVED_CXX}" -std=c++23 "${RNANUE_PROBE_SOURCE}" -o "${RNANUE_PROBE_BINARY}"
+        COMMAND
+            "${RNANUE_RESOLVED_CXX}" -std=c++23 "${RNANUE_PROBE_SOURCE}" -o
+            "${RNANUE_PROBE_BINARY}"
         RESULT_VARIABLE RNANUE_PROBE_RESULT
         OUTPUT_VARIABLE RNANUE_PROBE_OUTPUT
         ERROR_VARIABLE RNANUE_PROBE_ERROR
         OUTPUT_STRIP_TRAILING_WHITESPACE
-        ERROR_STRIP_TRAILING_WHITESPACE)
+        ERROR_STRIP_TRAILING_WHITESPACE
+    )
 
     if(NOT RNANUE_PROBE_RESULT EQUAL 0)
         if(RNANUE_PROBE_ERROR)
-            string(REGEX REPLACE "[\r\n].*" "" RNANUE_PROBE_FIRST_ERROR "${RNANUE_PROBE_ERROR}")
+            string(
+                REGEX REPLACE "[\r\n].*"
+                ""
+                RNANUE_PROBE_FIRST_ERROR
+                "${RNANUE_PROBE_ERROR}"
+            )
         else()
-            string(REGEX REPLACE "[\r\n].*" "" RNANUE_PROBE_FIRST_ERROR "${RNANUE_PROBE_OUTPUT}")
+            string(
+                REGEX REPLACE "[\r\n].*"
+                ""
+                RNANUE_PROBE_FIRST_ERROR
+                "${RNANUE_PROBE_OUTPUT}"
+            )
         endif()
 
         set(${RNANUE_OK_OUT} FALSE PARENT_SCOPE)
@@ -131,7 +165,8 @@ function(rnanue_probe_cxx_compiler
         set(${RNANUE_VERSION_OUT} "${RNANUE_GNU_VERSION}" PARENT_SCOPE)
         set(${RNANUE_REASON_OUT}
             "failed RNAnue's C++23 feature probe: ${RNANUE_PROBE_FIRST_ERROR}"
-            PARENT_SCOPE)
+            PARENT_SCOPE
+        )
         return()
     endif()
 
@@ -150,34 +185,51 @@ endfunction()
 
 function(rnanue_sanitize_gnu_compiler_flags)
     foreach(RNANUE_ENV_VAR CFLAGS CXXFLAGS)
-        if(DEFINED ENV{${RNANUE_ENV_VAR}} AND NOT "$ENV{${RNANUE_ENV_VAR}}" STREQUAL "")
+        if(
+            DEFINED ENV{${RNANUE_ENV_VAR}}
+            AND NOT "$ENV{${RNANUE_ENV_VAR}}" STREQUAL ""
+        )
             set(RNANUE_ENV_FLAGS "$ENV{${RNANUE_ENV_VAR}}")
             if(RNANUE_ENV_FLAGS MATCHES "-stdlib=libc\\+\\+")
                 rnanue_sanitize_libcxx_flag_from_string("${RNANUE_ENV_FLAGS}" RNANUE_SANITIZED_FLAGS)
                 set(ENV{${RNANUE_ENV_VAR}} "${RNANUE_SANITIZED_FLAGS}")
-                message(STATUS
-                    "Removed -stdlib=libc++ from ${RNANUE_ENV_VAR} for GCC/libstdc++ compatibility")
+                message(
+                    STATUS
+                    "Removed -stdlib=libc++ from ${RNANUE_ENV_VAR} for GCC/libstdc++ compatibility"
+                )
             endif()
         endif()
     endforeach()
 
-    foreach(RNANUE_FLAG_VAR
-            CMAKE_C_FLAGS
-            CMAKE_CXX_FLAGS
-            CMAKE_C_FLAGS_DEBUG
-            CMAKE_CXX_FLAGS_DEBUG
-            CMAKE_C_FLAGS_RELEASE
-            CMAKE_CXX_FLAGS_RELEASE
-            CMAKE_C_FLAGS_RELWITHDEBINFO
-            CMAKE_CXX_FLAGS_RELWITHDEBINFO
-            CMAKE_C_FLAGS_MINSIZEREL
-            CMAKE_CXX_FLAGS_MINSIZEREL)
-        if(DEFINED ${RNANUE_FLAG_VAR} AND NOT "${${RNANUE_FLAG_VAR}}" STREQUAL ""
-           AND "${${RNANUE_FLAG_VAR}}" MATCHES "-stdlib=libc\\+\\+")
+    foreach(
+        RNANUE_FLAG_VAR
+        CMAKE_C_FLAGS
+        CMAKE_CXX_FLAGS
+        CMAKE_C_FLAGS_DEBUG
+        CMAKE_CXX_FLAGS_DEBUG
+        CMAKE_C_FLAGS_RELEASE
+        CMAKE_CXX_FLAGS_RELEASE
+        CMAKE_C_FLAGS_RELWITHDEBINFO
+        CMAKE_CXX_FLAGS_RELWITHDEBINFO
+        CMAKE_C_FLAGS_MINSIZEREL
+        CMAKE_CXX_FLAGS_MINSIZEREL
+    )
+        if(
+            DEFINED ${RNANUE_FLAG_VAR}
+            AND NOT "${${RNANUE_FLAG_VAR}}" STREQUAL ""
+            AND "${${RNANUE_FLAG_VAR}}" MATCHES "-stdlib=libc\\+\\+"
+        )
             rnanue_sanitize_libcxx_flag_from_string("${${RNANUE_FLAG_VAR}}" RNANUE_SANITIZED_FLAGS)
-            set(${RNANUE_FLAG_VAR} "${RNANUE_SANITIZED_FLAGS}" CACHE STRING "" FORCE)
-            message(STATUS
-                "Removed -stdlib=libc++ from ${RNANUE_FLAG_VAR} for GCC/libstdc++ compatibility")
+            set(${RNANUE_FLAG_VAR}
+                "${RNANUE_SANITIZED_FLAGS}"
+                CACHE STRING
+                ""
+                FORCE
+            )
+            message(
+                STATUS
+                "Removed -stdlib=libc++ from ${RNANUE_FLAG_VAR} for GCC/libstdc++ compatibility"
+            )
         endif()
     endforeach()
 endfunction()
@@ -187,8 +239,15 @@ function(rnanue_find_matching_c_compiler RNANUE_CXX_COMPILER RNANUE_OUT)
     set(RNANUE_C_COMPILER_HINTS "")
     set(RNANUE_CXX_PATHS "${RNANUE_CXX_COMPILER}")
 
-    get_filename_component(RNANUE_CXX_REALPATH "${RNANUE_CXX_COMPILER}" REALPATH)
-    if(RNANUE_CXX_REALPATH AND NOT RNANUE_CXX_REALPATH STREQUAL RNANUE_CXX_COMPILER)
+    get_filename_component(
+        RNANUE_CXX_REALPATH
+        "${RNANUE_CXX_COMPILER}"
+        REALPATH
+    )
+    if(
+        RNANUE_CXX_REALPATH
+        AND NOT RNANUE_CXX_REALPATH STREQUAL RNANUE_CXX_COMPILER
+    )
         list(APPEND RNANUE_CXX_PATHS "${RNANUE_CXX_REALPATH}")
     endif()
 
@@ -198,7 +257,12 @@ function(rnanue_find_matching_c_compiler RNANUE_CXX_COMPILER RNANUE_OUT)
         list(APPEND RNANUE_C_COMPILER_HINTS "${RNANUE_CXX_DIR}")
 
         if(RNANUE_CXX_NAME MATCHES "^g\\+\\+")
-            string(REGEX REPLACE "^g\\+\\+" "gcc" RNANUE_GCC_NAME "${RNANUE_CXX_NAME}")
+            string(
+                REGEX REPLACE "^g\\+\\+"
+                "gcc"
+                RNANUE_GCC_NAME
+                "${RNANUE_CXX_NAME}"
+            )
             list(APPEND RNANUE_C_COMPILER_NAMES "${RNANUE_GCC_NAME}")
         endif()
     endforeach()
@@ -216,16 +280,19 @@ function(rnanue_find_matching_c_compiler RNANUE_CXX_COMPILER RNANUE_OUT)
     list(REMOVE_DUPLICATES RNANUE_C_COMPILER_NAMES)
     list(REMOVE_DUPLICATES RNANUE_C_COMPILER_HINTS)
 
-    find_program(RNANUE_MATCHING_C_COMPILER
-                 NAMES ${RNANUE_C_COMPILER_NAMES}
-                 HINTS ${RNANUE_C_COMPILER_HINTS}
-                 NO_DEFAULT_PATH
-                 NO_CACHE)
+    find_program(
+        RNANUE_MATCHING_C_COMPILER
+        NAMES ${RNANUE_C_COMPILER_NAMES}
+        HINTS ${RNANUE_C_COMPILER_HINTS}
+        NO_DEFAULT_PATH
+        NO_CACHE
+    )
 
     if(NOT RNANUE_MATCHING_C_COMPILER)
-        find_program(RNANUE_MATCHING_C_COMPILER
-                     NAMES ${RNANUE_C_COMPILER_NAMES}
-                     NO_CACHE)
+        find_program(
+            RNANUE_MATCHING_C_COMPILER
+            NAMES ${RNANUE_C_COMPILER_NAMES} NO_CACHE
+        )
     endif()
 
     set(${RNANUE_OUT} "${RNANUE_MATCHING_C_COMPILER}" PARENT_SCOPE)
@@ -238,22 +305,39 @@ function(rnanue_configure_c_compiler_from_cxx RNANUE_SELECTED_CXX)
 
     rnanue_find_matching_c_compiler("${RNANUE_SELECTED_CXX}" RNANUE_SELECTED_C)
     if(RNANUE_SELECTED_C)
-        set(CMAKE_C_COMPILER "${RNANUE_SELECTED_C}" CACHE FILEPATH "C compiler" FORCE)
-        message(STATUS "RNAnue selected matching C compiler: ${RNANUE_SELECTED_C}")
+        set(CMAKE_C_COMPILER
+            "${RNANUE_SELECTED_C}"
+            CACHE FILEPATH
+            "C compiler"
+            FORCE
+        )
+        message(
+            STATUS
+            "RNAnue selected matching C compiler: ${RNANUE_SELECTED_C}"
+        )
     elseif(CMAKE_HOST_APPLE)
-        message(FATAL_ERROR
+        message(
+            FATAL_ERROR
             "RNAnue found compatible C++ compiler '${RNANUE_SELECTED_CXX}', but could not "
             "find the matching GCC C compiler. Install the matching gcc package or configure "
-            "with -DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}.")
+            "with -DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}."
+        )
     endif()
 endfunction()
 
 function(rnanue_accept_cxx_compiler RNANUE_SELECTED_CXX RNANUE_VERSION)
-    set(CMAKE_CXX_COMPILER "${RNANUE_SELECTED_CXX}" CACHE FILEPATH "C++ compiler" FORCE)
+    set(CMAKE_CXX_COMPILER
+        "${RNANUE_SELECTED_CXX}"
+        CACHE FILEPATH
+        "C++ compiler"
+        FORCE
+    )
     rnanue_sanitize_gnu_compiler_flags()
     rnanue_configure_c_compiler_from_cxx("${RNANUE_SELECTED_CXX}")
-    message(STATUS
-        "RNAnue selected C++ compiler: ${RNANUE_SELECTED_CXX} (GNU ${RNANUE_VERSION})")
+    message(
+        STATUS
+        "RNAnue selected C++ compiler: ${RNANUE_SELECTED_CXX} (GNU ${RNANUE_VERSION})"
+    )
 endfunction()
 
 function(rnanue_select_compatible_compilers)
@@ -268,15 +352,18 @@ function(rnanue_select_compatible_compilers)
                                   RNANUE_CXX_OK
                                   RNANUE_RESOLVED_CXX
                                   RNANUE_CXX_VERSION
-                                  RNANUE_CXX_REASON)
+                                  RNANUE_CXX_REASON
+        )
         if(NOT RNANUE_CXX_OK)
-            message(FATAL_ERROR
+            message(
+                FATAL_ERROR
                 "RNAnue cannot use the configured CMAKE_CXX_COMPILER value "
                 "'${RNANUE_REQUESTED_CXX}': ${RNANUE_CXX_REASON}. "
                 "Use GCC/G++ ${RNANUE_MINIMUM_GNU_COMPILER_VERSION} or newer and configure "
                 "a fresh build directory with "
                 "-DCMAKE_CXX_COMPILER=/path/to/g++-${RNANUE_MINIMUM_GNU_COMPILER_VERSION} "
-                "-DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}.")
+                "-DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}."
+            )
         endif()
 
         rnanue_accept_cxx_compiler("${RNANUE_RESOLVED_CXX}" "${RNANUE_CXX_VERSION}")
@@ -296,16 +383,18 @@ function(rnanue_select_compatible_compilers)
     endif()
 
     if(CMAKE_HOST_APPLE)
-        list(APPEND RNANUE_CXX_CANDIDATES
-             /opt/homebrew/bin/g++-16
-             /opt/homebrew/bin/g++-15
-             /opt/homebrew/bin/g++-14
-             /usr/local/bin/g++-16
-             /usr/local/bin/g++-15
-             /usr/local/bin/g++-14
-             /opt/local/bin/g++-16
-             /opt/local/bin/g++-15
-             /opt/local/bin/g++-14)
+        list(
+            APPEND RNANUE_CXX_CANDIDATES
+            /opt/homebrew/bin/g++-16
+            /opt/homebrew/bin/g++-15
+            /opt/homebrew/bin/g++-14
+            /usr/local/bin/g++-16
+            /usr/local/bin/g++-15
+            /usr/local/bin/g++-14
+            /opt/local/bin/g++-16
+            /opt/local/bin/g++-15
+            /opt/local/bin/g++-14
+        )
     endif()
 
     list(APPEND RNANUE_CXX_CANDIDATES g++-16 g++-15 g++-14)
@@ -320,50 +409,71 @@ function(rnanue_select_compatible_compilers)
                                   RNANUE_CXX_OK
                                   RNANUE_RESOLVED_CXX
                                   RNANUE_CXX_VERSION
-                                  RNANUE_CXX_REASON)
+                                  RNANUE_CXX_REASON
+        )
 
         if(RNANUE_RESOLVED_CXX)
             set(RNANUE_TRIED_CXX_NAME "${RNANUE_RESOLVED_CXX}")
         else()
             set(RNANUE_TRIED_CXX_NAME "${RNANUE_CXX_CANDIDATE}")
         endif()
-        list(APPEND RNANUE_TRIED_CXX_COMPILERS
-             "${RNANUE_TRIED_CXX_NAME}: ${RNANUE_CXX_REASON}")
+        list(
+            APPEND RNANUE_TRIED_CXX_COMPILERS
+            "${RNANUE_TRIED_CXX_NAME}: ${RNANUE_CXX_REASON}"
+        )
 
-        if(RNANUE_ENV_CXX_COMPILER
-           AND RNANUE_CXX_CANDIDATE STREQUAL RNANUE_ENV_CXX_COMPILER)
+        if(
+            RNANUE_ENV_CXX_COMPILER
+            AND RNANUE_CXX_CANDIDATE STREQUAL RNANUE_ENV_CXX_COMPILER
+        )
             set(RNANUE_ENV_CXX_REASON "${RNANUE_CXX_REASON}")
         endif()
 
-        if(RNANUE_DEFAULT_CXX_COMPILER
-           AND RNANUE_CXX_CANDIDATE STREQUAL RNANUE_DEFAULT_CXX_COMPILER)
+        if(
+            RNANUE_DEFAULT_CXX_COMPILER
+            AND RNANUE_CXX_CANDIDATE STREQUAL RNANUE_DEFAULT_CXX_COMPILER
+        )
             set(RNANUE_DEFAULT_CXX_REASON "${RNANUE_CXX_REASON}")
         endif()
 
         if(RNANUE_CXX_OK)
-            if(RNANUE_ENV_CXX_COMPILER
-               AND NOT RNANUE_CXX_CANDIDATE STREQUAL RNANUE_ENV_CXX_COMPILER)
-                message(STATUS
-                    "RNAnue environment CXX is not compatible: ${RNANUE_ENV_CXX_REASON}")
+            if(
+                RNANUE_ENV_CXX_COMPILER
+                AND NOT RNANUE_CXX_CANDIDATE STREQUAL RNANUE_ENV_CXX_COMPILER
+            )
+                message(
+                    STATUS
+                    "RNAnue environment CXX is not compatible: ${RNANUE_ENV_CXX_REASON}"
+                )
             endif()
-            if(RNANUE_DEFAULT_CXX_COMPILER
-               AND NOT RNANUE_CXX_CANDIDATE STREQUAL RNANUE_DEFAULT_CXX_COMPILER)
-                message(STATUS
-                    "RNAnue default C++ compiler is not compatible: ${RNANUE_DEFAULT_CXX_REASON}")
+            if(
+                RNANUE_DEFAULT_CXX_COMPILER
+                AND NOT RNANUE_CXX_CANDIDATE STREQUAL RNANUE_DEFAULT_CXX_COMPILER
+            )
+                message(
+                    STATUS
+                    "RNAnue default C++ compiler is not compatible: ${RNANUE_DEFAULT_CXX_REASON}"
+                )
             endif()
             rnanue_accept_cxx_compiler("${RNANUE_RESOLVED_CXX}" "${RNANUE_CXX_VERSION}")
             return()
         endif()
     endforeach()
 
-    string(REPLACE ";" "\n  " RNANUE_TRIED_CXX_COMPILERS_TEXT
-           "${RNANUE_TRIED_CXX_COMPILERS}")
-    message(FATAL_ERROR
+    string(
+        REPLACE ";"
+        "\n  "
+        RNANUE_TRIED_CXX_COMPILERS_TEXT
+        "${RNANUE_TRIED_CXX_COMPILERS}"
+    )
+    message(
+        FATAL_ERROR
         "RNAnue requires GCC/G++ ${RNANUE_MINIMUM_GNU_COMPILER_VERSION} or newer with "
         "the required C++23 standard-library features. No compatible compiler was found.\n"
         "Tried:\n  ${RNANUE_TRIED_CXX_COMPILERS_TEXT}\n"
         "Install GCC/G++ ${RNANUE_MINIMUM_GNU_COMPILER_VERSION} or newer, put it on PATH, "
         "or configure a fresh build directory with "
         "-DCMAKE_CXX_COMPILER=/path/to/g++-${RNANUE_MINIMUM_GNU_COMPILER_VERSION} "
-        "-DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}.")
+        "-DCMAKE_C_COMPILER=/path/to/gcc-${RNANUE_MINIMUM_GNU_COMPILER_VERSION}."
+    )
 endfunction()

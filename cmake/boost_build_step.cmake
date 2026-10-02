@@ -1,12 +1,17 @@
 cmake_minimum_required(VERSION 3.24)
 
-foreach(RNANUE_REQUIRED_VAR
-        RNANUE_BOOST_STEP
-        RNANUE_BOOST_SOURCE_DIR
-        RNANUE_BOOST_INSTALL_DIR
-        RNANUE_BOOST_CXX_COMPILER
-        RNANUE_BOOST_TOOLSET)
-    if(NOT DEFINED ${RNANUE_REQUIRED_VAR} OR "${${RNANUE_REQUIRED_VAR}}" STREQUAL "")
+foreach(
+    RNANUE_REQUIRED_VAR
+    RNANUE_BOOST_STEP
+    RNANUE_BOOST_SOURCE_DIR
+    RNANUE_BOOST_INSTALL_DIR
+    RNANUE_BOOST_CXX_COMPILER
+    RNANUE_BOOST_TOOLSET
+)
+    if(
+        NOT DEFINED ${RNANUE_REQUIRED_VAR}
+        OR "${${RNANUE_REQUIRED_VAR}}" STREQUAL ""
+    )
         message(FATAL_ERROR "${RNANUE_REQUIRED_VAR} is required")
     endif()
 endforeach()
@@ -25,7 +30,10 @@ function(rnanue_run_boost_step)
     )
 
     if(NOT RNANUE_STEP_RESULT EQUAL 0)
-        message(FATAL_ERROR "Boost ${RNANUE_BOOST_STEP} step failed with exit code ${RNANUE_STEP_RESULT}")
+        message(
+            FATAL_ERROR
+            "Boost ${RNANUE_BOOST_STEP} step failed with exit code ${RNANUE_STEP_RESULT}"
+        )
     endif()
 endfunction()
 
@@ -33,7 +41,9 @@ if(RNANUE_BOOST_STEP STREQUAL "bootstrap")
     set(RNANUE_B2_ENGINE "${RNANUE_BOOST_SOURCE_DIR}/tools/build/src/engine/b2")
 
     set(RNANUE_B2_ENGINE_COMMAND
-        "${CMAKE_COMMAND}" -E env
+        "${CMAKE_COMMAND}"
+        -E
+        env
         "CXX=${RNANUE_BOOST_CXX_COMPILER}"
         ./tools/build/src/engine/build.sh
         "--cxx=${RNANUE_BOOST_CXX_COMPILER}"
@@ -63,9 +73,12 @@ if(RNANUE_BOOST_STEP STREQUAL "bootstrap")
     )
 elseif(RNANUE_BOOST_STEP STREQUAL "build")
     set(RNANUE_B2_COMMAND
-        "${CMAKE_COMMAND}" -E env
+        "${CMAKE_COMMAND}"
+        -E
+        env
         "CXX=${RNANUE_BOOST_CXX_COMPILER}"
-        ./b2 install
+        ./b2
+        install
         "--cxx=${RNANUE_BOOST_CXX_COMPILER}"
         "toolset=${RNANUE_BOOST_TOOLSET}"
         link=static

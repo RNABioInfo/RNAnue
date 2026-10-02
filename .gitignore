@@ -82,3 +82,4 @@ cspell.json
 review
 benchmarks
 docs
+.neocmake.toml

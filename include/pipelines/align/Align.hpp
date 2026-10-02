@@ -25,7 +25,8 @@ class Align {
     void processMergedPairedEnd(const AlignSampleMergedPaired& sample);
     void alignSingleReads(const fs::path& input, const fs::path& output);
     void alignPairedReads(const fs::path& forward, const fs::path& reverse, const fs::path& output);
-    auto referenceFromGenome() const -> dataTypes::SamReference;
-    void sortAlignmentsByQueryName(const fs::path& input, const fs::path& output) const;
+    [[nodiscard]] auto referenceFromGenome() const -> dataTypes::SamReference;
+    void sortAlignmentsByQueryName(const fs::path& alignmentsPath,
+                                   const fs::path& sortedAlignmentsPath) const;
 };
 }  // namespace pipelines::align

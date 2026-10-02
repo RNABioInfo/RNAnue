@@ -7,9 +7,7 @@
 #include <atomic>
 #include <cassert>
 #include <cstddef>
-#include <functional>
 #include <future>
-#include <iterator>
 #include <mutex>
 #include <string>
 #include <utility>
@@ -101,11 +99,15 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
         try {
             consumerThread.get();
         } catch (...) {
-            if (!error) error = std::current_exception();
+            if (!error) {
+                error = std::current_exception();
+            }
             cancelled = true;
         }
     }
-    if (error) std::rethrow_exception(error);
+    if (error) {
+        std::rethrow_exception(error);
+    }
 
     FeatureAnnotator supplementaryFeatureAnnotator{clusteringResults.supplementaryFeatureMap};
 
@@ -182,9 +184,9 @@ void ParallelInteractionClusterGenerator::annotatePartiallyAnnotatedClusters(
         }
 
         clusteringResults.featureCounts[firstFeatureID] +=
-            partiallyAnnotatedCluster.getTranscriptContribution();
+            static_cast<float>(partiallyAnnotatedCluster.getTranscriptContribution());
         clusteringResults.featureCounts[secondFeatureID] +=
-            partiallyAnnotatedCluster.getTranscriptContribution();
+            static_cast<float>(partiallyAnnotatedCluster.getTranscriptContribution());
 
         if (partiallyAnnotatedCluster.getTranscriptContribution() >=
                 parameters.minimumClusterTrascriptContribution &&

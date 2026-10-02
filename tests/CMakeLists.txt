@@ -11,11 +11,13 @@ include(${CMAKE_CURRENT_LIST_DIR}/../cmake/dependency_providers.cmake)
 set_directory_properties(PROPERTIES INCLUDE_DIRECTORIES "")
 
 foreach(RNANUE_TEST_FLAG_VAR CMAKE_C_FLAGS CMAKE_CXX_FLAGS)
-    string(REGEX REPLACE
-           "(^|[ \t]+)-isystem[ \t]+[^ \t]+/(miniconda3|miniforge3|anaconda3|mambaforge)/include($|[ \t]+)"
-           " "
-           ${RNANUE_TEST_FLAG_VAR}
-           " ${${RNANUE_TEST_FLAG_VAR}} ")
+    string(
+        REGEX REPLACE
+            "(^|[ \t]+)-isystem[ \t]+[^ \t]+/(miniconda3|miniforge3|anaconda3|mambaforge)/include($|[ \t]+)"
+        " "
+        ${RNANUE_TEST_FLAG_VAR}
+        " ${${RNANUE_TEST_FLAG_VAR}} "
+    )
     string(STRIP "${${RNANUE_TEST_FLAG_VAR}}" ${RNANUE_TEST_FLAG_VAR})
 endforeach()
 
@@ -31,15 +33,18 @@ endif()
 
 if(NOT TARGET GTest::gtest_main)
     if(RNANUE_DEPENDENCY_PROVIDER STREQUAL "SYSTEM")
-        message(FATAL_ERROR
+        message(
+            FATAL_ERROR
             "RNANUE_DEPENDENCY_PROVIDER=SYSTEM requires installed GoogleTest when "
             "RNANUE_BUILD_TESTS=ON. Install GTest, set CMAKE_PREFIX_PATH, disable tests "
-            "with -DRNANUE_BUILD_TESTS=OFF, or use AUTO/BUNDLED dependency mode.")
+            "with -DRNANUE_BUILD_TESTS=OFF, or use AUTO/BUNDLED dependency mode."
+        )
     elseif(RNANUE_GTEST_ALLOW_BUNDLED)
         FetchContent_Declare(
             googletest
             DOWNLOAD_EXTRACT_TIMESTAMP true
-            URL https://github.com/google/googletest/archive/1d17ea141d2c11b8917d2c7d029f1c4e2b9769b2.zip
+            URL
+                https://github.com/google/googletest/archive/1d17ea141d2c11b8917d2c7d029f1c4e2b9769b2.zip
         )
 
         FetchContent_MakeAvailable(googletest)
@@ -57,11 +62,15 @@ if(APPLE AND CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
         target_compile_definitions(gtest PRIVATE _Static_assert=static_assert)
     endif()
     if(TARGET gtest_main)
-        target_compile_definitions(gtest_main PRIVATE _Static_assert=static_assert)
+        target_compile_definitions(
+            gtest_main
+            PRIVATE _Static_assert=static_assert
+        )
     endif()
 endif()
 
-add_executable(tests
+add_executable(
+    tests
     ${CMAKE_CURRENT_SOURCE_DIR}/AdapterTrimmingTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StarAlignmentTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/ExternalProcess.cpp
@@ -81,19 +90,16 @@ add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/ParallelInteractionClusterGeneratorTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/SamFileUtilityTests.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/StatisticEvaluatorTests.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureAnnotator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/AnnotationHierarchyResolver.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureGrouper.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureParser.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/FeatureWriter.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/annotation/GenomicFeatureTreeMerger.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicRegion.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/GenomicOrientation.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/RecordFragment.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/dataTypes/FeatureGroup.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionCluster.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionClusterGenerator.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/analyze/InteractionsWriter.cpp
@@ -104,10 +110,8 @@ add_executable(tests
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/ComplementarityEvaluationStep.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/HybridizationEvaluationStep.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/pipelines/detect/CrosslinkingSitesEvaluator.cpp
-
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/Utility.cpp
     ${CMAKE_CURRENT_SOURCE_DIR}/../src/utility/SamFileUtility.cpp
-
     ${BAM_SORT_DIR}/bam_sort.c
     ${BAM_SORT_DIR}/sam_opts.c
     ${BAM_SORT_DIR}/bedidx.c
@@ -115,38 +119,42 @@ add_executable(tests
     ${BAM_SORT_DIR}/sam_utils.c
 )
 
-target_include_directories(tests PRIVATE
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/annotation
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/concepts
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options/optionTypes
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/analyze
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/align
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/preprocess
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/detect
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/plotting
-    ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
-    ${BAM_SORT_DIR}
-    ${VIENNA_RNA_INCLUDE_DIR}
-    ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
-    ${HTSlib_INCLUDE_DIRS}
-    ${HTSlib_INCLUDE_DIRS}/htslib
-    ${RNANUE_BOOST_INCLUDE_DIRS}
+target_include_directories(
+    tests
+    PRIVATE
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/annotation
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/concepts
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/parameters/options/optionTypes
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/analyze
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/align
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/dataTypes
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/preprocess
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/pipelines/detect
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/plotting
+        ${CMAKE_CURRENT_SOURCE_DIR}/../include/utility
+        ${BAM_SORT_DIR}
+        ${VIENNA_RNA_INCLUDE_DIR}
+        ${VIENNA_RNA_INCLUDE_DIR}/ViennaRNA
+        ${HTSlib_INCLUDE_DIRS}
+        ${HTSlib_INCLUDE_DIRS}/htslib
+        ${RNANUE_BOOST_INCLUDE_DIRS}
 )
 
-target_link_libraries(tests PRIVATE
-    matplot
-    GTest::gtest_main
-    RNAnue_StarSupport
-    seqan3::seqan3
-    segemehl
-    TBB::tbb
-    ${HTSlib_LIBRARIES}
-    ${VIENNA_RNA_LIBRARIES}
-    ${RNANUE_BOOST_LIBRARIES}
+target_link_libraries(
+    tests
+    PRIVATE
+        matplot
+        GTest::gtest_main
+        RNAnue_StarSupport
+        seqan3::seqan3
+        segemehl
+        TBB::tbb
+        ${HTSlib_LIBRARIES}
+        ${VIENNA_RNA_LIBRARIES}
+        ${RNANUE_BOOST_LIBRARIES}
 )
 
 if(TARGET RNAnue_tbb)
@@ -157,27 +165,49 @@ include(GoogleTest)
 gtest_discover_tests(tests PROPERTIES TIMEOUT 60)
 
 find_package(Python3 COMPONENTS Interpreter REQUIRED)
-add_test(NAME PipelineCliRegressions COMMAND ${Python3_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCliRegressionTests.py $<TARGET_FILE:RNAnue>)
+add_test(
+    NAME PipelineCliRegressions
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/PipelineCliRegressionTests.py
+        $<TARGET_FILE:RNAnue>
+)
 set_tests_properties(PipelineCliRegressions PROPERTIES TIMEOUT 180)
 
-add_test(NAME ParameterCliRegressions COMMAND ${Python3_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/ParameterCliRegressionTests.py $<TARGET_FILE:RNAnue>)
+add_test(
+    NAME ParameterCliRegressions
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/ParameterCliRegressionTests.py
+        $<TARGET_FILE:RNAnue>
+)
 set_tests_properties(ParameterCliRegressions PROPERTIES TIMEOUT 180)
 
-add_test(NAME StarPipelineRegressions COMMAND ${Python3_EXECUTABLE}
-    ${CMAKE_CURRENT_SOURCE_DIR}/StarPipelineRegressionTests.py $<TARGET_FILE:RNAnue> ${RNANUE_BUILD_STAR})
+add_test(
+    NAME StarPipelineRegressions
+    COMMAND
+        ${Python3_EXECUTABLE}
+        ${CMAKE_CURRENT_SOURCE_DIR}/StarPipelineRegressionTests.py
+        $<TARGET_FILE:RNAnue> ${RNANUE_BUILD_STAR}
+)
 set_tests_properties(StarPipelineRegressions PROPERTIES TIMEOUT 240)
 
 add_executable(star_locator_probe star/locator.cpp)
 target_link_libraries(star_locator_probe PRIVATE RNAnue_StarSupport)
 # The locator's build-tree anchor is the RNAnue executable directory.
-set_target_properties(star_locator_probe PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}")
+set_target_properties(
+    star_locator_probe
+    PROPERTIES RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}"
+)
 if(RNANUE_BUILD_STAR)
     add_dependencies(star_locator_probe RNAnue_STAR)
-    add_test(NAME StarSmoke COMMAND "${Python3_EXECUTABLE}"
-        "${CMAKE_CURRENT_SOURCE_DIR}/star/smoke.py"
-        --star "$<TARGET_FILE:STAR::STAR>" --locator "$<TARGET_FILE:star_locator_probe>")
+    add_test(
+        NAME StarSmoke
+        COMMAND
+            "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/star/smoke.py"
+            --star "$<TARGET_FILE:STAR::STAR>" --locator
+            "$<TARGET_FILE:star_locator_probe>"
+    )
     set_tests_properties(StarSmoke PROPERTIES TIMEOUT 120)
 else()
     add_test(NAME StarDisabled COMMAND star_locator_probe --expect-disabled)

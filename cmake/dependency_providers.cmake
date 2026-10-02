@@ -1,16 +1,32 @@
-set(RNANUE_DEPENDENCY_PROVIDER "AUTO" CACHE STRING
-    "Default dependency provider: AUTO tries installed packages first, SYSTEM requires installed packages, BUNDLED builds pinned bundled fallbacks")
-set_property(CACHE RNANUE_DEPENDENCY_PROVIDER PROPERTY STRINGS AUTO SYSTEM BUNDLED)
+set(RNANUE_DEPENDENCY_PROVIDER
+    "AUTO"
+    CACHE STRING
+    "Default dependency provider: AUTO tries installed packages first, SYSTEM requires installed packages, BUNDLED builds pinned bundled fallbacks"
+)
+set_property(
+    CACHE RNANUE_DEPENDENCY_PROVIDER
+    PROPERTY STRINGS AUTO SYSTEM BUNDLED
+)
 
-set(RNANUE_DEPENDENCY_PREFIX "" CACHE PATH
-    "Preferred installed dependency prefix. When unset, Conda-style prefixes from CMAKE_PREFIX_PATH or CONDA_PREFIX are detected automatically.")
-option(RNANUE_PREFER_ACTIVE_PREFIX_LIBS
+set(RNANUE_DEPENDENCY_PREFIX
+    ""
+    CACHE PATH
+    "Preferred installed dependency prefix. When unset, Conda-style prefixes from CMAKE_PREFIX_PATH or CONDA_PREFIX are detected automatically."
+)
+option(
+    RNANUE_PREFER_ACTIVE_PREFIX_LIBS
     "Prefer common runtime libraries from an active Conda-style dependency prefix to avoid mixed unsafe RPATHs"
-    ON)
+    ON
+)
 
 function(rnanue_normalize_provider VAR DESCRIPTION)
     if(NOT DEFINED ${VAR} OR "${${VAR}}" STREQUAL "")
-        set(${VAR} "${RNANUE_DEPENDENCY_PROVIDER}" CACHE STRING "${DESCRIPTION}" FORCE)
+        set(${VAR}
+            "${RNANUE_DEPENDENCY_PROVIDER}"
+            CACHE STRING
+            "${DESCRIPTION}"
+            FORCE
+        )
     endif()
 
     string(TOUPPER "${${VAR}}" RNANUE_PROVIDER_VALUE)
@@ -18,8 +34,10 @@ function(rnanue_normalize_provider VAR DESCRIPTION)
     set_property(CACHE ${VAR} PROPERTY STRINGS AUTO SYSTEM BUNDLED)
 
     if(NOT RNANUE_PROVIDER_VALUE IN_LIST RNANUE_PROVIDER_VALUES)
-        message(FATAL_ERROR
-            "Invalid ${VAR}='${RNANUE_PROVIDER_VALUE}'. Use AUTO, SYSTEM, or BUNDLED.")
+        message(
+            FATAL_ERROR
+            "Invalid ${VAR}='${RNANUE_PROVIDER_VALUE}'. Use AUTO, SYSTEM, or BUNDLED."
+        )
     endif()
 
     set(${VAR} "${RNANUE_PROVIDER_VALUE}" PARENT_SCOPE)
@@ -27,7 +45,8 @@ endfunction()
 
 set(RNANUE_PROVIDER_VALUES AUTO SYSTEM BUNDLED)
 rnanue_normalize_provider(RNANUE_DEPENDENCY_PROVIDER
-    "Default dependency provider: AUTO tries installed packages first, SYSTEM requires installed packages, BUNDLED builds pinned bundled fallbacks")
+    "Default dependency provider: AUTO tries installed packages first, SYSTEM requires installed packages, BUNDLED builds pinned bundled fallbacks"
+)
 
 function(rnanue_configure_dependency_provider VAR DESCRIPTION)
     rnanue_normalize_provider(${VAR} "${DESCRIPTION}")
@@ -51,7 +70,11 @@ function(rnanue_provider_allows_bundled VAR OUT_VAR)
 endfunction()
 
 function(rnanue_path_is_conda_like PATH_VALUE OUT_VAR)
-    if(PATH_VALUE MATCHES "/(conda|miniconda|miniconda3|miniforge|miniforge3|anaconda|anaconda3|mambaforge|envs)(/|$)")
+    if(
+        PATH_VALUE
+            MATCHES
+            "/(conda|miniconda|miniconda3|miniforge|miniforge3|anaconda|anaconda3|mambaforge|envs)(/|$)"
+    )
         set(${OUT_VAR} TRUE PARENT_SCOPE)
     else()
         set(${OUT_VAR} FALSE PARENT_SCOPE)
@@ -85,7 +108,8 @@ function(rnanue_detect_active_dependency_prefix OUT_VAR)
 endfunction()
 
 function(rnanue_find_prefix_library OUT_VAR PREFIX)
-    find_library(RNANUE_PREFIX_LIBRARY
+    find_library(
+        RNANUE_PREFIX_LIBRARY
         NAMES ${ARGN}
         PATHS "${PREFIX}/lib" "${PREFIX}/lib64"
         NO_DEFAULT_PATH
@@ -95,7 +119,8 @@ function(rnanue_find_prefix_library OUT_VAR PREFIX)
 endfunction()
 
 function(rnanue_find_prefix_include OUT_VAR PREFIX)
-    find_path(RNANUE_PREFIX_INCLUDE
+    find_path(
+        RNANUE_PREFIX_INCLUDE
         NAMES ${ARGN}
         PATHS "${PREFIX}/include" "${PREFIX}/include/libpng16"
         NO_DEFAULT_PATH
@@ -112,7 +137,12 @@ function(rnanue_set_prefix_cache_path VAR VALUE DOC)
     set(RNANUE_SHOULD_SET FALSE)
     if(RNANUE_DEPENDENCY_PREFIX)
         set(RNANUE_SHOULD_SET TRUE)
-    elseif(NOT DEFINED ${VAR} OR "${${VAR}}" STREQUAL "" OR "${${VAR}}" MATCHES "^/usr/" OR "${${VAR}}" MATCHES "^/lib/")
+    elseif(
+        NOT DEFINED ${VAR}
+        OR "${${VAR}}" STREQUAL ""
+        OR "${${VAR}}" MATCHES "^/usr/"
+        OR "${${VAR}}" MATCHES "^/lib/"
+    )
         set(RNANUE_SHOULD_SET TRUE)
     endif()
 
@@ -126,7 +156,10 @@ function(rnanue_prefer_active_prefix_libraries PREFIX)
         return()
     endif()
 
-    message(STATUS "RNAnue prefers common runtime libraries from dependency prefix: ${PREFIX}")
+    message(
+        STATUS
+        "RNAnue prefers common runtime libraries from dependency prefix: ${PREFIX}"
+    )
 
     list(PREPEND CMAKE_PREFIX_PATH "${PREFIX}")
     list(PREPEND CMAKE_LIBRARY_PATH "${PREFIX}/lib" "${PREFIX}/lib64")
@@ -158,8 +191,18 @@ function(rnanue_prefer_active_prefix_libraries PREFIX)
 
     rnanue_find_prefix_include(RNANUE_PREFIX_TBB_INCLUDE "${PREFIX}" tbb/tbb.h oneapi/tbb.h)
     rnanue_find_prefix_library(RNANUE_PREFIX_TBB_LIBRARY "${PREFIX}" tbb libtbb.so.12)
-    set(RNANUE_PREFIX_TBB_INCLUDE_DIR "${RNANUE_PREFIX_TBB_INCLUDE}" CACHE PATH "Preferred oneTBB include directory" FORCE)
-    set(RNANUE_PREFIX_TBB_LIBRARY "${RNANUE_PREFIX_TBB_LIBRARY}" CACHE FILEPATH "Preferred oneTBB library" FORCE)
+    set(RNANUE_PREFIX_TBB_INCLUDE_DIR
+        "${RNANUE_PREFIX_TBB_INCLUDE}"
+        CACHE PATH
+        "Preferred oneTBB include directory"
+        FORCE
+    )
+    set(RNANUE_PREFIX_TBB_LIBRARY
+        "${RNANUE_PREFIX_TBB_LIBRARY}"
+        CACHE FILEPATH
+        "Preferred oneTBB library"
+        FORCE
+    )
 endfunction()
 
 function(rnanue_try_prefix_tbb OUT_VAR)
@@ -170,13 +213,16 @@ function(rnanue_try_prefix_tbb OUT_VAR)
     endif()
 
     add_library(TBB::tbb SHARED IMPORTED GLOBAL)
-    set_target_properties(TBB::tbb PROPERTIES
-        IMPORTED_LOCATION "${RNANUE_PREFIX_TBB_LIBRARY}"
+    set_target_properties(
+        TBB::tbb
+        PROPERTIES IMPORTED_LOCATION "${RNANUE_PREFIX_TBB_LIBRARY}"
     )
 
     if(RNANUE_PREFIX_TBB_INCLUDE_DIR)
-        set_target_properties(TBB::tbb PROPERTIES
-            INTERFACE_INCLUDE_DIRECTORIES "${RNANUE_PREFIX_TBB_INCLUDE_DIR}"
+        set_target_properties(
+            TBB::tbb
+            PROPERTIES
+                INTERFACE_INCLUDE_DIRECTORIES "${RNANUE_PREFIX_TBB_INCLUDE_DIR}"
         )
     endif()
 
@@ -196,10 +242,17 @@ function(rnanue_classify_dependency_origin OUT_VAR)
         if(RNANUE_PATH MATCHES "^${CMAKE_BINARY_DIR}/")
             set(RNANUE_ORIGIN "bundled")
             break()
-        elseif(RNANUE_PATH MATCHES "/(conda|miniconda|miniconda3|miniforge|miniforge3|anaconda|anaconda3|mambaforge|envs)/")
+        elseif(
+            RNANUE_PATH
+                MATCHES
+                "/(conda|miniconda|miniconda3|miniforge|miniforge3|anaconda|anaconda3|mambaforge|envs)/"
+        )
             set(RNANUE_ORIGIN "conda")
             break()
-        elseif(RNANUE_PATH MATCHES "^/opt/homebrew/" OR RNANUE_PATH MATCHES "^/usr/local/")
+        elseif(
+            RNANUE_PATH MATCHES "^/opt/homebrew/"
+            OR RNANUE_PATH MATCHES "^/usr/local/"
+        )
             set(RNANUE_ORIGIN "homebrew")
         elseif(RNANUE_PATH MATCHES "^/opt/local/")
             set(RNANUE_ORIGIN "macports")
@@ -221,7 +274,11 @@ function(rnanue_warn_if_shadowing_implicit NAME)
     endif()
 
     foreach(RNANUE_PATH IN LISTS ARGN)
-        if(NOT RNANUE_PATH OR RNANUE_PATH MATCHES "^/usr/lib" OR RNANUE_PATH MATCHES "^/lib")
+        if(
+            NOT RNANUE_PATH
+            OR RNANUE_PATH MATCHES "^/usr/lib"
+            OR RNANUE_PATH MATCHES "^/lib"
+        )
             continue()
         endif()
 
@@ -232,11 +289,13 @@ function(rnanue_warn_if_shadowing_implicit NAME)
         endif()
 
         if(EXISTS "${RNANUE_LIB_DIR}/libz.so.1")
-            message(WARNING
+            message(
+                WARNING
                 "${NAME} uses non-system library directory '${RNANUE_LIB_DIR}', which contains "
                 "libz.so.1 and may shadow the implicit system zlib. Prefer a consistent "
                 "dependency prefix via CMAKE_PREFIX_PATH/ZLIB_ROOT, or use "
-                "-DRNANUE_DEPENDENCY_PROVIDER=SYSTEM for no-download system-only builds.")
+                "-DRNANUE_DEPENDENCY_PROVIDER=SYSTEM for no-download system-only builds."
+            )
         endif()
     endforeach()
 endfunction()
@@ -248,8 +307,13 @@ function(rnanue_record_dependency NAME PROVIDER INCLUDE_PATHS LIBRARIES)
     string(REPLACE ";" ", " RNANUE_INCLUDE_TEXT "${INCLUDE_PATHS}")
     string(REPLACE ";" ", " RNANUE_LIBRARY_TEXT "${LIBRARIES}")
     set(RNANUE_LINE
-        "  ${NAME}: provider=${PROVIDER} | origin=${RNANUE_ORIGIN} | includes=${RNANUE_INCLUDE_TEXT} | libs=${RNANUE_LIBRARY_TEXT}")
-    set_property(GLOBAL APPEND PROPERTY RNANUE_DEPENDENCY_SUMMARY "${RNANUE_LINE}")
+        "  ${NAME}: provider=${PROVIDER} | origin=${RNANUE_ORIGIN} | includes=${RNANUE_INCLUDE_TEXT} | libs=${RNANUE_LIBRARY_TEXT}"
+    )
+    set_property(
+        GLOBAL
+        APPEND
+        PROPERTY RNANUE_DEPENDENCY_SUMMARY "${RNANUE_LINE}"
+    )
 endfunction()
 
 function(rnanue_print_dependency_summary)

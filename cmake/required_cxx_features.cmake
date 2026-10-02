@@ -1,6 +1,7 @@
 include_guard(GLOBAL)
 
-set(RNANUE_REQUIRED_CXX_FEATURES_SOURCE [[
+set(RNANUE_REQUIRED_CXX_FEATURES_SOURCE
+    [[
 #include <coroutine>
 #include <format>
 #include <print>
@@ -106,4 +107,5 @@ auto main() -> int
 
     return 0;
 }
-]])
+]]
+)

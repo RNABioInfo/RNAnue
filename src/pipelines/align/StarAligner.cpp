@@ -104,7 +104,9 @@ struct FastqReader {
     auto next() -> std::optional<std::array<std::string, 4>> {
         std::array<std::string, 4> record;
         if (!std::getline(stream, record[0])) {
-            if (!stream.eof()) throw std::runtime_error("Cannot read FASTQ: " + path.string());
+            if (!stream.eof()) {
+                throw std::runtime_error("Cannot read FASTQ: " + path.string());
+            }
             return std::nullopt;
         }
 
@@ -161,8 +163,8 @@ struct IndexLock {
         }
     }
     ~IndexLock() {
-        std::error_code e;
-        fs::remove(path, e);
+        std::error_code error;
+        fs::remove(path, error);
     }
 };
 }  // namespace
@@ -387,11 +389,11 @@ void StarAligner::align(const fs::path& forward, const std::optional<fs::path>& 
     const auto secondPath = workspace.path() / "reverse.fastq";
     size_t entries = 0;
     {
-        std::ofstream f{firstPath};
-        std::ofstream r{secondPath};
+        std::ofstream forward_stream{firstPath};
+        std::ofstream reverse_stream{secondPath};
 
-        f.exceptions(std::ios::badbit | std::ios::failbit);
-        r.exceptions(std::ios::badbit | std::ios::failbit);
+        forward_stream.exceptions(std::ios::badbit | std::ios::failbit);
+        reverse_stream.exceptions(std::ios::badbit | std::ios::failbit);
 
         while (true) {
             auto a = first.next();
@@ -415,10 +417,10 @@ void StarAligner::align(const fs::path& forward, const std::optional<fs::path>& 
                 continue;
             }
 
-            writeFastq(f, *a);
+            writeFastq(forward_stream, *a);
 
             if (b) {
-                writeFastq(r, *b);
+                writeFastq(reverse_stream, *b);
             }
             ++entries;
         }

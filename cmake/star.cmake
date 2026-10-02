@@ -1,7 +1,11 @@
 include_guard(GLOBAL)
 include(GNUInstallDirs)
 
-option(RNANUE_BUILD_STAR "Build and package the pinned private STAR executable" ON)
+option(
+    RNANUE_BUILD_STAR
+    "Build and package the pinned private STAR executable"
+    ON
+)
 option(RNANUE_STAR_STATIC "Require fully static STAR on Linux" OFF)
 # Pin updates must change the gitlink, both constants, exact-version tests and
 # notices together, then pass all native CI builds and RNAnue regressions.
@@ -14,75 +18,159 @@ function(rnanue_add_star host)
     set(RNANUE_STAR_SOURCE "${repo}/submodules/STAR")
     set(RNANUE_STAR_STAGE "${CMAKE_BINARY_DIR}/libexec/rnanue")
     set(RNANUE_STAR_EXECUTABLE "${RNANUE_STAR_STAGE}/STAR")
-    if(IS_ABSOLUTE "${CMAKE_INSTALL_BINDIR}" OR IS_ABSOLUTE "${CMAKE_INSTALL_LIBEXECDIR}")
-        message(FATAL_ERROR "STAR relocation requires relative CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBEXECDIR")
+    if(
+        IS_ABSOLUTE "${CMAKE_INSTALL_BINDIR}"
+        OR IS_ABSOLUTE "${CMAKE_INSTALL_LIBEXECDIR}"
+    )
+        message(
+            FATAL_ERROR
+            "STAR relocation requires relative CMAKE_INSTALL_BINDIR and CMAKE_INSTALL_LIBEXECDIR"
+        )
     endif()
-    file(RELATIVE_PATH RNANUE_STAR_INSTALL_RELATIVE
+    file(
+        RELATIVE_PATH
+        RNANUE_STAR_INSTALL_RELATIVE
         "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_BINDIR}"
-        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBEXECDIR}/rnanue/STAR")
+        "${CMAKE_INSTALL_PREFIX}/${CMAKE_INSTALL_LIBEXECDIR}/rnanue/STAR"
+    )
     set(RNANUE_STAR_ENABLED_CPP false)
-    if(RNANUE_STAR_STATIC AND (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT RNANUE_BUILD_STAR))
-        message(FATAL_ERROR "RNANUE_STAR_STATIC requires Linux and RNANUE_BUILD_STAR=ON")
+    if(
+        RNANUE_STAR_STATIC
+        AND (NOT CMAKE_SYSTEM_NAME STREQUAL "Linux" OR NOT RNANUE_BUILD_STAR)
+    )
+        message(
+            FATAL_ERROR
+            "RNANUE_STAR_STATIC requires Linux and RNANUE_BUILD_STAR=ON"
+        )
     endif()
 
     if(RNANUE_BUILD_STAR)
         if(NOT CMAKE_SYSTEM_NAME MATCHES "^(Linux|Darwin)$")
-            message(FATAL_ERROR "Bundled STAR supports Linux/macOS; use RNANUE_BUILD_STAR=OFF on other platforms")
+            message(
+                FATAL_ERROR
+                "Bundled STAR supports Linux/macOS; use RNANUE_BUILD_STAR=OFF on other platforms"
+            )
         endif()
         if(CMAKE_CROSSCOMPILING OR CMAKE_OSX_ARCHITECTURES MATCHES ";")
-            message(FATAL_ERROR "Bundled STAR requires a native, single-architecture build")
+            message(
+                FATAL_ERROR
+                "Bundled STAR requires a native, single-architecture build"
+            )
         endif()
         string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}" RNANUE_STAR_ARCH)
         if(NOT RNANUE_STAR_ARCH MATCHES "^(x86_64|amd64|arm64|aarch64)$")
-            message(FATAL_ERROR "Unsupported STAR architecture: ${CMAKE_SYSTEM_PROCESSOR}")
+            message(
+                FATAL_ERROR
+                "Unsupported STAR architecture: ${CMAKE_SYSTEM_PROCESSOR}"
+            )
         endif()
-        if(CMAKE_OSX_ARCHITECTURES AND NOT CMAKE_OSX_ARCHITECTURES STREQUAL CMAKE_SYSTEM_PROCESSOR)
-            message(FATAL_ERROR "STAR cannot cross-compile CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}")
+        if(
+            CMAKE_OSX_ARCHITECTURES
+            AND NOT CMAKE_OSX_ARCHITECTURES STREQUAL CMAKE_SYSTEM_PROCESSOR
+        )
+            message(
+                FATAL_ERROR
+                "STAR cannot cross-compile CMAKE_OSX_ARCHITECTURES=${CMAKE_OSX_ARCHITECTURES}"
+            )
         endif()
         if(NOT EXISTS "${RNANUE_STAR_SOURCE}/source/VERSION")
-            message(FATAL_ERROR "STAR source missing. Run git submodule update --init submodules/STAR, or set RNANUE_BUILD_STAR=OFF")
+            message(
+                FATAL_ERROR
+                "STAR source missing. Run git submodule update --init submodules/STAR, or set RNANUE_BUILD_STAR=OFF"
+            )
         endif()
         find_package(Git REQUIRED)
-        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}" rev-parse HEAD
-            OUTPUT_VARIABLE actual_commit OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(
+            COMMAND
+                "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}" rev-parse HEAD
+            OUTPUT_VARIABLE actual_commit
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
         if(NOT actual_commit STREQUAL RNANUE_STAR_COMMIT)
-            message(FATAL_ERROR "STAR must be pinned to ${RNANUE_STAR_COMMIT}; found ${actual_commit}. Run git submodule update --init submodules/STAR")
+            message(
+                FATAL_ERROR
+                "STAR must be pinned to ${RNANUE_STAR_COMMIT}; found ${actual_commit}. Run git submodule update --init submodules/STAR"
+            )
         endif()
         file(READ "${RNANUE_STAR_SOURCE}/source/VERSION" version_text)
-        string(FIND "${version_text}" "STAR_VERSION \"${RNANUE_STAR_VERSION}\"" version_position)
+        string(
+            FIND "${version_text}"
+            "STAR_VERSION \"${RNANUE_STAR_VERSION}\""
+            version_position
+        )
         if(version_position EQUAL -1)
-            message(FATAL_ERROR "STAR source VERSION does not match ${RNANUE_STAR_VERSION}")
+            message(
+                FATAL_ERROR
+                "STAR source VERSION does not match ${RNANUE_STAR_VERSION}"
+            )
         endif()
-        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}" status --porcelain -- source LICENSE
-            OUTPUT_VARIABLE dirty COMMAND_ERROR_IS_FATAL ANY)
+        execute_process(
+            COMMAND
+                "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}" status
+                --porcelain -- source LICENSE
+            OUTPUT_VARIABLE dirty
+            COMMAND_ERROR_IS_FATAL ANY
+        )
         if(dirty)
-            message(FATAL_ERROR "Pinned STAR source has local changes; restore it or disable RNANUE_BUILD_STAR")
+            message(
+                FATAL_ERROR
+                "Pinned STAR source has local changes; restore it or disable RNANUE_BUILD_STAR"
+            )
         endif()
-        execute_process(COMMAND "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}"
-            rev-parse --path-format=absolute --git-path HEAD
-            OUTPUT_VARIABLE star_head OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
-        set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS "${star_head}")
+        execute_process(
+            COMMAND
+                "${GIT_EXECUTABLE}" -C "${RNANUE_STAR_SOURCE}" rev-parse
+                --path-format=absolute --git-path HEAD
+            OUTPUT_VARIABLE star_head
+            OUTPUT_STRIP_TRAILING_WHITESPACE
+            COMMAND_ERROR_IS_FATAL ANY
+        )
+        set_property(
+            DIRECTORY
+            APPEND
+            PROPERTY CMAKE_CONFIGURE_DEPENDS "${star_head}"
+        )
         find_program(RNANUE_STAR_MAKE NAMES gmake make REQUIRED)
-        execute_process(COMMAND "${RNANUE_STAR_MAKE}" --version OUTPUT_VARIABLE make_version)
+        execute_process(
+            COMMAND "${RNANUE_STAR_MAKE}" --version
+            OUTPUT_VARIABLE make_version
+        )
         if(NOT make_version MATCHES "GNU Make")
             message(FATAL_ERROR "Building STAR requires GNU Make")
         endif()
         find_program(RNANUE_STAR_XXD NAMES xxd REQUIRED)
-        execute_process(COMMAND "${RNANUE_STAR_XXD}" -v RESULT_VARIABLE xxd_result
-            OUTPUT_QUIET ERROR_QUIET)
+        execute_process(
+            COMMAND "${RNANUE_STAR_XXD}" -v
+            RESULT_VARIABLE xxd_result
+            OUTPUT_QUIET
+            ERROR_QUIET
+        )
         if(NOT xxd_result EQUAL 0)
-            message(FATAL_ERROR "STAR requires a working xxd executable; install xxd or set RNANUE_STAR_XXD")
+            message(
+                FATAL_ERROR
+                "STAR requires a working xxd executable; install xxd or set RNANUE_STAR_XXD"
+            )
         endif()
         find_package(ZLIB REQUIRED)
         find_package(OpenMP REQUIRED COMPONENTS CXX)
         if(NOT CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
-            message(FATAL_ERROR "The pinned STAR build requires GCC; select gcc/g++ as RNAnue's compilers")
+            message(
+                FATAL_ERROR
+                "The pinned STAR build requires GCC; select gcc/g++ as RNAnue's compilers"
+            )
         endif()
         include("${module_dir}/star_runtime_license.cmake")
-        set(star_runtime_license "${CMAKE_CURRENT_BINARY_DIR}/star-licenses/GCC-RUNTIME-EXCEPTION.txt")
+        set(star_runtime_license
+            "${CMAKE_CURRENT_BINARY_DIR}/star-licenses/GCC-RUNTIME-EXCEPTION.txt"
+        )
         rnanue_stage_star_runtime_license("${star_runtime_license}")
         if(APPLE)
-            find_program(RNANUE_STAR_INSTALL_NAME_TOOL install_name_tool REQUIRED)
+            find_program(
+                RNANUE_STAR_INSTALL_NAME_TOOL
+                install_name_tool
+                REQUIRED
+            )
             find_program(RNANUE_STAR_CODESIGN codesign REQUIRED)
             find_program(RNANUE_STAR_OTOOL otool REQUIRED)
         elseif(NOT RNANUE_STAR_STATIC)
@@ -104,13 +192,22 @@ function(rnanue_add_star host)
                 set(star_sdk "${CMAKE_OSX_SYSROOT}")
                 if(NOT IS_ABSOLUTE "${star_sdk}")
                     find_program(RNANUE_STAR_XCRUN xcrun REQUIRED)
-                    execute_process(COMMAND "${RNANUE_STAR_XCRUN}" --sdk "${star_sdk}" --show-sdk-path
-                        OUTPUT_VARIABLE star_sdk OUTPUT_STRIP_TRAILING_WHITESPACE COMMAND_ERROR_IS_FATAL ANY)
+                    execute_process(
+                        COMMAND
+                            "${RNANUE_STAR_XCRUN}" --sdk "${star_sdk}"
+                            --show-sdk-path
+                        OUTPUT_VARIABLE star_sdk
+                        OUTPUT_STRIP_TRAILING_WHITESPACE
+                        COMMAND_ERROR_IS_FATAL ANY
+                    )
                 endif()
                 string(APPEND RNANUE_STAR_FLAGS " -isysroot \"${star_sdk}\"")
             endif()
             if(CMAKE_OSX_DEPLOYMENT_TARGET)
-                string(APPEND RNANUE_STAR_FLAGS " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}")
+                string(
+                    APPEND RNANUE_STAR_FLAGS
+                    " -mmacosx-version-min=${CMAKE_OSX_DEPLOYMENT_TARGET}"
+                )
             endif()
         endif()
         # Independent of RNAnue's C++23 flags and CPU-specific environment flags.
@@ -130,53 +227,123 @@ function(rnanue_add_star host)
             set(CMAKE_REQUIRED_LINK_OPTIONS -static -static-libgcc)
             set(CMAKE_REQUIRED_INCLUDES "${ZLIB_INCLUDE_DIRS}")
             set(CMAKE_REQUIRED_LIBRARIES "${RNANUE_STAR_STATIC_ZLIB}")
-            check_cxx_source_compiles("#include <omp.h>\n#include <zlib.h>\nint main() { return omp_get_max_threads() + zlibVersion()[0]; }"
-                RNANUE_STAR_STATIC_PREREQUISITES)
+            check_cxx_source_compiles(
+                "#include <omp.h>\n#include <zlib.h>\nint main() { return omp_get_max_threads() + zlibVersion()[0]; }"
+                RNANUE_STAR_STATIC_PREREQUISITES
+            )
             if(NOT RNANUE_STAR_STATIC_PREREQUISITES)
-                message(FATAL_ERROR "Static STAR requires static zlib, libc, libstdc++, libgcc and libgomp. Install their development/static packages or set RNANUE_STAR_STATIC=OFF. See CMake's configure log.")
+                message(
+                    FATAL_ERROR
+                    "Static STAR requires static zlib, libc, libstdc++, libgcc and libgomp. Install their development/static packages or set RNANUE_STAR_STATIC=OFF. See CMake's configure log."
+                )
             endif()
             find_program(RNANUE_STAR_READELF readelf REQUIRED)
         endif()
-        get_filename_component(RNANUE_STAR_ZLIB_DIR "${RNANUE_STAR_ZLIB}" DIRECTORY)
+        get_filename_component(
+            RNANUE_STAR_ZLIB_DIR
+            "${RNANUE_STAR_ZLIB}"
+            DIRECTORY
+        )
         # Upstream's xxd invocation is replaced only in the disposable build copy.
-        configure_file("${module_dir}/star_build.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/star_build.cmake" @ONLY)
-        configure_file("${module_dir}/star_install.cmake.in" "${CMAKE_CURRENT_BINARY_DIR}/star_install.cmake" @ONLY)
-        file(GLOB_RECURSE star_inputs CONFIGURE_DEPENDS "${RNANUE_STAR_SOURCE}/source/*")
-        add_custom_command(OUTPUT "${RNANUE_STAR_EXECUTABLE}"
-            COMMAND "${CMAKE_COMMAND}" -P "${CMAKE_CURRENT_BINARY_DIR}/star_build.cmake"
-            DEPENDS ${star_inputs} "${RNANUE_STAR_SOURCE}/LICENSE"
+        configure_file(
+            "${module_dir}/star_build.cmake.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/star_build.cmake"
+            @ONLY
+        )
+        configure_file(
+            "${module_dir}/star_install.cmake.in"
+            "${CMAKE_CURRENT_BINARY_DIR}/star_install.cmake"
+            @ONLY
+        )
+        file(
+            GLOB_RECURSE star_inputs
+            CONFIGURE_DEPENDS
+            "${RNANUE_STAR_SOURCE}/source/*"
+        )
+        add_custom_command(
+            OUTPUT "${RNANUE_STAR_EXECUTABLE}"
+            COMMAND
+                "${CMAKE_COMMAND}" -P
                 "${CMAKE_CURRENT_BINARY_DIR}/star_build.cmake"
-            BYPRODUCTS "${RNANUE_STAR_STAGE}/build-info.txt" "${RNANUE_STAR_STAGE}/upstream-source.tar.gz"
-            COMMENT "Building pinned STAR ${RNANUE_STAR_VERSION} (${RNANUE_STAR_ARCH}, ${RNANUE_STAR_LINK_MODE})"
-            VERBATIM)
+            DEPENDS
+                ${star_inputs}
+                "${RNANUE_STAR_SOURCE}/LICENSE"
+                "${CMAKE_CURRENT_BINARY_DIR}/star_build.cmake"
+            BYPRODUCTS
+                "${RNANUE_STAR_STAGE}/build-info.txt"
+                "${RNANUE_STAR_STAGE}/upstream-source.tar.gz"
+            COMMENT
+                "Building pinned STAR ${RNANUE_STAR_VERSION} (${RNANUE_STAR_ARCH}, ${RNANUE_STAR_LINK_MODE})"
+            VERBATIM
+        )
         add_custom_target(RNAnue_STAR DEPENDS "${RNANUE_STAR_EXECUTABLE}")
         add_executable(STAR::STAR IMPORTED GLOBAL)
-        set_target_properties(STAR::STAR PROPERTIES IMPORTED_LOCATION "${RNANUE_STAR_EXECUTABLE}")
+        set_target_properties(
+            STAR::STAR
+            PROPERTIES IMPORTED_LOCATION "${RNANUE_STAR_EXECUTABLE}"
+        )
         add_dependencies(STAR::STAR RNAnue_STAR)
         add_dependencies(${host} RNAnue_STAR)
-        install(PROGRAMS "${RNANUE_STAR_EXECUTABLE}" DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rnanue")
-        install(FILES "${RNANUE_STAR_STAGE}/build-info.txt" "${RNANUE_STAR_STAGE}/upstream-source.tar.gz"
-            "${RNANUE_STAR_SOURCE}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR")
-        install(FILES "${repo}/LICENSE" DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR" RENAME GPL-3.0.txt)
-        install(FILES "${star_runtime_license}" "${module_dir}/licenses/STAR-NOTICES.txt"
-            DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR")
+        install(
+            PROGRAMS "${RNANUE_STAR_EXECUTABLE}"
+            DESTINATION "${CMAKE_INSTALL_LIBEXECDIR}/rnanue"
+        )
+        install(
+            FILES
+                "${RNANUE_STAR_STAGE}/build-info.txt"
+                "${RNANUE_STAR_STAGE}/upstream-source.tar.gz"
+                "${RNANUE_STAR_SOURCE}/LICENSE"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR"
+        )
+        install(
+            FILES "${repo}/LICENSE"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR"
+            RENAME GPL-3.0.txt
+        )
+        install(
+            FILES
+                "${star_runtime_license}"
+                "${module_dir}/licenses/STAR-NOTICES.txt"
+            DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR"
+        )
         foreach(include_dir IN LISTS ZLIB_INCLUDE_DIRS)
             if(EXISTS "${include_dir}/zlib.h")
-                install(FILES "${include_dir}/zlib.h" DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR" RENAME zlib-notice.h)
+                install(
+                    FILES "${include_dir}/zlib.h"
+                    DESTINATION "${CMAKE_INSTALL_DATADIR}/rnanue/licenses/STAR"
+                    RENAME zlib-notice.h
+                )
                 break()
             endif()
         endforeach()
         install(SCRIPT "${CMAKE_CURRENT_BINARY_DIR}/star_install.cmake")
         set(RNANUE_STAR_ENABLED_CPP true)
-        message(STATUS "Bundled STAR: ${RNANUE_STAR_VERSION} @ ${RNANUE_STAR_COMMIT}; ${RNANUE_STAR_LINK_MODE}; ${RNANUE_STAR_EXECUTABLE}")
+        message(
+            STATUS
+            "Bundled STAR: ${RNANUE_STAR_VERSION} @ ${RNANUE_STAR_COMMIT}; ${RNANUE_STAR_LINK_MODE}; ${RNANUE_STAR_EXECUTABLE}"
+        )
     endif()
 
-    configure_file("${module_dir}/StarBuildConfig.hpp.in" "${CMAKE_CURRENT_BINARY_DIR}/StarBuildConfig.hpp.in" @ONLY)
-    file(GENERATE OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>/StarBuildConfig.hpp"
-        INPUT "${CMAKE_CURRENT_BINARY_DIR}/StarBuildConfig.hpp.in")
-    add_library(RNAnue_StarSupport STATIC "${repo}/src/utility/StarExecutable.cpp")
-    target_include_directories(RNAnue_StarSupport PUBLIC "${repo}/include/utility"
-        PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>")
+    configure_file(
+        "${module_dir}/StarBuildConfig.hpp.in"
+        "${CMAKE_CURRENT_BINARY_DIR}/StarBuildConfig.hpp.in"
+        @ONLY
+    )
+    file(
+        GENERATE OUTPUT
+            "${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>/StarBuildConfig.hpp"
+        INPUT "${CMAKE_CURRENT_BINARY_DIR}/StarBuildConfig.hpp.in"
+    )
+    add_library(
+        RNAnue_StarSupport
+        STATIC
+        "${repo}/src/utility/StarExecutable.cpp"
+    )
+    target_include_directories(
+        RNAnue_StarSupport
+        PUBLIC "${repo}/include/utility"
+        PRIVATE "${CMAKE_CURRENT_BINARY_DIR}/generated/$<CONFIG>"
+    )
     target_compile_features(RNAnue_StarSupport PUBLIC cxx_std_17)
     target_link_libraries(${host} PRIVATE RNAnue_StarSupport)
 endfunction()

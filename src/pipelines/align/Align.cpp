@@ -7,7 +7,6 @@
 #include <cstdlib>
 #include <filesystem>
 #include <optional>
-#include <string>
 #include <variant>
 #include <vector>
 
@@ -15,8 +14,6 @@
 #include "AnnotationFilePicker.hpp"
 #include "GenomePreprocessor.hpp"
 #include "ReferenceGenomeFilePicker.hpp"
-#include "hts.h"
-#include "segemehl.h"
 
 // Internal
 #include "AlignData.hpp"
