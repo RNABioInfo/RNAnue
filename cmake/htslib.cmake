@@ -103,9 +103,17 @@ ExternalProject_Add(
     BUILD_COMMAND
         ${MAKE_COMMAND} "CXX=${CMAKE_CXX_COMPILER}" "CC=${CMAKE_C_COMPILER}"
         lib-static
-    INSTALL_COMMAND
-        ${MAKE_COMMAND} install "CXX=${CMAKE_CXX_COMPILER}"
+    INSTALL_COMMAND ""
+)
+
+# Declare the installed archive at the step that actually creates it.
+ExternalProject_Add_Step(htslib install_library
+    COMMAND ${MAKE_COMMAND} install "CXX=${CMAKE_CXX_COMPILER}"
         "CC=${CMAKE_C_COMPILER}" prefix=${htslib_INSTALL}
+    WORKING_DIRECTORY <SOURCE_DIR>
+    DEPENDEES build
+    DEPENDERS install
+    BYPRODUCTS "${htslib_INSTALL}/lib/libhts.a"
 )
 
 if(ZLIB_BUILD)

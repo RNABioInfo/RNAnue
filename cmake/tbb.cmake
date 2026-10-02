@@ -32,6 +32,15 @@ ExternalProject_Add(
         -DTBBMALLOC_BUILD=OFF -DTBBMALLOC_PROXY_BUILD=OFF
         -DTBB_DISABLE_HWLOC_AUTOMATIC_SEARCH=ON -DTBB_ENABLE_IPO=OFF
         -DTBB_EXAMPLES=OFF -DTBB_INSTALL=ON -DTBB_TEST=OFF -DTBB_STRICT=OFF
+    INSTALL_COMMAND ""
+)
+
+# Declare the installed library at the step that actually creates it.
+ExternalProject_Add_Step(RNAnue_tbb install_library
+    COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config Release
+    DEPENDEES build
+    DEPENDERS install
+    BYPRODUCTS "${RNANUE_TBB_LIBRARY}"
 )
 
 add_library(TBB::tbb UNKNOWN IMPORTED GLOBAL)

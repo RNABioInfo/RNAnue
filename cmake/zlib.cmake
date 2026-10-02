@@ -2,6 +2,7 @@ include(ExternalProject)
 
 set(zlib_PREFIX ${CMAKE_BINARY_DIR}/submodules/zlib-prefix)
 set(zlib_INSTALL ${CMAKE_BINARY_DIR}/submodules/zlib-install)
+set(zlib_LIBRARIES ${zlib_INSTALL}/lib/libz.a)
 
 ExternalProject_Add(
     zlib
@@ -16,7 +17,15 @@ ExternalProject_Add(
         "-DCMAKE_CXX_COMPILER=${CMAKE_CXX_COMPILER}"
         -DCMAKE_BUILD_TYPE=${CMAKE_BUILD_TYPE}
         -DCMAKE_INSTALL_PREFIX=${zlib_INSTALL} -DCMAKE_MACOSX_RPATH=0
+    INSTALL_COMMAND ""
+)
+
+# Declare the installed archive at the step that actually creates it.
+ExternalProject_Add_Step(zlib install_library
+    COMMAND "${CMAKE_COMMAND}" --install <BINARY_DIR> --config "$<CONFIG>"
+    DEPENDEES build
+    DEPENDERS install
+    BYPRODUCTS ${zlib_LIBRARIES}
 )
 
 include_directories(${zlib_INSTALL}/include)
-set(zlib_LIBRARIES ${zlib_INSTALL}/lib/libz.a)

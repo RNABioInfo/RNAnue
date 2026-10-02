@@ -73,6 +73,9 @@ if(NOT RNANUE_BOOST_LIBRARIES)
         ${RNANUE_BUNDLED_BOOST_INSTALL}/include
     )
     set(RNANUE_BUNDLED_BOOST_LIB_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}/lib)
+    set(RNANUE_BOOST_LIBRARIES
+        ${RNANUE_BUNDLED_BOOST_LIB_DIR}/libboost_program_options.a
+    )
     set(RNANUE_BUNDLED_BOOST_TOOLSET gcc)
     set(RNANUE_BUNDLED_BOOST_CXXFLAGS "")
 
@@ -139,13 +142,12 @@ if(NOT RNANUE_BOOST_LIBRARIES)
             "-DRNANUE_BOOST_TOOLSET=${RNANUE_BUNDLED_BOOST_TOOLSET}" -P
             "${CMAKE_CURRENT_LIST_DIR}/boost_build_step.cmake"
         INSTALL_COMMAND ""
+        # The build command runs b2 install, producing this archive.
+        BUILD_BYPRODUCTS ${RNANUE_BOOST_LIBRARIES}
         INSTALL_DIR ${RNANUE_BUNDLED_BOOST_INSTALL}
     )
 
     set(RNANUE_BOOST_INCLUDE_DIRS ${RNANUE_BUNDLED_BOOST_INCLUDE_DIR})
-    set(RNANUE_BOOST_LIBRARIES
-        ${RNANUE_BUNDLED_BOOST_LIB_DIR}/libboost_program_options.a
-    )
     set(RNANUE_BOOST_EXTERNAL_TARGET Boost)
 
     message(STATUS "Bundled Boost static libs: ${RNANUE_BOOST_LIBRARIES}")
