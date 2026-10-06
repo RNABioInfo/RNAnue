@@ -66,7 +66,7 @@ auto ParallelInteractionClusterGenerator::mergeClusters(std::vector<InteractionC
                 std::lock_guard<std::mutex> lock(mergeMutex);
                 clusteringResults.merge(std::move(result));
 
-                constexpr size_t LOG_INTERVAL = 100;
+                constexpr size_t LOG_INTERVAL = 1000;
                 if (nextGroupIndex % LOG_INTERVAL == 0) {
                     logClusteringStatus();
                 }

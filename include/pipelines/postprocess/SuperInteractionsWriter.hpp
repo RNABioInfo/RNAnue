@@ -49,7 +49,7 @@ namespace {
 
 void writeSuperInteractionsGCTHeader(const std::vector<std::string>& sampleIDs,
                                      size_t superInteractionCount, std::ostream& out,
-                                     csv::TSVWriter<std::ofstream>& writer) {
+                                     csv::TSVWriter<std::ofstream, false>& writer) {
     out << std::format("#1.3\n{}\t{}\n", superInteractionCount, sampleIDs.size());
     std::vector<std::string> headerTokens = {"Name", "Description"};
     std::ranges::copy(sampleIDs, std::back_inserter(headerTokens));
@@ -66,7 +66,7 @@ void writeSuperInteractionsBEDPEHeader(std::ofstream& bedOut,
     bedOut << "#columns color=16\n";
 }
 
-void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
+void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream, false>& writer,
                               const std::string& interactionID,
                               const std::vector<std::string>& sampleIDs,
                               const Interaction& superInteraction) {
@@ -75,7 +75,7 @@ void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
 
     for (const auto& sampleName : sampleIDs) {
         lineTokens.emplace_back(
-            std::format("{:.17g}", superInteraction.getContributionScore(sampleName)));
+            std::format("{:.5g}", superInteraction.getContributionScore(sampleName)));
     }
 
     writer << lineTokens;
@@ -133,7 +133,7 @@ void writeSuperInteractionGCT(csv::TSVWriter<std::ofstream>& writer,
     return formattedIDs(sampleID, featureIDs);
 }
 
-void writeSuperInteractionsBEDPE(csv::TSVWriter<std::ofstream>& writer,
+void writeSuperInteractionsBEDPE(csv::TSVWriter<std::ofstream, false>& writer,
                                  const std::unordered_map<int, std::string>& referenceIndexToIDMap,
                                  const std::string& interactionID,
                                  const std::vector<std::string>& sampleIDs,
@@ -212,8 +212,8 @@ void writeInteractions(const PostprocessData& data,
                                                             outSuperInteractionBEDPE);
     }
 
-    auto gcsWriter = csv::make_tsv_writer(outSuperInteractionsGCT);
-    auto bedpeWriter = csv::make_tsv_writer(outSuperInteractionBEDPE);
+    auto gcsWriter = csv::make_tsv_writer_buffered(outSuperInteractionsGCT);
+    auto bedpeWriter = csv::make_tsv_writer_buffered(outSuperInteractionBEDPE);
     csv::set_decimal_places(2);
 
     const auto sampleIDs = getSampleIDs(data.samples);
