@@ -207,7 +207,7 @@ void writeInteractions(const PostprocessData& data,
                                                             outSuperInteractionsGCT);
     }
 
-    if (!outSuperInteractionsGCT.is_open()) {
+    if (!outSuperInteractionBEDPE.is_open()) {
         Logger::log<IncludeSourceLocation, LogLevel::ERROR>("Could not open file: ",
                                                             outSuperInteractionBEDPE);
     }
